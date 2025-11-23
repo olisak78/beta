@@ -215,6 +215,16 @@ func (r *ProjectRepository) CheckProjectExists(id uuid.UUID) (bool, error) {
 	return count > 0, err
 }
 
+// GetAllProjects retrieves all projects
+func (r *ProjectRepository) GetAllProjects() ([]models.Project, error) {
+	var projects []models.Project
+	err := r.db.Find(&projects).Error
+	if err != nil {
+		return nil, err
+	}
+	return projects, nil
+}
+
 // CheckProjectNameExists checks if a project name exists within an organization
 func (r *ProjectRepository) CheckProjectNameExists(orgID uuid.UUID, name string, excludeID *uuid.UUID) (bool, error) {
 	query := r.db.Model(&models.Project{}).Where("organization_id = ? AND name = ?", orgID, name)

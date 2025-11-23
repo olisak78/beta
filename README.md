@@ -84,11 +84,11 @@ cp .env.example .env
 # 4. Run migrations (if any)
 make migrate-up
 
-# 5. Load initial data
-make load-initial-data
-
-# 6. Start server
+# 5. Start server
 make run-dev
+
+# Initial data
+# Loaded automatically on server startup from scripts/data/*.yaml
 ```
 
 ### Option 3: Production Mode
@@ -127,8 +127,8 @@ make db-up
 # Reset database (WARNING: deletes all data)
 make db-reset
 
-# Load initial sample data
-make load-initial-data
+# Initial data
+# Loaded automatically on server startup from scripts/data/*.yaml
 ```
 
 ## 🗄️ Database Access
@@ -541,13 +541,13 @@ appVersion: "1.0.8"  # Update to your new version
 ```bash
 make docker-build
 ```
-This builds both the backend application and init-data Docker images with the version from Chart.yaml.
+This builds the backend Docker image with the version from Chart.yaml. Initial data is loaded automatically by the server at startup; there is no separate init-data image or job.
 
 #### 3. Push Images to Registry
 ```bash
 make docker-push
 ```
-Pushes both images to the Docker registry.
+Pushes the backend image to the Docker registry.
 
 #### 4. Deploy to Dev Environment
 **Important:** Make sure you're connected to the dev cluster first!
@@ -623,7 +623,6 @@ make build-prod
 
 # Or build Docker images manually
 make docker-build-backend TAG=1.0.7
-make docker-build-init-data TAG=1.0.7
 ```
 
 ### Environment Setup

@@ -103,6 +103,11 @@ type CategoryServiceInterface interface {
 	GetAll(page, pageSize int) (*CategoryListResponse, error)
 }
 
+// ProjectServiceInterface defines the interface for project service
+type ProjectServiceInterface interface {
+	GetAllProjects() ([]models.Project, error)
+}
+
 // LinkServiceInterface defines the interface for link service
 type LinkServiceInterface interface {
 	// GetByOwnerUserID returns all links owned by the user with the given user_id (string, not)

@@ -43,7 +43,7 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       expiresInSeconds:
-        example: 43200
+        example: 3600
         type: integer
       profile:
         $ref: '#/definitions/auth.UserProfile'
@@ -246,6 +246,36 @@ definitions:
         example: queued
         type: string
     type: object
+  handlers.ProjectResponse:
+    properties:
+      created_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      created_by:
+        example: user123
+        type: string
+      description:
+        example: This is a sample project
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        example: my-project
+        type: string
+      title:
+        example: My Project
+        type: string
+      updated_at:
+        example: "2023-01-01T00:00:00Z"
+        type: string
+      updated_by:
+        example: user123
+        type: string
+    type: object
   handlers.UpdateRepositoryFileRequest:
     properties:
       branch:
@@ -260,6 +290,14 @@ definitions:
     - content
     - message
     - sha
+    type: object
+  handlers.UpdateTeamMetadataRequest:
+    properties:
+      metadata:
+        additionalProperties: true
+        type: object
+    required:
+    - metadata
     type: object
   handlers.UpdateUserTeamBody:
     properties:
@@ -846,12 +884,18 @@ definitions:
         items:
           type: string
         type: array
+      parent:
+        $ref: '#/definitions/service.JiraParent'
       priority:
         $ref: '#/definitions/service.JiraPriority'
       reporter:
         $ref: '#/definitions/service.JiraUser'
       status:
         $ref: '#/definitions/service.JiraStatus'
+      subtasks:
+        items:
+          $ref: '#/definitions/service.JiraSubtask'
+        type: array
       summary:
         type: string
       updated:
@@ -877,6 +921,26 @@ definitions:
       total:
         type: integer
     type: object
+  service.JiraParent:
+    properties:
+      fields:
+        $ref: '#/definitions/service.JiraParentFields'
+      id:
+        type: string
+      key:
+        type: string
+    type: object
+  service.JiraParentFields:
+    properties:
+      issuetype:
+        $ref: '#/definitions/service.JiraIssueType'
+      priority:
+        $ref: '#/definitions/service.JiraPriority'
+      status:
+        $ref: '#/definitions/service.JiraStatus'
+      summary:
+        type: string
+    type: object
   service.JiraPriority:
     properties:
       id:
@@ -889,6 +953,26 @@ definitions:
       id:
         type: string
       name:
+        type: string
+    type: object
+  service.JiraSubtask:
+    properties:
+      fields:
+        $ref: '#/definitions/service.JiraSubtaskFields'
+      id:
+        type: string
+      key:
+        type: string
+    type: object
+  service.JiraSubtaskFields:
+    properties:
+      issuetype:
+        $ref: '#/definitions/service.JiraIssueType'
+      priority:
+        $ref: '#/definitions/service.JiraPriority'
+      status:
+        $ref: '#/definitions/service.JiraStatus'
+      summary:
         type: string
     type: object
   service.JiraUser:
@@ -924,17 +1008,59 @@ definitions:
     type: object
   service.LandscapeMinimalResponse:
     properties:
+      central-region:
+        type: boolean
+      cockpit:
+        type: string
+      concourse:
+        type: string
+      control-center:
+        type: string
+      debug:
+        type: string
       description:
+        type: string
+      destinations:
         type: string
       domain:
         type: string
+      dynatrace:
+        type: string
       environment:
+        type: string
+      extension:
+        type: boolean
+      gardener:
+        type: string
+      git:
+        description: Enriched top-level fields (replaces exposing raw metadata in
+          this endpoint)
+        type: string
+      grafana:
+        type: string
+      health:
         type: string
       id:
         type: string
+      kibana:
+        type: string
+      logs:
+        type: string
       name:
         type: string
+      operation-console:
+        type: string
+      overview:
+        type: string
+      plutono:
+        type: string
+      prometheus:
+        type: string
+      roles:
+        type: string
       title:
+        type: string
+      type:
         type: string
     type: object
   service.LinkResponse:
@@ -972,6 +1098,21 @@ definitions:
       week_start:
         example: "2024-10-15"
         type: string
+    type: object
+  service.PRReviewCommentsResponse:
+    properties:
+      from:
+        example: "2024-10-16T00:00:00Z"
+        type: string
+      period:
+        example: 30d
+        type: string
+      to:
+        example: "2024-11-16T23:59:59Z"
+        type: string
+      total_comments:
+        example: 42
+        type: integer
     type: object
   service.PullRequest:
     properties:
@@ -1156,7 +1297,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Send chat messages to a deployed model and get AI responses
+      description: Send chat messages to a deployed model and get AI responses (supports
+        streaming)
       parameters:
       - description: Chat inference request
         in: body
@@ -1166,6 +1308,7 @@ paths:
           $ref: '#/definitions/service.AICoreInferenceRequest'
       produces:
       - application/json
+      - text/event-stream
       responses:
         "200":
           description: Successfully received inference response
@@ -1825,6 +1968,89 @@ paths:
       summary: Validate JWT token
       tags:
       - authentication
+  /api/v1/projects/{projectId}/alerts:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all Prometheus alert configurations from the configured
+        GitHub repository
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alerts data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Prometheus alerts from GitHub repository
+      tags:
+      - alerts
+  /api/v1/projects/{projectId}/alerts/pr:
+    post:
+      consumes:
+      - application/json
+      description: Creates a pull request to update Prometheus alert configurations
+        in GitHub
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: Alert changes
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: PR created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a pull request with alert changes
+      tags:
+      - alerts
   /categories:
     get:
       consumes:
@@ -1858,6 +2084,39 @@ paths:
       summary: List all categories
       tags:
       - categories
+  /cis-public/proxy:
+    get:
+      consumes:
+      - application/json
+      description: Fetch data from component public endpoints (health, version, system
+        info) server-side to avoid CORS
+      parameters:
+      - description: Component public endpoint URL to fetch
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response from component endpoint
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: URL parameter is required
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "502":
+          description: Failed to fetch from component
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Proxy component public endpoints
+      tags:
+      - cis-public
   /components:
     get:
       consumes:
@@ -2221,6 +2480,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Get user total contributions
+      tags:
+      - github
+  /github/pr-review-comments:
+    get:
+      description: Returns the total number of pull request reviews performed by the
+        authenticated user over a specified period (default 30 days)
+      parameters:
+      - description: 'Time period in days (e.g., ''30d'', ''90d'', ''180d''). Default:
+          ''30d'''
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.PRReviewCommentsResponse'
+        "400":
+          description: Invalid period parameter
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "502":
+          description: GitHub API error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get PR review comments count
       tags:
       - github
   /github/pull-requests:
@@ -2803,6 +3100,30 @@ paths:
       summary: Delete a link by ID
       tags:
       - links
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all projects from the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved all projects
+          schema:
+            items:
+              $ref: '#/definitions/handlers.ProjectResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all projects
+      tags:
+      - projects
   /self-service/jenkins/{jaasName}/{jobName}/{buildNumber}/status:
     get:
       description: Retrieves the current status of a Jenkins build. Poll this endpoint
@@ -3102,6 +3423,53 @@ paths:
       summary: List documentations for a team
       tags:
       - documentations
+  /teams/{id}/metadata:
+    patch:
+      consumes:
+      - application/json
+      description: Merges the provided metadata fields with existing team metadata.
+        Only updates/adds the fields provided, preserves other existing fields (e.g.,
+        updating color preserves jira config)
+      parameters:
+      - description: Team ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Metadata fields to update/add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateTeamMetadataRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated team with merged metadata
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Team not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update team metadata (merge, not replace)
+      tags:
+      - teams
   /users:
     get:
       consumes:

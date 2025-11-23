@@ -1163,7 +1163,7 @@ components:
     title: Developer Portal Backend
     description: Backend side of the developer portal project managed by team-coe
     owner: team-coe
-    project: internal
+    project: developer-portal
     metadata:
       github:
         url: https://github.tools.sap/cfs-platform-engineering/developer-portal-backend
@@ -1172,7 +1172,7 @@ components:
     title: Developer Portal Frontend
     description: Frontend side of the developer portal project managed by team-coe
     owner: team-coe
-    project: internal
+    project: developer-portal
     metadata:
       github:
         url: https://github.tools.sap/cfs-platform-engineering/developer-portal-frontend
@@ -1240,3 +1240,12 @@ components:
       github:
         url: https://git.wdf.sap.corp/admin/repos/NGJP/JPaaS/Infrastruc/com.sap.core.service.commandtunnel
       technology: java
+  - name: dynatrace-exporter
+    title: Dynatrace Exporter
+    description: dynatrace-exporter managed by team-coe
+    project: btp-monitoring
+    owner: team-coe
+    metadata:
+      github:
+        url: https://github.tools.sap/btp-monitoring/dynatrace-exporter
+        technology: python

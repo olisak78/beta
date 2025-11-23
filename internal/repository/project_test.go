@@ -77,22 +77,13 @@ func (suite *ProjectRepositoryTestSuite) TestCreateDuplicateName() {
 	err = suite.repo.Create(project1)
 	suite.NoError(err)
 
-	// Create second project with same name - should succeed since no unique constraint
+	// Create second project with same name - should fail due to unique constraint on name
 	project2 := suite.factories.Project.WithName("duplicate-project")
 	// NOTE: OrganizationID removed from Project model in new schema
 
 	err = suite.repo.Create(project2)
-	suite.NoError(err) // Should succeed since there's no unique constraint on project names
-
-	// Verify both projects exist
-	// NOTE: GetAll method doesn't exist, using GetByName instead to verify creation
-	project1Retrieved, err := suite.repo.GetByName(project1.Name)
-	suite.NoError(err)
-	suite.NotNil(project1Retrieved)
-	
-	project2Retrieved, err := suite.repo.GetByName(project2.Name)
-	suite.NoError(err)
-	suite.NotNil(project2Retrieved)
+	suite.Error(err)
+	suite.Contains(err.Error(), "projects_name_unique")
 }
 
 // TestCreateSameNameDifferentOrg tests creating projects with same name (REMOVED - OrganizationID no longer on Project)

@@ -79,11 +79,12 @@ if [ ! -z "$EXTRA_ARGS" ]; then
     echo "   Extra Args: $EXTRA_ARGS"
 fi
 echo ""
+ENV_PATH="./../../.env"
 
 # Try to source .env file first if it exists
-if [ -f ".env" ]; then
+if [ -f "$ENV_PATH" ]; then
     echo "📥 Loading environment variables from .env..."
-    source .env
+    source "$ENV_PATH"
     echo "✅ Loaded .env file"
     echo ""
 fi
@@ -115,7 +116,7 @@ echo ""
 # Function to check for missing required variables
 check_required_vars() {
     local missing=()
-    
+
     [ -z "$JWT_SECRET" ] && missing+=("JWT_SECRET")
     [ -z "$DB_PASSWORD" ] && missing+=("DB_PASSWORD")
     [ -z "$LDAP_HOST" ] && missing+=("LDAP_HOST")
@@ -136,7 +137,7 @@ check_required_vars() {
     [ -z "$JENKINS_ATOM_JAAS_TOKEN" ] && missing+=("JENKINS_ATOM_JAAS_TOKEN")
     [ -z "$JENKINS_GKECFSMULTICIS2_JAAS_TOKEN" ] && missing+=("JENKINS_GKECFSMULTICIS2_JAAS_TOKEN")
     [ -z "$JENKINS_ATOMPERF_JAAS_TOKEN" ] && missing+=("JENKINS_ATOMPERF_JAAS_TOKEN")
-    
+
     echo "${missing[@]}"
 }
 
@@ -153,8 +154,8 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
         echo "   • $var"
     done
     echo ""
-    
-    if [ -f ".env" ]; then
+
+    if [ -f "$ENV_PATH" ]; then
         echo "💡 Your .env file is missing these variables. Add them:"
         echo ""
         for var in "${MISSING_VARS[@]}"; do
@@ -163,8 +164,8 @@ if [ ${#MISSING_VARS[@]} -ne 0 ]; then
     else
         echo "💡 Create a .env file with the missing variables:"
         echo ""
-        echo "cat > .env << 'EOF'"
-        
+        echo "cat > $ENV_PATH << 'EOF'"
+
         # Show environment-specific secrets
         if [ "$DEPLOY_ENVIRONMENT" == "dev" ]; then
             echo "# DEV Environment Secrets"
@@ -291,7 +292,7 @@ helm lint "$CHART_DIR" -f "$VALUES_FILE"
 if helm list -n "$NAMESPACE" | grep -q "$RELEASE_NAME"; then
     echo ""
     echo "📝 Release $RELEASE_NAME exists. Performing upgrade..."
-    
+
     # Show diff if helm-diff plugin is installed
     if helm plugin list | grep -q "diff"; then
         echo ""
@@ -311,7 +312,7 @@ if helm list -n "$NAMESPACE" | grep -q "$RELEASE_NAME"; then
                 -n "$NAMESPACE" || true
         fi
     fi
-    
+
     if [ ! -z "$AI_CORE_VALUES_FILE" ]; then
         helm upgrade "$RELEASE_NAME" "$CHART_DIR" \
             -f "$VALUES_FILE" \
@@ -330,13 +331,13 @@ if helm list -n "$NAMESPACE" | grep -q "$RELEASE_NAME"; then
             --wait \
             --timeout 10m
     fi
-    
+
     echo ""
     echo "✅ Upgrade completed successfully!"
 else
     echo ""
     echo "📝 Installing new release: $RELEASE_NAME"
-    
+
     # Dry run first
     echo "   Running dry-run validation..."
     helm install "$RELEASE_NAME" "$CHART_DIR" \
@@ -344,7 +345,7 @@ else
         $EXTRA_ARGS \
         -n "$NAMESPACE" \
         --dry-run > /dev/null
-    
+
     read -p "Continue with installation? (y/N) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -366,7 +367,7 @@ else
                 --wait \
                 --timeout 10m
         fi
-        
+
         echo ""
         echo "✅ Installation completed successfully!"
     else

@@ -4,8 +4,8 @@ set -euo pipefail
 # Helper script to insert attributes to metadata by reading values from text file and inserting them to a copy of landscapes.yaml (can be changed to other)
 
 INPUT_FILE="input.txt"
-YAML_FILE="landscapes.yaml"
-OUTPUT_FILE="landscapes.updated.yaml"
+YAML_FILE="../landscapes.yaml"
+OUTPUT_FILE="../landscapes.updated.yaml"
 PREFIX_VALUE="operator.operationsconsole"
 #PREFIX_VALUE="operation-console.operationsconsole"
 #PREFIX_VALUE="operations-console.operationsconsole"
@@ -31,9 +31,8 @@ while IFS= read -r line; do
     "$OUTPUT_FILE"
 
   # 2) Set metadata.oc-prefix on the matched item(s)
-  yq eval -i \
-    "(.landscapes[] | select(.name == \"$first_word\")).metadata.\"cockpit\" = \"$second_word\"" \
-    "$OUTPUT_FILE"
+  yq eval -i "(.landscapes[] | select(.name == \"$first_word\")).metadata.\"debug\" = \"$second_word\"" "$OUTPUT_FILE"
+  # delete: yq eval -i "del(.landscapes[] | select(.name == \"$first_word\").metadata.debug)" "$OUTPUT_FILE"
 
 done < "$INPUT_FILE"
 

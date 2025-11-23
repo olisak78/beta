@@ -2,6 +2,9 @@ package database
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"developer-portal-backend/internal/database/models"
@@ -23,6 +26,7 @@ type Options struct {
 // Initialize opens a Postgres connection and creates the schema from GORM models.
 // Simplified single-phase AutoMigrate since cyclic foreign keys were removed.
 func Initialize(dsn string, opts *Options) (*gorm.DB, error) {
+	log.Print("Initializing database...")
 	// Defaults
 	if opts == nil {
 		opts = &Options{}
@@ -46,6 +50,10 @@ func Initialize(dsn string, opts *Options) (*gorm.DB, error) {
 		opts.AutoMigrate = true
 	}
 
+	dataDir, err := resolveDataDir()
+	if err != nil {
+		return nil, err
+	}
 	// Open DB
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(opts.LogLevel),
@@ -87,7 +95,95 @@ func Initialize(dsn string, opts *Options) (*gorm.DB, error) {
 		if err := db.AutoMigrate(all...); err != nil {
 			return nil, fmt.Errorf("auto-migrate: %w", err)
 		}
+
 	}
 
+	if err := CreateIndexes(db); err != nil {
+		return nil, fmt.Errorf("failed to create indexes: %w", err)
+	}
+	if err := ErrorsFix(db); err != nil {
+		return nil, fmt.Errorf("failed to fix errors in database: %w", err)
+	}
+
+	if err := InitDataFromYAMLs(db, dataDir); err != nil {
+		return nil, fmt.Errorf("failed init data from YAML files: %w", err)
+	}
+	log.Print("Initializing database done.")
 	return db, nil
+}
+
+func resolveDataDir() (string, error) {
+	// Try common locations to accommodate local runs, tests, and containers
+	candidates := []string{
+		"scripts/data",
+		"/app/scripts/data",
+	}
+	// Walk up from current working directory to find scripts/data
+	if wd, err := os.Getwd(); err == nil {
+		dir := wd
+		for i := 0; i < 5 && dir != "/" && dir != ""; i++ {
+			p := filepath.Join(dir, "scripts", "data")
+			candidates = append(candidates, p)
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+	for _, p := range candidates {
+		if fi, err := os.Stat(p); err == nil && fi.IsDir() {
+			return p, nil
+		}
+	}
+	return "", fmt.Errorf("data directory not found: tried %v", candidates)
+}
+
+func CreateIndexes(db *gorm.DB) error {
+	// Ensure unique index on organizations.name
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS organizations_name_unique ON organizations (name)`).Error; err != nil {
+		return fmt.Errorf("create unique index organizations.name: %w", err)
+	}
+	// Ensure unique index on group.name with org_id
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS groups_name_org_id_unique ON groups (name, org_id)`).Error; err != nil {
+		return fmt.Errorf("create unique index groups.name+organization_id: %w", err)
+	}
+	// Ensure unique index on team.name with group_id
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS teams_name_group_id_unique ON teams (name, group_id)`).Error; err != nil {
+		return fmt.Errorf("create unique index teams.name+group_id: %w", err)
+	}
+	// Ensure unique index on project.name
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS projects_name_unique ON projects (name)`).Error; err != nil {
+		return fmt.Errorf("create unique index projects.name: %w", err)
+	}
+	// Ensure unique index on landscape.name and project_id
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS landscapes_name_project_id_unique ON landscapes (name, project_id)`).Error; err != nil {
+		return fmt.Errorf("create unique index landscapes.name+project_id: %w", err)
+	}
+	// Ensure unique index on component.name and project_id
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS components_name_project_id_unique ON components (name, project_id)`).Error; err != nil {
+		return fmt.Errorf("create unique index components.name+project_id: %w", err)
+	}
+	// Ensure unique index on link.name and category_id
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS links_name_category_id_unique ON links (name, category_id)`).Error; err != nil {
+		return fmt.Errorf("create unique index links.name+category_id: %w", err)
+	}
+	// Ensure unique index on category.name
+	if err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS categories_name_unique ON categories (name)`).Error; err != nil {
+		return fmt.Errorf("create unique index categories.name: %w", err)
+	}
+
+	return nil
+}
+
+func ErrorsFix(db *gorm.DB) error {
+	// remove components which belong to project 'internal' - this was a test project created in early versions:
+	if err := db.Exec(`DELETE FROM components WHERE project_id IN (SELECT id FROM projects WHERE name = ?)`, "internal").Error; err != nil {
+		return err
+	}
+	// remove projects with name 'noe' or 'internal' - these were test projects created in early versions:
+	if err := db.Exec(`DELETE FROM projects WHERE name IN (?,?)`, "noe", "internal").Error; err != nil {
+		return err
+	}
+	return nil
 }

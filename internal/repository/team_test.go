@@ -94,7 +94,9 @@ func (suite *TeamRepositoryTestSuite) TestCreateDuplicateName() {
 	team2.GroupID = group.ID
 
 	err = suite.repo.Create(team2)
-	suite.NoError(err)
+	// Expect error due to unique constraint on (name, group_id)
+	suite.Error(err)
+	suite.Contains(err.Error(), "teams_name_group_id_unique")
 }
 
 // TestCreateSameNameDifferentGroup tests creating teams with same name in different groups

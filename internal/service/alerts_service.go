@@ -62,8 +62,14 @@ func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr strin
 		return nil, errors.New("failed to parse project metadata")
 	}
 
-	alertsRepo, ok := metadata["alerts-repo"].(string)
-	if !ok || alertsRepo == "" {
+	alertsRepo := ""
+	if alerts, ok := metadata["alerts"].(map[string]interface{}); ok {
+		if repo, ok := alerts["repo"].(string); ok && repo != "" {
+			alertsRepo = repo
+		}
+	}
+
+	if alertsRepo == "" {
 		return nil, errors.New("alerts repository not configured for this project")
 	}
 
@@ -182,7 +188,6 @@ func fetchAlertFiles(repoInfo *GitHubRepoInfo, token string) ([]AlertFile, error
 		return nil, fmt.Errorf("GitHub API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-
 	var githubFiles []struct {
 		Name        string `json:"name"`
 		Path        string `json:"path"`
@@ -196,7 +201,6 @@ func fetchAlertFiles(repoInfo *GitHubRepoInfo, token string) ([]AlertFile, error
 		return nil, err
 	}
 
-
 	var alertFiles []AlertFile
 	for _, file := range githubFiles {
 
@@ -204,7 +208,6 @@ func fetchAlertFiles(repoInfo *GitHubRepoInfo, token string) ([]AlertFile, error
 		if file.Type != "file" || (!strings.HasSuffix(file.Name, ".yaml") && !strings.HasSuffix(file.Name, ".yml")) {
 			continue
 		}
-
 
 		// Fetch file content
 		var content string
@@ -341,7 +344,6 @@ func createGitHubPR(repoInfo *GitHubRepoInfo, fileName, content, message, descri
 	branchName := fmt.Sprintf("alert-update-%d", time.Now().Unix())
 	filePath := fmt.Sprintf("%s/%s", repoInfo.Path, fileName)
 
-
 	// Step 1: Get the base branch ref (SHA of the latest commit on main/master)
 	refURL := fmt.Sprintf("%s/api/v3/repos/%s/%s/git/ref/heads/%s",
 		repoInfo.BaseURL, repoInfo.Owner, repoInfo.Repo, repoInfo.Branch)
@@ -403,7 +405,6 @@ func createGitHubPR(repoInfo *GitHubRepoInfo, fileName, content, message, descri
 		body, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("failed to create branch, status %d: %s", resp.StatusCode, string(body))
 	}
-
 
 	// Step 3: Get the current file to get its SHA
 	getFileURL := fmt.Sprintf("%s/api/v3/repos/%s/%s/contents/%s?ref=%s",
@@ -470,7 +471,6 @@ func createGitHubPR(repoInfo *GitHubRepoInfo, fileName, content, message, descri
 		return "", fmt.Errorf("failed to update file, status %d: %s", resp.StatusCode, string(body))
 	}
 
-
 	// Step 5: Create pull request
 	createPRURL := fmt.Sprintf("%s/api/v3/repos/%s/%s/pulls",
 		repoInfo.BaseURL, repoInfo.Owner, repoInfo.Repo)
@@ -509,7 +509,6 @@ func createGitHubPR(repoInfo *GitHubRepoInfo, fileName, content, message, descri
 	if err := json.NewDecoder(resp.Body).Decode(&prData); err != nil {
 		return "", fmt.Errorf("failed to decode PR response: %w", err)
 	}
-
 
 	return prData.HTMLURL, nil
 }

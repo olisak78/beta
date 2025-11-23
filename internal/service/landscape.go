@@ -1,14 +1,12 @@
 package service
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"strings"
-
 	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
+	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -74,29 +72,28 @@ type LandscapeMinimalResponse struct {
 	Name        string    `json:"name"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Domain      string    `json:"domain"`
-	Environment string    `json:"environment"`
-	// Enriched top-level fields (replaces exposing raw metadata in this endpoint)
-	Git              string `json:"git,omitempty"`
-	Concourse        string `json:"concourse,omitempty"`
-	Kibana           string `json:"kibana,omitempty"`
-	Dynatrace        string `json:"dynatrace,omitempty"`
+
+	Auditlog         string `json:"auditlog,omitempty"`
+	Cam              string `json:"cam,omitempty"`
 	Cockpit          string `json:"cockpit,omitempty"`
-	Grafana          string `json:"grafana,omitempty"`
+	Concourse        string `json:"concourse,omitempty"`
 	ControlCenter    string `json:"control-center,omitempty"`
-	CentralRegion    bool   `json:"central-region,omitempty"`
+	Domain           string `json:"domain"`
+	Dynatrace        string `json:"dynatrace,omitempty"`
+	Environment      string `json:"environment"`
 	Extension        bool   `json:"extension,omitempty"`
-	OperationConsole string `json:"operation-console,omitempty"`
-	Type             string `json:"type,omitempty"`
-	Prometheus       string `json:"prometheus,omitempty"`
 	Gardener         string `json:"gardener,omitempty"`
-	Plutono          string `json:"plutono,omitempty"`
-	Overview         string `json:"overview,omitempty"`
-	Logs             string `json:"logs,omitempty"`
-	Roles            string `json:"roles,omitempty"`
-	Destinations     string `json:"destinations,omitempty"`
-	Debug            string `json:"debug,omitempty"`
+	Git              string `json:"git,omitempty"`
+	Grafana          string `json:"grafana,omitempty"`
 	Health           string `json:"health,omitempty"`
+	IaasConsole      string `json:"iaas-console,omitempty"`
+	IsCentralRegion  bool   `json:"is-central-region,omitempty"`
+	Kibana           string `json:"kibana,omitempty"`
+	Monitoring       string `json:"monitoring,omitempty"`
+	OperationConsole string `json:"operation-console,omitempty"`
+	Plutono          string `json:"plutono,omitempty"`
+	Prometheus       string `json:"prometheus,omitempty"`
+	Type             string `json:"type,omitempty"`
 }
 
 // LandscapeListResponse represents a paginated list of landscapes
@@ -370,7 +367,7 @@ func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeM
 	}
 	responses := make([]LandscapeMinimalResponse, len(landscapes))
 	for i, l := range landscapes {
-		enr := enrichLandscapeMetadata(projectName, l.Domain, l.Metadata)
+		enr := enrichLandscapeMetadata(l.Metadata)
 		responses[i] = LandscapeMinimalResponse{
 			// common
 			ID:          l.ID,
@@ -381,13 +378,16 @@ func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeM
 			Environment: l.Environment,
 			Git:         enr.Git,
 			Cockpit:     enr.Cockpit,
+			Cam:         enr.Cam,
+			IaasConsole: enr.IaasConsole,
+			Auditlog:    enr.Auditlog,
 			// cis20
 			Concourse:        enr.Concourse,
 			Kibana:           enr.Kibana,
 			Dynatrace:        enr.Dynatrace,
 			Grafana:          enr.Grafana,
 			ControlCenter:    enr.ControlCenter,
-			CentralRegion:    enr.CentralRegion,
+			IsCentralRegion:  enr.IsCentralRegion,
 			Extension:        enr.Extension,
 			OperationConsole: enr.OperationConsole,
 			Type:             enr.Type,
@@ -396,11 +396,7 @@ func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeM
 			Gardener:   enr.Gardener,
 			Plutono:    enr.Plutono,
 			//neo
-			Overview:     enr.Overview,
-			Logs:         enr.Logs,
-			Roles:        enr.Roles,
-			Destinations: enr.Destinations,
-			Debug:        enr.Debug,
+			Monitoring: enr.Monitoring,
 			// cloud automation
 			Health: enr.Health,
 		}
@@ -416,81 +412,82 @@ type LandscapeEnrichment struct {
 	Cockpit          string
 	Grafana          string
 	ControlCenter    string
-	CentralRegion    bool
+	IsCentralRegion  bool
 	Extension        bool
 	OperationConsole string
 	Type             string
 	Prometheus       string
 	Gardener         string
 	Plutono          string
-	Overview         string
-	Logs             string
-	Roles            string
-	Destinations     string
-	Debug            string
+	Cam              string
+	IaasConsole      string
+	Auditlog         string
 	Health           string
+	Monitoring       string
 }
 
-func enrichLandscapeMetadata(projectName string, domain string, raw json.RawMessage) LandscapeEnrichment {
+func enrichLandscapeMetadata(raw json.RawMessage) LandscapeEnrichment {
 	m := map[string]interface{}{}
 	if len(raw) > 0 {
 		_ = json.Unmarshal(raw, &m)
 	}
 	enr := LandscapeEnrichment{}
-	switch strings.ToLower(projectName) {
-	case "cis20":
-		if repo, ok := m["landscape-repository"].(string); ok && repo != "" {
-			enr.Git = repo
-		}
-		if cockpit, ok := m["cockpit"].(string); ok && cockpit != "" {
-			enr.Cockpit = cockpit
-		}
-		enr.Concourse = fmt.Sprintf("https://concourse.cf.%s/teams/product-cf/pipelines/landscape-update-pipeline", domain)
-		enr.Kibana = fmt.Sprintf("https://logs.cf.%s/app/dashboards#/view/Requests-and-Logs", domain)
-		if apm, ok := m["apm-infra-environment"].(string); ok && apm != "" {
-			enr.Dynatrace = apm
-		}
-		if provider, ok := m["type"].(string); ok && provider != "" {
-			enr.Type = provider
-		}
-		if true == m["central-region"] {
-			enr.ControlCenter = fmt.Sprintf("https://cp-control-client.cfapps.%s", domain)
-			enr.CentralRegion = true
-		}
-		if true == m["extension"] {
-			enr.Extension = true
-		}
-		if ocPrefix, ok := m["oc-prefix"].(string); ok && ocPrefix != "" {
-			enr.OperationConsole = fmt.Sprintf("https://%s.cfapps.%s", ocPrefix, domain)
-		}
-	case "neo":
-		enr.Cockpit = fmt.Sprintf("https://account.%s", domain)
-		enr.Overview = fmt.Sprintf("https://account.%s/cockpit#/acc/services/app/account", domain)
-		enr.Logs = fmt.Sprintf("https://account.%s/cockpit#/acc/services/app/account/logging", domain)
-		enr.Roles = fmt.Sprintf("https://account.%s/cockpit#/acc/services/app/account/authorizationRolesForApplication", domain)
-		enr.Destinations = fmt.Sprintf("https://account.%s/cockpit#/acc/services/app/account/destinations", domain)
-		enr.Debug = fmt.Sprintf("https://monitoring.%s/monitoring/debug/enable/services/account/account", domain)
-	case "usrv":
-		if repo, ok := m["landscape-repository"].(string); ok && repo != "" {
-			enr.Git = repo
-		}
-		if kibana, ok := m["kibana"].(string); ok && kibana != "" {
-			enr.Kibana = kibana
-		}
-		if grafana, ok := m["grafana"].(string); ok && grafana != "" {
-			enr.Grafana = grafana
-		}
-		if prometheus, ok := m["prometheus"].(string); ok && prometheus != "" {
-			enr.Prometheus = prometheus
-		}
-		if gardener, ok := m["gardener"].(string); ok && gardener != "" {
-			enr.Gardener = gardener
-		}
-		enr.Plutono = fmt.Sprintf("https://graf.ingress.%s", domain)
-	case "ca":
-		enr.Health = fmt.Sprintf("https://cloud-automation-service.cfapps.%s/health", domain)
-	default:
-		// no enrichment for other projects
+	if repo, ok := m["git"].(string); ok && repo != "" {
+		enr.Git = repo
+	}
+	if concourse, ok := m["concourse"].(string); ok && concourse != "" {
+		enr.Concourse = concourse
+	}
+	if cockpit, ok := m["cockpit"].(string); ok && cockpit != "" {
+		enr.Cockpit = cockpit
+	}
+	if dynatrace, ok := m["dynatrace"].(string); ok && dynatrace != "" {
+		enr.Dynatrace = dynatrace
+	}
+	if grafana, ok := m["grafana"].(string); ok && grafana != "" {
+		enr.Grafana = grafana
+	}
+	if prometheus, ok := m["prometheus"].(string); ok && prometheus != "" {
+		enr.Prometheus = prometheus
+	}
+	if gardener, ok := m["gardener"].(string); ok && gardener != "" {
+		enr.Gardener = gardener
+	}
+	if kibana, ok := m["kibana"].(string); ok && kibana != "" {
+		enr.Kibana = kibana
+	}
+	if type_, ok := m["type"].(string); ok && type_ != "" {
+		enr.Type = type_
+	}
+	if true == m["is-central-region"] {
+		enr.IsCentralRegion = true
+	}
+	if controlCenter, ok := m["control-center"].(string); ok && controlCenter != "" {
+		enr.ControlCenter = controlCenter
+	}
+	if operationConsole, ok := m["operations-console"].(string); ok && operationConsole != "" {
+		enr.OperationConsole = operationConsole
+	}
+	if true == m["extension"] {
+		enr.Extension = true
+	}
+	if plutono, ok := m["plutono"].(string); ok && plutono != "" {
+		enr.Plutono = plutono
+	}
+	if health, ok := m["health"].(string); ok && health != "" {
+		enr.Health = health
+	}
+	if cam, ok := m["cam"].(string); ok && cam != "" {
+		enr.Cam = cam
+	}
+	if iaasConsole, ok := m["iaas-console"].(string); ok && iaasConsole != "" {
+		enr.IaasConsole = iaasConsole
+	}
+	if monitoring, ok := m["monitoring"].(string); ok && monitoring != "" {
+		enr.Monitoring = monitoring
+	}
+	if auditlog, ok := m["auditlog"].(string); ok && auditlog != "" {
+		enr.Auditlog = auditlog
 	}
 	return enr
 }
@@ -629,19 +626,6 @@ func (s *LandscapeService) GetWithProjects(id uuid.UUID) (*models.Landscape, err
 			return nil, apperrors.ErrLandscapeNotFound
 		}
 		return nil, fmt.Errorf("failed to get landscape with projects: %w", err)
-	}
-
-	return landscape, nil
-}
-
-// GetWithComponentDeployments retrieves a landscape with component deployments
-func (s *LandscapeService) GetComponentDeployments(id uuid.UUID) (*models.Landscape, error) {
-	landscape, err := s.repo.GetWithComponentDeployments(id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrLandscapeNotFound
-		}
-		return nil, fmt.Errorf("failed to get landscape with component deployments: %w", err)
 	}
 
 	return landscape, nil

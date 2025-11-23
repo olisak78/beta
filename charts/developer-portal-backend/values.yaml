@@ -3,46 +3,33 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
-
 image:
   repository: atom-cfs-docker.common.repositories.cloud.sap/dev/amit/developer-portal/backend
   pullPolicy: Always
-  tag: "1.0.11"
-
-initData:
-  image:
-    repository: atom-cfs-docker.common.repositories.cloud.sap/dev/amit/developer-portal/init-data
-    tag: "1.0.6"
-
+  tag: "1.0.19"
 imagePullSecrets:
   - name: gcr-registry
 nameOverride: ""
 fullnameOverride: ""
-
 serviceAccount:
   create: true
   annotations: {}
   name: ""
-
 podAnnotations: {}
-
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1001
   fsGroup: 1001
-
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
-    - ALL
+      - ALL
   readOnlyRootFilesystem: false
-
 service:
   type: ClusterIP
   port: 7008
   targetPort: 7008
-
 ingress:
   enabled: true
   # Gardener-managed hostname (environment.service.app.domain pattern)
@@ -54,7 +41,6 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     # Add any other custom annotations here
-
 resources:
   limits:
     cpu: 1000m
@@ -62,7 +48,6 @@ resources:
   requests:
     cpu: 250m
     memory: 256Mi
-
 livenessProbe:
   httpGet:
     path: /health
@@ -71,7 +56,6 @@ livenessProbe:
   periodSeconds: 10
   timeoutSeconds: 5
   failureThreshold: 3
-
 readinessProbe:
   httpGet:
     path: /health
@@ -80,11 +64,8 @@ readinessProbe:
   periodSeconds: 5
   timeoutSeconds: 3
   failureThreshold: 3
-
 nodeSelector: {}
-
 tolerations: []
-
 affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
@@ -97,7 +78,6 @@ affinity:
                 values:
                   - developer-portal-backend
           topologyKey: kubernetes.io/hostname
-
 # Application Configuration
 config:
   environment: "production"
@@ -105,14 +85,12 @@ config:
   port: "7008"
   logLevel: "info"
   allowedOrigins:
-    - "*"  # TODO: Update with actual frontend URL after frontend deployment
-
+    - "*" # TODO: Update with actual frontend URL after frontend deployment
 # Auth Configuration
 auth:
   # OAuth redirect URL - must match your backend's public URL
   # OAuth callback will be: {redirectUrl}/api/auth/{provider}/handler/frame
   redirectUrl: "https://dev.backend.developer-portal.cfs.c.eu-de-2.cloud.sap"
-
 # Database Configuration
 database:
   # Use internal PostgreSQL subchart
@@ -126,11 +104,9 @@ database:
     password: ""
   # SSL Mode: "disable" for simple password auth without TLS
   sslMode: "disable"
-
 # JWT Configuration
 jwt:
   secret: "change-me-in-production"
-
 # LDAP Configuration
 ldap:
   host: "ldap.example.com"
@@ -140,18 +116,15 @@ ldap:
   baseDN: "DC=example,DC=com"
   insecureSkipVerify: false
   timeoutSec: 10
-
 # Jira Configuration
 jira:
   domain: "jira.example.com"
   user: "service-account@example.com"
   password: "change-me"
-
 # Sonar Configuration
 sonar:
   host: "https://sonarqube.example.com"
   token: "change-me"
-
 # GitHub OAuth Configuration
 github:
   tools:
@@ -162,11 +135,9 @@ github:
     clientId: "change-me"
     clientSecret: "change-me"
     enterpriseBaseUrl: "https://github.wdf.sap.corp"
-
 # OAuth Encryption
 oauth:
   encryptionKey: "change-me-in-production"
-
 # Jenkins Configuration
 jenkins:
   pUser: "change-me"
@@ -175,26 +146,24 @@ jenkins:
   atomperfJaasToken: "change-me"
   # Set to true to skip TLS certificate verification for SAP internal CAs
   insecureSkipVerify: true
-
 # AI Core Configuration
 # Credentials as JSON array - will be exposed as AI_CORE_CREDENTIALS env variable
 # IMPORTANT: All fields are required for each credential entry
 aiCore:
   credentials: []
-    # Example:
-    # - team: "team-name"                                    # Team name (must match team in DB)
-    #   clientId: "your-client-id"                           # AI Core OAuth client ID
-    #   clientSecret: "your-client-secret"                   # AI Core OAuth client secret
-    #   oauthUrl: "https://your-tenant.authentication.sap.hana.ondemand.com/oauth/token"  # OAuth token URL
-    #   apiUrl: "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com"               # AI Core API URL
-    #   resourceGroup: "default"                             # AI Core resource group
-    # - team: "another-team"
-    #   clientId: "another-client-id"
-    #   clientSecret: "another-client-secret"
-    #   oauthUrl: "https://your-tenant.authentication.sap.hana.ondemand.com/oauth/token"
-    #   apiUrl: "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com"
-    #   resourceGroup: "default"
-
+  # Example:
+  # - team: "team-name"                                    # Team name (must match team in DB)
+  #   clientId: "your-client-id"                           # AI Core OAuth client ID
+  #   clientSecret: "your-client-secret"                   # AI Core OAuth client secret
+  #   oauthUrl: "https://your-tenant.authentication.sap.hana.ondemand.com/oauth/token"  # OAuth token URL
+  #   apiUrl: "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com"               # AI Core API URL
+  #   resourceGroup: "default"                             # AI Core resource group
+  # - team: "another-team"
+  #   clientId: "another-client-id"
+  #   clientSecret: "another-client-secret"
+  #   oauthUrl: "https://your-tenant.authentication.sap.hana.ondemand.com/oauth/token"
+  #   apiUrl: "https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com"
+  #   resourceGroup: "default"
 # PostgreSQL subchart configuration
 postgresql:
   enabled: true
@@ -227,4 +196,3 @@ postgresql:
         memory: 512Mi
   metrics:
     enabled: false
-

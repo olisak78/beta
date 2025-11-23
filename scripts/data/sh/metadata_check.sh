@@ -3,11 +3,14 @@ set -euo pipefail
 
 # Helper script to test metadata: search by conditions, echo and/or open browser with URL
 # Requires yq (brew install yq)
-INPUT_FILE="${1:-landscapes.yaml}"
+INPUT_FILE="${1:-../landscapes.yaml}"
 
 # Iterate over matching entries (project=cis20, environment=?)
 #and (.metadata | has("oc-prefix") | not)
 #and .environment == "live"
+# and (.metadata | has("extension") | not)
+# and (.metadata | has("oc-prefix"))
+# and (.metadata | has("central-region"))
 yq -r '.landscapes[]
   | select(
                 .project == "cis20"
@@ -23,7 +26,13 @@ yq -r '.landscapes[]
   #URL="https://operator.operationsconsole.cfapps.${DOMAIN}"
   #URL="https://operations-console.operationsconsole.cfapps.${DOMAIN}"
   #URL="https://${OC_PREFIX}.cfapps.${DOMAIN}"
-  URL="https://cp-control-client.cfapps.${DOMAIN}"
+  #URL="https://concourse.cf.${DOMAIN}/teams/product-cf/pipelines/landscape-update-pipeline"
+  #URL="https://logs.cf.${DOMAIN}/app/dashboards#/view/Requests-and-Logs"
+  #URL="https://cp-control-client.cfapps.${DOMAIN}"
+  #URL="https://graf.ingress.${DOMAIN}"
+  #URL="https://cloud-automation-service.cfapps.${DOMAIN}/health"
+  URL="https://monitoring.${DOMAIN}/monitoring/debug/enable/services/account/account"
+
   echo "$NAME $URL"
 
   # Open a new Chrome window and record its ID

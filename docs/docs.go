@@ -31,12 +31,13 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Send chat messages to a deployed model and get AI responses",
+                "description": "Send chat messages to a deployed model and get AI responses (supports streaming)",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
-                    "application/json"
+                    "application/json",
+                    "text/event-stream"
                 ],
                 "tags": [
                     "ai-core"
@@ -1021,6 +1022,124 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/projects/{projectId}/alerts": {
+            "get": {
+                "description": "Fetches all Prometheus alert configurations from the configured GitHub repository",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alerts"
+                ],
+                "summary": "Get Prometheus alerts from GitHub repository",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Alerts data",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/projects/{projectId}/alerts/pr": {
+            "post": {
+                "description": "Creates a pull request to update Prometheus alert configurations in GitHub",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alerts"
+                ],
+                "summary": "Create a pull request with alert changes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Alert changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PR created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "security": [
@@ -1067,6 +1186,56 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/cis-public/proxy": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetch data from component public endpoints (health, version, system info) server-side to avoid CORS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cis-public"
+                ],
+                "summary": "Proxy component public endpoints",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Component public endpoint URL to fetch",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response from component endpoint",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "URL parameter is required",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Failed to fetch from component",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -1511,6 +1680,63 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/service.TotalContributionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid period parameter",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "GitHub API error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/github/pr-review-comments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the total number of pull request reviews performed by the authenticated user over a specified period (default 30 days)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "github"
+                ],
+                "summary": "Get PR review comments count",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Time period in days (e.g., '30d', '90d', '180d'). Default: '30d'",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/service.PRReviewCommentsResponse"
                         }
                     },
                     "400": {
@@ -2469,6 +2695,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves all projects from the database",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get all projects",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved all projects",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handlers.ProjectResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/self-service/jenkins/{jaasName}/queue/{queueItemId}/status": {
             "get": {
                 "description": "Retrieves the current status of a queued Jenkins job. Poll this endpoint to track when the job starts building and obtain the build number and URL.",
@@ -2877,6 +3141,74 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid team ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Team not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/teams/{id}/metadata": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Merges the provided metadata fields with existing team metadata. Only updates/adds the fields provided, preserves other existing fields (e.g., updating color preserves jira config)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "teams"
+                ],
+                "summary": "Update team metadata (merge, not replace)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Metadata fields to update/add",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.UpdateTeamMetadataRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated team with merged metadata",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3386,7 +3718,7 @@ const docTemplate = `{
                 },
                 "expiresInSeconds": {
                     "type": "integer",
-                    "example": 43200
+                    "example": 3600
                 },
                 "profile": {
                     "$ref": "#/definitions/auth.UserProfile"
@@ -3674,6 +4006,47 @@ const docTemplate = `{
                 }
             }
         },
+        "handlers.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "created_by": {
+                    "type": "string",
+                    "example": "user123"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "This is a sample project"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "my-project"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "My Project"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "updated_by": {
+                    "type": "string",
+                    "example": "user123"
+                }
+            }
+        },
         "handlers.UpdateRepositoryFileRequest": {
             "type": "object",
             "required": [
@@ -3693,6 +4066,18 @@ const docTemplate = `{
                 },
                 "sha": {
                     "type": "string"
+                }
+            }
+        },
+        "handlers.UpdateTeamMetadataRequest": {
+            "type": "object",
+            "required": [
+                "metadata"
+            ],
+            "properties": {
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": true
                 }
             }
         },
@@ -4567,6 +4952,9 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "parent": {
+                    "$ref": "#/definitions/service.JiraParent"
+                },
                 "priority": {
                     "$ref": "#/definitions/service.JiraPriority"
                 },
@@ -4575,6 +4963,12 @@ const docTemplate = `{
                 },
                 "status": {
                     "$ref": "#/definitions/service.JiraStatus"
+                },
+                "subtasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.JiraSubtask"
+                    }
                 },
                 "summary": {
                     "type": "string"
@@ -4615,6 +5009,37 @@ const docTemplate = `{
                 }
             }
         },
+        "service.JiraParent": {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "$ref": "#/definitions/service.JiraParentFields"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.JiraParentFields": {
+            "type": "object",
+            "properties": {
+                "issuetype": {
+                    "$ref": "#/definitions/service.JiraIssueType"
+                },
+                "priority": {
+                    "$ref": "#/definitions/service.JiraPriority"
+                },
+                "status": {
+                    "$ref": "#/definitions/service.JiraStatus"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
         "service.JiraPriority": {
             "type": "object",
             "properties": {
@@ -4633,6 +5058,37 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.JiraSubtask": {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "$ref": "#/definitions/service.JiraSubtaskFields"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.JiraSubtaskFields": {
+            "type": "object",
+            "properties": {
+                "issuetype": {
+                    "$ref": "#/definitions/service.JiraIssueType"
+                },
+                "priority": {
+                    "$ref": "#/definitions/service.JiraPriority"
+                },
+                "status": {
+                    "$ref": "#/definitions/service.JiraStatus"
+                },
+                "summary": {
                     "type": "string"
                 }
             }
@@ -4688,22 +5144,83 @@ const docTemplate = `{
         "service.LandscapeMinimalResponse": {
             "type": "object",
             "properties": {
+                "central-region": {
+                    "type": "boolean"
+                },
+                "cockpit": {
+                    "type": "string"
+                },
+                "concourse": {
+                    "type": "string"
+                },
+                "control-center": {
+                    "type": "string"
+                },
+                "debug": {
+                    "type": "string"
+                },
                 "description": {
+                    "type": "string"
+                },
+                "destinations": {
                     "type": "string"
                 },
                 "domain": {
                     "type": "string"
                 },
+                "dynatrace": {
+                    "type": "string"
+                },
                 "environment": {
+                    "type": "string"
+                },
+                "extension": {
+                    "type": "boolean"
+                },
+                "gardener": {
+                    "type": "string"
+                },
+                "git": {
+                    "description": "Enriched top-level fields (replaces exposing raw metadata in this endpoint)",
+                    "type": "string"
+                },
+                "grafana": {
+                    "type": "string"
+                },
+                "health": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
+                "kibana": {
+                    "type": "string"
+                },
+                "logs": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
+                "operation-console": {
+                    "type": "string"
+                },
+                "overview": {
+                    "type": "string"
+                },
+                "plutono": {
+                    "type": "string"
+                },
+                "prometheus": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "string"
+                },
                 "title": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -4758,6 +5275,27 @@ const docTemplate = `{
                 "week_start": {
                     "type": "string",
                     "example": "2024-10-15"
+                }
+            }
+        },
+        "service.PRReviewCommentsResponse": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2024-10-16T00:00:00Z"
+                },
+                "period": {
+                    "type": "string",
+                    "example": "30d"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2024-11-16T23:59:59Z"
+                },
+                "total_comments": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

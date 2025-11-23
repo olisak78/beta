@@ -199,7 +199,6 @@ func (mr *MockUserServiceInterfaceMockRecorder) UpdateUser(id, req any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockUserServiceInterface)(nil).UpdateUser), id, req)
 }
 
-
 // MockTeamServiceInterface is a mock of TeamServiceInterface interface.
 type MockTeamServiceInterface struct {
 	ctrl     *gomock.Controller
@@ -730,7 +729,6 @@ func (mr *MockLandscapeServiceInterfaceMockRecorder) UpdateLandscape(id, req any
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLandscape", reflect.TypeOf((*MockLandscapeServiceInterface)(nil).UpdateLandscape), id, req)
 }
-
 
 // MockGitHubServiceInterface is a mock of GitHubServiceInterface interface.
 type MockGitHubServiceInterface struct {
@@ -1446,4 +1444,19 @@ func (m *MockDocumentationServiceInterface) UpdateDocumentation(id uuid.UUID, re
 func (mr *MockDocumentationServiceInterfaceMockRecorder) UpdateDocumentation(id, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDocumentation", reflect.TypeOf((*MockDocumentationServiceInterface)(nil).UpdateDocumentation), id, req)
+}
+
+// GetAllProjects mocks base method.
+func (m *MockProjectServiceInterface) GetAllProjects() ([]models.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllProjects")
+	ret0, _ := ret[0].([]models.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllProjects indicates an expected call of GetAllProjects.
+func (mr *MockProjectServiceInterfaceMockRecorder) GetAllProjects() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProjects", reflect.TypeOf((*MockProjectServiceInterface)(nil).GetAllProjects))
 }

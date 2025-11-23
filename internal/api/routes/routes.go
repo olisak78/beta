@@ -54,6 +54,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Initialize services
 	userService := service.NewUserService(userRepo, linkRepo, validator)
 	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator)
+	projectService := service.NewProjectService(projectRepo, validator)
 	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator)
 	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator)
 	categoryService := service.NewCategoryService(categoryRepo, validator)
@@ -95,6 +96,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	healthHandler := handlers.NewHealthHandler(db)
 	userHandler := handlers.NewUserHandler(userService, teamRepo)
 	teamHandler := handlers.NewTeamHandler(teamService)
+	projectHandler := handlers.NewProjectHandler(projectService)
 	componentHandler := handlers.NewComponentHandler(componentService, teamService)
 	landscapeHandler := handlers.NewLandscapeHandler(landscapeService)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
@@ -166,7 +168,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		teams := v1.Group("/teams")
 		{
 			teams.GET("", teamHandler.GetAllTeams)
-			teams.PATCH("/:id/metadata", teamHandler.UpdateTeamMetadata) // Update team metadata
+			teams.PATCH("/:id/metadata", teamHandler.UpdateTeamMetadata)           // Update team metadata
 			teams.GET("/:id/documentations", docHandler.GetDocumentationsByTeamID) // Get documentations by team ID
 		}
 
@@ -177,6 +179,12 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			documentations.GET("/:id", docHandler.GetDocumentationByID)
 			documentations.PATCH("/:id", docHandler.UpdateDocumentation)
 			documentations.DELETE("/:id", docHandler.DeleteDocumentation)
+		}
+
+		// Project routes
+		projects := v1.Group("/projects")
+		{
+			projects.GET("", projectHandler.GetAllProjects)
 		}
 
 		// Component routes

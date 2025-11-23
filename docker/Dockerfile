@@ -37,6 +37,8 @@ COPY --from=builder /app/main .
 
 # Copy auth configuration
 COPY --from=builder /app/config ./config
+# Copy initial data YAMLs
+COPY --from=builder /app/scripts/data ./scripts/data
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app

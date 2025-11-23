@@ -1,56 +1,60 @@
 landscapes:
-  - name: ls-cla-eu10-canary
+  - name: cloud-automation-canary
     title: Canary
     description: Canary
     domain: canary.hana.ondemand.com
     project: ca
     environment: preview
     metadata:
-      landscape-repository: https://github.tools.sap/cp-core-k8s/ls-cla-eu10-canary
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=k8s-core-cla-eu10c
+      git: https://github.tools.sap/cp-core-k8s/ls-cla-eu10-canary
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=k8s-core-cla-eu10c
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-cla-eu10c/shoots/
       grafana: https://gu-cla-eu10c--cl-auto-cn.ingress.eu9.aws.seed.live.k8s.ondemand.com/
       kibana: https://kibana-sf-06a49606-fe9f-49af-88c9-be8acd2f8617.cls-02.cloud.logs.services.sap.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
       dynatrace: https://canary.eu10.apm.services.cloud.sap/e/3c24485f-e6cd-4212-8020-290cde919b36/ui/entity/SERVICE-659398A5BFFA54A2?gtf=-2h&gf=all&sessionId=7gsY8NcssjuGHBhF
-  - name: ls-cla-eu10-int
+      health: https://cloud-automation-service.cfapps.canary.hana.ondemand.com/health
+  - name: cloud-automation-int
     title: Integrate
     description: Integrate
     domain: us10-integrate.hanavlab.ondemand.com
     project: ca
     environment: testing
     metadata:
-      landscape-repository: https://github.tools.sap/cfs-cloud-automation/landscape-cloud-automation-int
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
+      git: https://github.tools.sap/cfs-cloud-automation/landscape-cloud-automation-int
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
       gardener: https://dashboard.garden.canary.k8s.ondemand.com/namespace/garden-cfs-dev/shoots/cloud-auto-int/
       grafana: https://gu-cfs-dev--cloud-auto-int.ingress.eu2.aws.seed.canary.k8s.ondemand.com/
       kibana: https://kibana-sf-95f820b7-66ad-4d2b-9c45-5396a1f605b9.cls-01.cloud.logs.services.sap.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
       dynatrace: https://apm.cf.hotfixaws.hanavlab.ondemand.com/e/57a5446f-2a00-40f8-952c-a3ec1aeb81f7/ui/kubernetes/KUBERNETES_CLUSTER-E44E6941E3ADEFB6?gtf=-2h&gf=all
-  - name: ls-cla-eu10-live
+      health: https://cloud-automation-service.cfapps.us10-integrate.hanavlab.ondemand.com/health
+  - name: cloud-automation-live
     title: Live
     description: Live
     domain: eu10.hana.ondemand.com
     project: ca
     environment: production
     metadata:
-      landscape-repository: https://github.tools.sap/cp-core-k8s/ls-cla-eu10-live
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=k8s-core-cla-eu10l
+      git: https://github.tools.sap/cp-core-k8s/ls-cla-eu10-live
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=k8s-core-cla-eu10l
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-cla-eu10l/shoots/
       grafana: https://gu-cla-eu10l--cl-auto-lv.ingress.eu4.aws.seed.live.k8s.ondemand.com/
       kibana: https://kibana-sf-49495e75-65eb-41cc-b467-6efbec2d0bc3.cls-11.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
       dynatrace: https://apm.cf.eu10.hana.ondemand.com/e/c7c03030-12e3-474e-bb26-2805ea06a604/ui/kubernetes/KUBERNETES_CLUSTER-CC89D2F023062861?gtf=c_1678182929948_1678193864326&gf=all
-  - name: ls-cla-eu10-staging
+      health: https://cloud-automation-service.cfapps.eu10.hana.ondemand.com/health
+  - name: cloud-automation-staging
     title: Staging
     description: Staging
     domain: stagingaws.hanavlab.ondemand.com
     project: ca
     environment: staging
     metadata:
-      landscape-repository: https://github.tools.sap/cfs-cloud-automation/landscape-cloud-automation-staging
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
+      git: https://github.tools.sap/cfs-cloud-automation/landscape-cloud-automation-staging
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
       gardener: https://dashboard.garden.canary.k8s.ondemand.com/namespace/garden-cfs-dev/shoots/cloud-auto-stg/
       grafana: https://plutono-shoot--cfs-dev--cloud-auto-stg.ingress.eu5.aws-ha.seed.canary.k8s.ondemand.com/d/node-worker-pool-overview/node-worker-pool-overview?orgId=1&refresh=1m
       kibana: https://kibana-sf-802f962c-22ea-45d6-be51-4dec7de64b64.cls-03.cloud.logs.services.sap.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
       dynatrace: https://staging.us10.apm.services.cloud.sap/e/121ba5cc-bee6-4007-9103-80b0f498503e/#services/serviceOverview;gtf=-12h%20to%20now;gf=705430376232399121;id=SERVICE-6D9592F7D4F61276;appswitched=true
+      health: https://cloud-automation-service.cfapps.stagingaws.hanavlab.ondemand.com/health
   - name: cf-ae01
     title: UAE (Dubai)
     description: UAE (Dubai) SAP Cloud Infrastructure
@@ -58,19 +62,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.ap-ae-1.cloud.sap/btp_fp/cp-cf-ae01/home
-      apm-infra-environment: https://live.ae1.apm.services.cloud.sap/e/c76f031a-1922-4004-9388-7a50aec8e5ff
+      iaas-console: https://dashboard.ap-ae-1.cloud.sap/btp_fp/cp-cf-ae01/home
+      dynatrace: https://live.ae1.apm.services.cloud.sap/e/c76f031a-1922-4004-9388-7a50aec8e5ff
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/265104419/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.192.77
       jumpbox2: 10.190.193.227
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ae01-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ae01-landscape
       region: ap-ae-1
       slack-channel: ls-ccee-cf-ae01
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ae01.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ae01.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ae01.hana.ondemand.com
   - name: cf-ap01
     title: Australia (Sydney) 01
     description: Australia (Sydney) SAP Cloud Infrastructure
@@ -78,19 +84,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.ap-au-1.cloud.sap/btp_fp/cp-cf-ap01/home
-      apm-infra-environment: https://live.ap1.apm.services.cloud.sap/e/a39b1af0-f4f8-4046-951f-5810a3136778
+      iaas-console: https://dashboard.ap-au-1.cloud.sap/btp_fp/cp-cf-ap01/home
+      dynatrace: https://live.ap1.apm.services.cloud.sap/e/a39b1af0-f4f8-4046-951f-5810a3136778
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/263619334/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.8.68
       jumpbox2: 10.188.234.144
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap01-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap01-landscape
       region: ap-au-1
       slack-channel: ls-ccee-cf-ap01
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ap01.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap01.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ap01.hana.ondemand.com
   - name: cf-ap10
     title: Australia (Sydney) 10
     description: Australia (Sydney) AWS
@@ -98,19 +106,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap10
-      apm-infra-environment: https://live.ap10.apm.services.cloud.sap/e/0aa71c72-b361-4fcf-b881-3ce91517e7dc
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap10
+      dynatrace: https://live.ap10.apm.services.cloud.sap/e/0aa71c72-b361-4fcf-b881-3ce91517e7dc
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/133571/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 13.55.57.30
       jumpbox2: 54.66.178.146
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap10-landscape
       region: ap-southeast-2
       slack-channel: ls-aws-cf-ap10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.ap10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.ap10.hana.ondemand.com
   - name: cf-ap11
     title: Singapore 11
     description: Singapore AWS
@@ -118,19 +128,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap11
-      apm-infra-environment: https://live.ap11.apm.services.cloud.sap/e/b194eb8a-867e-4ab9-b8e8-372bfddfc30a
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap11
+      dynatrace: https://live.ap11.apm.services.cloud.sap/e/b194eb8a-867e-4ab9-b8e8-372bfddfc30a
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/219903/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 13.251.74.52
       jumpbox2: 18.139.126.87
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap11-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap11-landscape
       region: ap-southeast-1
       slack-channel: ls-aws-cf-ap11
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.ap11.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap11.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.ap11.hana.ondemand.com
   - name: cf-ap12
     title: South Korea (Seoul)
     description: South Korea (Seoul) AWS
@@ -138,19 +150,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap12
-      apm-infra-environment: https://live.ap12.apm.services.cloud.sap/e/d0c73872-58b0-4af6-a267-9c8f096bba30
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ap12
+      dynatrace: https://live.ap12.apm.services.cloud.sap/e/d0c73872-58b0-4af6-a267-9c8f096bba30
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/24508853/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 3.35.124.34
       jumpbox2: 3.35.83.132
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap12-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap12-landscape
       region: ap-northeast-2
       slack-channel: ls-aws-cf-ap12
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ap12.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap12.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ap12.hana.ondemand.com
   - name: cf-ap20
     title: Australia (Sydney) 20
     description: Australia (Sydney) Azure
@@ -158,19 +172,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/0161df46-390a-4bb9-9f66-b6ed8ff160f5/resourceGroups/rg-cf-ap20/overview
-      apm-infra-environment: https://live.ap20.apm.services.cloud.sap/e/e93f13c8-1bb3-435f-a0fb-f489f65245d3
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/0161df46-390a-4bb9-9f66-b6ed8ff160f5/resourceGroups/rg-cf-ap20/overview
+      dynatrace: https://live.ap20.apm.services.cloud.sap/e/e93f13c8-1bb3-435f-a0fb-f489f65245d3
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/34295415/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 40.82.214.190
       jumpbox2: 40.82.205.186
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap20-landscape
       region: australiaeast
       slack-channel: ls-azure-cf-ap20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ap20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ap20.hana.ondemand.com
   - name: cf-ap21
     title: Singapore 21
     description: Singapore Azure
@@ -178,19 +194,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/4be62b0f-987f-4883-b188-15f8f935adb6/resourceGroups/rg-cf-ap21/overview
-      apm-infra-environment: https://live.ap21.apm.services.cloud.sap/e/249e49c5-1ad9-4955-a7fb-49a9e8d41439
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/4be62b0f-987f-4883-b188-15f8f935adb6/resourceGroups/rg-cf-ap21/overview
+      dynatrace: https://live.ap21.apm.services.cloud.sap/e/249e49c5-1ad9-4955-a7fb-49a9e8d41439
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/1193426/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 52.237.97.99
       jumpbox2: 52.230.105.46
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap21-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap21-landscape
       region: southeastasia
       slack-channel: ls-azure-cf-ap21
       type: azure
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.ap21.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap21.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.ap21.hana.ondemand.com
   - name: cf-ap30
     title: Australia (Sydney) 30
     description: Australia (Sydney) GCP
@@ -198,19 +216,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-ap30-live
-      apm-infra-environment: https://live.ap30.apm.services.cloud.sap/e/3022937b-cd89-44e8-bc77-5e79873f5fd7
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-ap30-live
+      dynatrace: https://live.ap30.apm.services.cloud.sap/e/3022937b-cd89-44e8-bc77-5e79873f5fd7
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/199416592/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 35.244.70.104
       jumpbox2: 35.201.5.22
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap30-landscape
       region: australia-southeast1
       slack-channel: ls-gcp-cf-ap30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ap30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ap30.hana.ondemand.com
   - name: cf-ap31
     title: Singapore 31
     description: Singapore GCP
@@ -218,19 +238,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-ap31-live
-      apm-infra-environment: https://live.ap31.apm.services.cloud.sap/e/6dcbce33-95ba-494d-a9e9-c2a45ac305e2
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-ap31-live
+      dynatrace: https://live.ap31.apm.services.cloud.sap/e/6dcbce33-95ba-494d-a9e9-c2a45ac305e2
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/248620832/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 34.124.176.25
       jumpbox2: 35.240.192.126
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ap31-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ap31-landscape
       region: asia-southeast1
       slack-channel: ls-gcp-cf-ap31
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ap31.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ap31.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ap31.hana.ondemand.com
   - name: cf-br10
     title: Brazil (São Paulo) 10
     description: Brazil (São Paulo) AWS
@@ -238,19 +260,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-br10
-      apm-infra-environment: https://live.br10.apm.services.cloud.sap/e/3c6e79c1-b583-4c01-8cf2-ddf8686a46b1
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-br10
+      dynatrace: https://live.br10.apm.services.cloud.sap/e/3c6e79c1-b583-4c01-8cf2-ddf8686a46b1
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/74565/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 18.231.67.130
       jumpbox2: 18.228.123.191
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-br10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-br10-landscape
       region: sa-east-1
       slack-channel: ls-aws-cf-br10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.br10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.br10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.br10.hana.ondemand.com
   - name: cf-br20
     title: Brazil (São Paulo) 20
     description: Brazil (São Paulo) Azure
@@ -258,19 +282,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a3c932a3-fecc-4286-985b-53d782a2b0d7/overview
-      apm-infra-environment: https://live.br20.apm.services.cloud.sap/e/5753f6c4-a2b9-4f96-9622-5e0d3d2b64ec
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a3c932a3-fecc-4286-985b-53d782a2b0d7/overview
+      dynatrace: https://live.br20.apm.services.cloud.sap/e/5753f6c4-a2b9-4f96-9622-5e0d3d2b64ec
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/199416390/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 20.206.250.129
       jumpbox2: 4.228.56.61
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-br20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-br20-landscape
       region: brazilsouth
       slack-channel: ls-azure-cf-br20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.br20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.br20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.br20.hana.ondemand.com
   - name: cf-br30
     title: Brazil (São Paulo) 30
     description: Brazil (São Paulo) GCP
@@ -278,19 +304,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-br30-live
-      apm-infra-environment: https://live.br30.apm.services.cloud.sap/e/1cabe793-ebf2-4756-8462-e2bb4de4c935
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-br30-live
+      dynatrace: https://live.br30.apm.services.cloud.sap/e/1cabe793-ebf2-4756-8462-e2bb4de4c935
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/199416485/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 34.95.237.85
       jumpbox2: 34.95.169.213
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-br30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-br30-landscape
       region: southamerica-east1
       slack-channel: ls-gcp-cf-br30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.br30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.br30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.br30.hana.ondemand.com
   - name: cf-ca10
     title: Canada (Montreal)
     description: Canada (Montreal) AWS
@@ -298,19 +326,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ca10
-      apm-infra-environment: https://live.ca10.apm.services.cloud.sap/e/b349e002-8cb3-4b1d-a86b-b0db024f6c90
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-ca10
+      dynatrace: https://live.ca10.apm.services.cloud.sap/e/b349e002-8cb3-4b1d-a86b-b0db024f6c90
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/335671/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 35.183.216.196
       jumpbox2: 52.60.247.245
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ca10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ca10-landscape
       region: ca-central-1
       slack-channel: ls-aws-cf-ca10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.ca10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ca10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.ca10.hana.ondemand.com
   - name: cf-ca20
     title: Canada Central (Toronto)
     description: Canada Central (Toronto) AZURE
@@ -318,19 +348,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/49092aaa-e918-4991-8fc4-dd552bec1c9f/overview
-      apm-infra-environment: https://live.ca20.apm.services.cloud.sap/e/6bb4518d-5cd2-451a-b1cc-7f78de2aa16f
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/49092aaa-e918-4991-8fc4-dd552bec1c9f/overview
+      dynatrace: https://live.ca20.apm.services.cloud.sap/e/6bb4518d-5cd2-451a-b1cc-7f78de2aa16f
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/236982197/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 20.220.17.254
       jumpbox2: 20.220.175.166
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ca20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ca20-landscape
       region: canadacentral
       slack-channel: ls-azure-cf-ca20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ca20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ca20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ca20.hana.ondemand.com
   - name: cf-ch20
     title: Switzerland (Zurich) EU Access
     description: Switzerland (Zurich) Azure EU Access
@@ -338,19 +370,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/7c0e9c99-804f-4438-8347-4d2b3c4f3f06/resourceGroups/rg-cf-ch20/overview
-      apm-infra-environment: https://live.ch20.apm.services.cloud.sap/e/71b251e0-c877-4dad-a4d2-ed9b6aa12715
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/7c0e9c99-804f-4438-8347-4d2b3c4f3f06/resourceGroups/rg-cf-ch20/overview
+      dynatrace: https://live.ch20.apm.services.cloud.sap/e/71b251e0-c877-4dad-a4d2-ed9b6aa12715
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/84991699/LAST_HOUR
-      cam-profile-devod: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
       ccf-universe: live
       cockpit: https://eu-access.cockpit.btp.cloud.sap
       jumpbox: 51.107.2.18
       jumpbox2: 51.103.216.109
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-ch20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-ch20-landscape
       region: switzerlandnorth
       slack-channel: ls-azure-cf-ch20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.ch20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.ch20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.ch20.hana.ondemand.com
   - name: cf-cn20
     title: China (North 3) 20
     description: China (North 3) Azure
@@ -358,19 +392,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.cn/#@cdcprod.partner.onmschina.cn/resource/subscriptions/2bb3f049-9304-4276-9bf7-0dd5edf501d6/resourceGroups/rg-cn20-live/overview
-      apm-infra-environment: https://live.cn20.apm.services.sapcloud.cn/e/8e04de8c-5923-4ae8-82ac-cf090313f9ba
+      iaas-console: https://portal.azure.cn/#@cdcprod.partner.onmschina.cn/resource/subscriptions/2bb3f049-9304-4276-9bf7-0dd5edf501d6/resourceGroups/rg-cn20-live/overview
+      dynatrace: https://live.cn20.apm.services.sapcloud.cn/e/8e04de8c-5923-4ae8-82ac-cf090313f9ba
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/235311204/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20%28CN%20Live%29
+      cam: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20%28CN%20Live%29
       ccf-universe: China Live
       cockpit: https://cockpit.cn40.platform.sapcloud.cn
       jumpbox: 159.27.66.209
       jumpbox2: 159.27.99.108
-      landscape-repository: https://github.tools.sap/cpops/landscape-cn20-live
+      git: https://github.tools.sap/cpops/landscape-cn20-live
       region: ChinaNorth3
       slack-channel: ls-azure-cf-cn20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.cn20.platform.sapcloud.cn/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.cn20.platform.sapcloud.cn/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.cn20.platform.sapcloud.cn
   - name: cf-cn20-canary
     title: China (North 3) Canary
     description: China (North 3) Azure Canary
@@ -378,19 +414,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://portal.azure.cn/#@sapchn.partner.onmschina.cn/resource/subscriptions/4df8baee-ab00-485c-85ba-5cc43532d70a/resourceGroups/rg-cn20-canary/overview
-      apm-infra-environment: https://canary.cn20.apm.services.sapcloud.cn/e/3fc7c8d5-4b3c-48f0-8d02-6b0eb6f08fdb
+      iaas-console: https://portal.azure.cn/#@sapchn.partner.onmschina.cn/resource/subscriptions/4df8baee-ab00-485c-85ba-5cc43532d70a/resourceGroups/rg-cn20-canary/overview
+      dynatrace: https://canary.cn20.apm.services.sapcloud.cn/e/3fc7c8d5-4b3c-48f0-8d02-6b0eb6f08fdb
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/223280813/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: China canary
       cockpit: https://cockpit.canaryac.vlab-sapcloudplatformdev.cn
       jumpbox: 159.27.99.5
       jumpbox2: 159.27.72.223
-      landscape-repository: https://github.tools.sap/cpops/landscape-cn20-canary
+      git: https://github.tools.sap/cpops/landscape-cn20-canary
       region: ChinaNorth3
       slack-channel: ls-azure-cf-cn20-canary
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.canaryaz.vlab-sapcloudplatformdev.cn/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.canaryaz.vlab-sapcloudplatformdev.cn/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.canaryaz.vlab-sapcloudplatformdev.cn
   - name: cf-cn20-staging
     title: China (North 3) Staging
     description: China (North 3) Azure Staging
@@ -398,19 +436,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://portal.azure.cn/#@sapchn.partner.onmschina.cn/resource/subscriptions/531b6237-69cb-4044-8c6f-7f87219c0047/resourceGroups/rg-cn20-staging/overview
-      apm-infra-environment: https://staging.cn20.apm.services.sapcloud.cn/e/b6bdfaa0-fcde-444d-a828-bf56f6483f9c/
+      iaas-console: https://portal.azure.cn/#@sapchn.partner.onmschina.cn/resource/subscriptions/531b6237-69cb-4044-8c6f-7f87219c0047/resourceGroups/rg-cn20-staging/overview
+      dynatrace: https://staging.cn20.apm.services.sapcloud.cn/e/b6bdfaa0-fcde-444d-a828-bf56f6483f9c/
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: China staging
       cockpit: https://cockpit.stagingac.vlab-sapcloudplatformdev.cn
       jumpbox: 159.27.210.62
       jumpbox2: 159.27.73.201
-      landscape-repository: https://github.tools.sap/cloudfoundry/cf-cn20-staging-landscape
+      git: https://github.tools.sap/cloudfoundry/cf-cn20-staging-landscape
       region: ChinaNorth3
       slack-channel: ls-az-cf-cn20-staging
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.stagingaz.vlab-sapcloudplatformdev.cn/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingaz.vlab-sapcloudplatformdev.cn/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.stagingaz.vlab-sapcloudplatformdev.cn
   - name: cf-cn40-canary
     title: China (Shanghai) Canary
     description: China (Shanghai) AliCloud Canary
@@ -418,19 +458,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
-      apm-infra-environment: https://canary.cn40.apm.services.sapcloud.cn/e/6ff1c7c6-1df1-4dfc-8a3b-4a65b6b2d8cd
+      iaas-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
+      dynatrace: https://canary.cn40.apm.services.sapcloud.cn/e/6ff1c7c6-1df1-4dfc-8a3b-4a65b6b2d8cd
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/22522323/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: China canary
       cockpit: https://cockpit.canaryac.vlab-sapcloudplatformdev.cn
       jumpbox: 101.132.141.66
       jumpbox2: 106.14.192.44
-      landscape-repository: https://github.tools.sap/cpops/landscape-ac-canary
+      git: https://github.tools.sap/cpops/landscape-ac-canary
       region: Shanghai
       slack-channel: ls-ac-cf-cn40-canary
       type: ali
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.canaryac.vlab-sapcloudplatformdev.cn/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.canaryac.vlab-sapcloudplatformdev.cn/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.canaryac.vlab-sapcloudplatformdev.cn
   - name: cf-cn40-hotfix
     title: China (Shanghai) Hotfix
     description: China (Shanghai) AliCloud Hotfix
@@ -438,19 +480,21 @@ landscapes:
     project: cis20
     environment: hotfix
     metadata:
-      IaaS-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
-      apm-infra-environment: https://hotfix.cn40.apm.services.sapcloud.cn/e/d56f90fe-523e-4f9d-849d-4ac0df697d1b
+      iaas-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
+      dynatrace: https://hotfix.cn40.apm.services.sapcloud.cn/e/d56f90fe-523e-4f9d-849d-4ac0df697d1b
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: China hotfix
       cockpit: https://cockpit.hotfixac.vlab-sapcloudplatformdev.cn
       jumpbox: 47.103.15.208
       jumpbox2: 47.101.217.255
-      landscape-repository: https://github.tools.sap/cpops/landscape-ac-hotfix
+      git: https://github.tools.sap/cpops/landscape-ac-hotfix
       region: Shanghai
       slack-channel: ls-ac-cf-cn40-hotfix
       type: ali
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.hotfixac.vlab-sapcloudplatformdev.cn/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.hotfixac.vlab-sapcloudplatformdev.cn/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.hotfixac.vlab-sapcloudplatformdev.cn
   - name: cf-eu01
     title: Europe (Frankfurt) EUA only
     description: Europe (Frankfurt) SAP Live, EU access only
@@ -458,19 +502,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01/home
-      apm-infra-environment: https://live.eu1.apm.services.cloud.sap/e/9a4c808a-eb1e-496b-a2ea-ab61b401d1ac
+      iaas-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01/home
+      dynatrace: https://live.eu1.apm.services.cloud.sap/e/9a4c808a-eb1e-496b-a2ea-ab61b401d1ac
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/255365931/LAST_HOUR
-      cam-profile-devod: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.136.166
       jumpbox2: 10.190.134.87
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu01-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu01-landscape
       region: eu-de-2
       slack-channel: ls-ccee-cf-eu01
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu01.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu01.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu01.hana.ondemand.com
   - name: cf-eu01-canary
     title: Europe (Frankfurt) Canary EU01
     description: Europe (Frankfurt) SAP Canary
@@ -478,19 +524,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01-canary/home
-      apm-infra-environment: https://canary.eu1.apm.services.cloud.sap/e/df7437a5-ee71-4580-806d-4dd012674823
+      iaas-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01-canary/home
+      dynatrace: https://canary.eu1.apm.services.cloud.sap/e/df7437a5-ee71-4580-806d-4dd012674823
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/223308399/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: https://canary.cockpit.btp.int.sap
       jumpbox: 10.190.136.26
       jumpbox2: 10.190.134.16
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu01-canary-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu01-canary-landscape
       region: eu-de-2
       slack-channel: ls-ccee-cf-eu01-canary
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu01-canary.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu01-canary.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu01-canary.hana.ondemand.com
   - name: cf-eu01-hotfix
     title: Europe (Frankfurt) Hotfix
     description: Europe (Frankfurt) SAP Hotfix
@@ -498,19 +546,21 @@ landscapes:
     project: cis20
     environment: hotfix
     metadata:
-      IaaS-console: ""
-      apm-infra-environment: ""
+      iaas-console: ""
+      dynatrace: ""
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: ""
       cockpit: http://cockpit.hotfixaws.hanavlab.ondemand.com
       jumpbox: ""
       jumpbox2: ""
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu01-hotfix-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu01-hotfix-landscape
       region: ""
       slack-channel: ls-ccee-cf-eu01-hotfix
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu01-hotfix.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu01-hotfix.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu01-hotfix.hanavlab.ondemand.com
   - name: cf-eu01-integrate
     title: Europe (Frankfurt) - Integrate
     description: Europe (Frankfurt) SAP Integrate
@@ -518,19 +568,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01-integrate/home
-      apm-infra-environment: https://canary.eu1.apm.services.cloud.sap/e/a1c43ff6-358c-47ca-97bb-c3e1a1e7a125
+      iaas-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cp-cf-eu01-integrate/home
+      dynatrace: https://canary.eu1.apm.services.cloud.sap/e/a1c43ff6-358c-47ca-97bb-c3e1a1e7a125
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: https://cockpit.us10-integrate.hanavlab.ondemand.com
       jumpbox: 10.190.136.186
       jumpbox2: 10.190.134.185
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu01-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu01-integrate-landscape
       region: eu-de-2
       slack-channel: ls-ccee-cf-eu01-integrate
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu01-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu01-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu01-integrate.hanavlab.ondemand.com
   - name: cf-eu01-staging
     title: Europe (Frankfurt) CCEE staging
     description: Europe (Frankfurt) CCEE staging
@@ -538,19 +590,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cf-eu00-staging/home
-      apm-infra-environment: https://staging.eu1.apm.services.cloud.sap/e/4bc12d60-7caa-45a2-85c1-e09185e853b8
+      iaas-console: https://dashboard.eu-de-2.cloud.sap/btp_fp/cf-eu00-staging/home
+      dynatrace: https://staging.eu1.apm.services.cloud.sap/e/4bc12d60-7caa-45a2-85c1-e09185e853b8
       avs-aggregated-monitor: ""
-      cam-profile-devod: ""
+      cam: ""
       ccf-universe: staging
       cockpit: https://staging.cockpit.btp.int.sap
       jumpbox: 10.190.134.39
       jumpbox2: 10.190.136.39
-      landscape-repository: https://github.tools.sap/cloudfoundry/cf-eu01-staging-landscape
+      git: https://github.tools.sap/cloudfoundry/cf-eu01-staging-landscape
       region: ""
       slack-channel: ls-ccee-cf-eu01-staging
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.stagingccee.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingccee.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.stagingccee.hanavlab.ondemand.com
   - name: cf-eu02
     title: Europe (Rot)
     description: Europe (Rot) SAP EU Access
@@ -558,19 +612,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.eu-de-1.cloud.sap/btp_fp/cp-cf-eu02/home
-      apm-infra-environment: https://live.eu2.apm.services.cloud.sap/e/3a6c272e-c6f6-4bed-8dd7-2c0193e61d30
+      iaas-console: https://dashboard.eu-de-1.cloud.sap/btp_fp/cp-cf-eu02/home
+      dynatrace: https://live.eu2.apm.services.cloud.sap/e/3a6c272e-c6f6-4bed-8dd7-2c0193e61d30
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/270612031/LAST_HOUR
-      cam-profile-devod: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
       ccf-universe: live
       cockpit: https://eu-access.cockpit.btp.cloud.sap
       jumpbox: 10.190.183.47
       jumpbox2: 10.47.196.166
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu02-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu02-landscape
       region: eu-de-1
       slack-channel: ls-ccee-cf-eu02
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu02.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu02.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu02.hana.ondemand.com
   - name: cf-eu10
     title: Europe (Frankfurt)
     description: Europe (Frankfurt) AWS
@@ -578,20 +634,23 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      central-region: true
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10
-      apm-infra-environment: https://live.eu10.apm.services.cloud.sap/e/c7c03030-12e3-474e-bb26-2805ea06a604
+      is-central-region: true
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/c7c03030-12e3-474e-bb26-2805ea06a604
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65153/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 18.195.99.177
       jumpbox2: 3.123.160.80
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.eu10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      control-center: https://cp-control-client-uc2.cfapps.eu10.hana.ondemand.com
+      operations-console: https://operations-console.operationsconsole.cfapps.eu10.hana.ondemand.com
   - name: cf-eu10-002
     title: Europe (Frankfurt) 002
     description: Europe (Frankfurt) AWS 002
@@ -599,19 +658,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-002
-      apm-infra-environment: https://live.eu10.apm.services.cloud.sap/e/bce1748b-d959-40b2-a5b5-79ee6446f3e9
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-002
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/bce1748b-d959-40b2-a5b5-79ee6446f3e9
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/35667497/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 18.198.200.246
       jumpbox2: 3.64.171.136
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-002-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-002-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10-002
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu10-002.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu10-002.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu10-003
     title: Europe (Frankfurt) 003
     description: Europe (Frankfurt) AWS 003
@@ -619,19 +680,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-003
-      apm-infra-environment: https://live.eu10.apm.services.cloud.sap/e/110aab93-b611-49a1-ba6b-878fe90f0ae4
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-003
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/110aab93-b611-49a1-ba6b-878fe90f0ae4
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/36054754/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 3.64.174.230
       jumpbox2: 18.198.177.145
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-003-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-003-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10-003
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu10-003.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu10-003.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu10-004
     title: Europe (Frankfurt) 004
     description: Europe (Frankfurt) AWS 004
@@ -639,19 +702,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-004
-      apm-infra-environment: https://live.eu10.apm.services.cloud.sap/e/6caf0e69-52fe-49ef-931e-61fbb2c0ae47
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-004
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/6caf0e69-52fe-49ef-931e-61fbb2c0ae47
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/48234994/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 18.156.40.231
       jumpbox2: 3.66.21.137
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-004-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-004-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10-004
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu10-004.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu10-004.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu10-005
     title: Europe (Frankfurt) 005
     description: Europe (Frankfurt) AWS 005
@@ -659,19 +724,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-005
-      apm-infra-environment: https://live.eu10.apm.services.cloud.sap/e/691ca225-8698-49b8-8822-29f2f6e80041
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-005
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/691ca225-8698-49b8-8822-29f2f6e80041
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/199064001/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 52.57.82.77
       jumpbox2: 3.124.250.50
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-005-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-005-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10-005
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu10-005.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu10-005.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu10-canary
     title: Europe (Frankfurt) Canary
     description: Europe (Frankfurt) AWS Canary
@@ -679,20 +746,23 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      central-region: true
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-canary
-      apm-infra-environment: https://canary.eu10.apm.services.cloud.sap/e/3c24485f-e6cd-4212-8020-290cde919b36
+      is-central-region: true
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu10-canary
+      dynatrace: https://canary.eu10.apm.services.cloud.sap/e/3c24485f-e6cd-4212-8020-290cde919b36
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65154/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: https://canary.cockpit.btp.int.sap
       jumpbox: 35.158.149.138
       jumpbox2: 3.120.22.190
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu10-canary-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu10-canary-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu10-canary
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.sap.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.sap.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      control-center: https://cp-control-client-uc2.cfapps.sap.hana.ondemand.com
+      operations-console: https://operations-console.operationsconsole.cfapps.sap.hana.ondemand.com
   - name: cf-eu11
     title: Europe (Frankfurt) EU access
     description: Europe (Frankfurt) AWS EU access
@@ -700,19 +770,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu11
-      apm-infra-environment: https://live.eu11.apm.services.cloud.sap/e/f5e9a579-b464-4c72-81f4-b06723879ecc
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu11
+      dynatrace: https://live.eu11.apm.services.cloud.sap/e/f5e9a579-b464-4c72-81f4-b06723879ecc
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/4925251/LAST_HOUR
-      cam-profile-devod: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E23DBB31ED78C99F9C0AE8F5569
       ccf-universe: live
       cockpit: https://eu-access.cockpit.btp.cloud.sap
       jumpbox: 18.156.125.28
       jumpbox2: 3.125.223.244
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu11-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu11-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu11
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu11.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu11.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu11.hana.ondemand.com
   - name: cf-eu12
     title: Europe (Frankfurt) 2
     description: Europe (Frankfurt) AWS 2 Canary
@@ -720,19 +792,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12
-      apm-infra-environment: https://canary.eu12.apm.services.cloud.sap/e/33877c4a-9c15-4a93-833b-6da12d4587aa
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12
+      dynatrace: https://canary.eu12.apm.services.cloud.sap/e/33877c4a-9c15-4a93-833b-6da12d4587aa
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/9598906/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: https://canary.cockpit.btp.int.sap
       jumpbox: 18.158.48.230
       jumpbox2: 18.158.64.207
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu12-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu12-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu12
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu12.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu12.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu12.hana.ondemand.com
   - name: cf-eu12-001
     title: Europe (Frankfurt) 2 001
     description: Europe (Frankfurt) AWS 2 Canary 001
@@ -740,19 +814,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12-001
-      apm-infra-environment: https://canary.eu12.apm.services.cloud.sap/e/eb5b8511-7f6a-4448-a9ad-9beece8e8bfe
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12-001
+      dynatrace: https://canary.eu12.apm.services.cloud.sap/e/eb5b8511-7f6a-4448-a9ad-9beece8e8bfe
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/18682669/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: ""
       jumpbox: 35.158.56.190
       jumpbox2: 18.159.19.135
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu12-001-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu12-001-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu12-001
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu12-001.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu12-001.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu12-002
     title: Europe (Frankfurt) Canary 002
     description: Europe (Frankfurt) AWS 2 canary 002
@@ -760,19 +836,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12-002
-      apm-infra-environment: https://canary.eu12.apm.services.cloud.sap/e/a6e8850e-7119-43be-8d6b-1092676ebf71
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu12-002
+      dynatrace: https://canary.eu12.apm.services.cloud.sap/e/a6e8850e-7119-43be-8d6b-1092676ebf71
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/180137533/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: ""
       jumpbox: 3.72.130.184
       jumpbox2: 3.68.42.106
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu12-002-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu12-002-landscape
       region: eu-central-1
       slack-channel: ls-aws-cf-eu12-002
       type: aws
       extension: true
+      concourse: https://concourse.cf.eu12-002.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu12-002.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu13
     title: Europe (Milan)
     description: Europe (Milan) AWS
@@ -780,19 +858,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu13
-      apm-infra-environment: https://live.eu13.apm.services.cloud.sap/e/ce947f72-16c6-4d24-b996-91fba4151c8c
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-eu13
+      dynatrace: https://live.eu13.apm.services.cloud.sap/e/ce947f72-16c6-4d24-b996-91fba4151c8c
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/265104421/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 15.160.13.219
       jumpbox2: 18.102.117.80
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu13-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu13-landscape
       region: eu-south-1
       slack-channel: ls-aws-cf-eu13
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu13.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu13.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu13.hana.ondemand.com
   - name: cf-eu20
     title: Europe (Netherlands) 20
     description: Europe (Netherlands) Azure
@@ -800,19 +880,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/9d5aa33d-a58c-40ce-82e6-9374b9b6c216/resourceGroups/rg-azure-live-eu20/overview
-      apm-infra-environment: https://live.eu20.apm.services.cloud.sap/e/7a86811f-8258-4a60-bdfb-794bb50e7845
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/9d5aa33d-a58c-40ce-82e6-9374b9b6c216/resourceGroups/rg-azure-live-eu20/overview
+      dynatrace: https://live.eu20.apm.services.cloud.sap/e/7a86811f-8258-4a60-bdfb-794bb50e7845
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65156/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 40.113.162.247
       jumpbox2: 51.136.113.190
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu20-landscape
       region: westeurope
       slack-channel: ls-azure-cf-eu20
       type: azure
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.eu20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.eu20.hana.ondemand.com
   - name: cf-eu20-001
     title: Europe (Netherlands) 20 001
     description: Europe (Netherlands) Azure 001
@@ -820,19 +902,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/ccbc118b-ae57-477d-9ab2-3e4ca5f5b7bb/resourceGroups/rg-cf-eu20-001/overview
-      apm-infra-environment: https://live.eu20.apm.services.cloud.sap/e/306f0df9-ddf5-467b-b2a1-eea3a4a5a1b7/
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/ccbc118b-ae57-477d-9ab2-3e4ca5f5b7bb/resourceGroups/rg-cf-eu20-001/overview
+      dynatrace: https://live.eu20.apm.services.cloud.sap/e/306f0df9-ddf5-467b-b2a1-eea3a4a5a1b7/
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/95522196/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 20.107.60.53
       jumpbox2: 20.56.178.187
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu20-001-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu20-001-landscape
       region: westeurope
       slack-channel: ls-azure-cf-eu20-001
       type: azure
       extension: true
+      concourse: https://concourse.cf.eu20-001.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu20-001.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu20-002
     title: Europe (Netherlands) 20 002
     description: Europe (Netherlands) Azure 002
@@ -840,19 +924,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/f346eeb7-94b6-43f4-8680-c2455a62a7e4/overview
-      apm-infra-environment: ""
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/f346eeb7-94b6-43f4-8680-c2455a62a7e4/overview
+      dynatrace: ""
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 74.234.163.16
       jumpbox2: ""
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu20-002-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu20-002-landscape
       region: westeurope
       slack-channel: ls-azure-cf-eu20-002
       type: azure
       extension: true
+      concourse: https://concourse.cf.eu20-002.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu20-002.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-eu20-integrate
     title: "Europe West - Integrate"
     description: "Europe West - Integrate"
@@ -860,19 +946,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a0525d78-9914-4342-af91-b149e469c423/resourceGroups/rg-cf-eu20-integrate/overview
-      apm-infra-environment: https://canary.eu21.apm.services.cloud.sap/e/0afd3a1a-2644-4088-b274-9e8adcb1467f
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a0525d78-9914-4342-af91-b149e469c423/resourceGroups/rg-cf-eu20-integrate/overview
+      dynatrace: https://canary.eu21.apm.services.cloud.sap/e/0afd3a1a-2644-4088-b274-9e8adcb1467f
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: https://cockpit.us10-integrate.hanavlab.ondemand.com
       jumpbox: 20.82.121.67
       jumpbox2: 20.86.83.236
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu20-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu20-integrate-landscape
       region: westeurope
       slack-channel: ls-azure-cf-eu20-integrate
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu20-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu20-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu20-integrate.hanavlab.ondemand.com
   - name: cf-eu20-staging
     title: "Europe West - Staging"
     description: "Europe West - Staging"
@@ -880,19 +968,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/41506888-24fb-4fdc-84cf-c0084fca150e/resourceGroups/rg-azure-staging/overview
-      apm-infra-environment: https://staging.eu20.apm.services.cloud.sap/e/b7ecc45a-af75-4947-924d-fa7d62311093
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/41506888-24fb-4fdc-84cf-c0084fca150e/resourceGroups/rg-azure-staging/overview
+      dynatrace: https://staging.eu20.apm.services.cloud.sap/e/b7ecc45a-af75-4947-924d-fa7d62311093
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: staging
       cockpit: https://staging.cockpit.btp.int.sap
       jumpbox: 40.113.161.80
       jumpbox2: 51.124.97.253
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-azure-staging
+      git: https://github.tools.sap/cloudfoundry/landscape-azure-staging
       region: westeurope
       slack-channel: ""
       type: azure
-      oc-prefix: operation-console.operationsconsole
+      concourse: https://concourse.cf.stagingazure.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingazure.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operation-console.operationsconsole.cfapps.stagingazure.hanavlab.ondemand.com
   - name: cf-eu21
     title: Europe (Netherlands) 21
     description: Europe (Netherlands) Azure Canary
@@ -900,19 +990,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a01ac046-bfe1-4a0a-89aa-746fe220f28a/resourceGroups/rg-cf-eu21/overview
-      apm-infra-environment: https://canary.eu21.apm.services.cloud.sap/e/d236c273-b35c-4606-8bdc-efda3ad45860
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/a01ac046-bfe1-4a0a-89aa-746fe220f28a/resourceGroups/rg-cf-eu21/overview
+      dynatrace: https://canary.eu21.apm.services.cloud.sap/e/d236c273-b35c-4606-8bdc-efda3ad45860
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/75025130/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: https://canary.cockpit.btp.int.sap
       jumpbox: 20.56.76.101
       jumpbox2: 20.67.36.59
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu21-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu21-landscape
       region: westeurope
       slack-channel: ls-azure-cf-eu21
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu21.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu21.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu21.hana.ondemand.com
   - name: cf-eu22
     title: Europe (Frankfurt) EU22
     description: Europe (Frankfurt) Azure
@@ -920,19 +1012,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/ec55eb8c-4e0c-4701-a741-f32807f7f321/overview
-      apm-infra-environment: https://live.eu22.apm.services.cloud.sap/e/3fb741fd-3bec-45e7-ad08-ce3d58bfa6cc
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/ec55eb8c-4e0c-4701-a741-f32807f7f321/overview
+      dynatrace: https://live.eu22.apm.services.cloud.sap/e/3fb741fd-3bec-45e7-ad08-ce3d58bfa6cc
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/278675871/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 20.170.114.210
       jumpbox2: 20.79.169.144
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu22-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu22-landscape
       region: germanywestcentral
       slack-channel: ls-azure-cf-eu22
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu22.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu22.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu22.hana.ondemand.com
   - name: cf-eu23-canary
     title: Europe (Frankfurt) Canary EU23
     description: Europe (Frankfurt) Azure Canary
@@ -940,19 +1034,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/5d0a96ff-e0f7-40c7-bd56-742474729dea/overview
-      apm-infra-environment: ""
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/5d0a96ff-e0f7-40c7-bd56-742474729dea/overview
+      dynatrace: ""
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/277292036/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: ""
       jumpbox: 4.182.249.20
       jumpbox2: 9.141.72.206
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu23-canary-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu23-canary-landscape
       region: germanywestcentral
       slack-channel: ls-azure-cf-eu23-canary
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu23-canary.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu23-canary.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu23-canary.hana.ondemand.com
   - name: cf-eu30
     title: Europe (Frankfurt) 30
     description: Europe (Frankfurt) GCP
@@ -960,19 +1056,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-eu30-live
-      apm-infra-environment: https://live.eu30.apm.services.cloud.sap/e/7de1c6a7-ef01-4d80-98f0-410b446492c7
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-eu30-live
+      dynatrace: https://live.eu30.apm.services.cloud.sap/e/7de1c6a7-ef01-4d80-98f0-410b446492c7
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/60858117/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 35.246.186.129
       jumpbox2: 35.246.143.194
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu30-landscape
       region: europe-west3
       slack-channel: ls-gcp-cf-eu30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu30.hana.ondemand.com
   - name: cf-eu31
     title: Europe (Netherlands) 31
     description: Europe (Netherlands) GCP
@@ -980,19 +1078,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-eu31-live
-      apm-infra-environment: https://live.eu31.apm.services.cloud.sap/e/68939597-758b-4631-ba51-2903dd5547d8
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-eu31-live
+      dynatrace: https://live.eu31.apm.services.cloud.sap/e/68939597-758b-4631-ba51-2903dd5547d8
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/248640661/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 34.90.188.217
       jumpbox2: 34.141.229.20
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-eu31-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-eu31-landscape
       region: europe-west4
       slack-channel: ls-gcp-cf-eu31
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.eu31.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.eu31.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.eu31.hana.ondemand.com
   - name: cf-eu40-staging
     title: Europe (Frankfurt) AC
     description: Europe (Frankfurt) AliCloud Staging
@@ -1000,19 +1100,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
-      apm-infra-environment: https://staging.eu40.apm.services.cloud.sap/e/7f0705c3-2fc8-4c06-bb49-b28310b923a5
+      iaas-console: https://cn40-ops.accounts.sapcloud.cn/saml2/idp/sso?sp=urn:alibaba:cloudcomputing
+      dynatrace: https://staging.eu40.apm.services.cloud.sap/e/7f0705c3-2fc8-4c06-bb49-b28310b923a5
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: China staging
       cockpit: https://cockpit.stagingac.hanavlab.ondemand.com
       jumpbox: 47.91.74.228
       jumpbox2: 47.254.159.35
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-ac-staging2
+      git: https://github.tools.sap/cloudfoundry/landscape-ac-staging2
       region: eu-central-1
       slack-channel: ""
       type: ali
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.stagingac.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingac.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.stagingac.hanavlab.ondemand.com
   - name: cf-il30
     title: Israel (Tel Aviv)
     description: Israel (Tel Aviv) GCP
@@ -1020,19 +1122,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-il30-live
-      apm-infra-environment: https://live.il30.apm.services.cloud.sap/e/0218928c-6785-4d06-8743-e342cbd395c8
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-il30-live
+      dynatrace: https://live.il30.apm.services.cloud.sap/e/0218928c-6785-4d06-8743-e342cbd395c8
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/180128142/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 34.165.158.192
       jumpbox2: 34.165.41.133
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-il30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-il30-landscape
       region: me-west1
       slack-channel: ls-gcp-cf-il30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.il30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.il30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.il30.hana.ondemand.com
   - name: cf-in30
     title: India (Mumbai)
     description: India (Mumbai) GCP
@@ -1040,19 +1144,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-in30-live
-      apm-infra-environment: https://live.in30.apm.services.cloud.sap/e/871bcfb2-48b4-499c-9381-474e5adb937f
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-in30-live
+      dynatrace: https://live.in30.apm.services.cloud.sap/e/871bcfb2-48b4-499c-9381-474e5adb937f
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65088064/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 35.244.26.62
       jumpbox2: 34.93.200.93
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-in30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-in30-landscape
       region: asia-south1
       slack-channel: ls-gcp-cf-in30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.in30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.in30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.in30.hana.ondemand.com
   - name: cf-jp01
     title: Japan (Tokyo) 01
     description: Japan (Tokyo) SAP Cloud Infrastructure
@@ -1060,19 +1166,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.ap-jp-1.cloud.sap/btp_fp/cp-cf-jp01/home
-      apm-infra-environment: https://live.jp1.apm.services.cloud.sap/e/526f2a2b-6d43-4377-9a28-64da482e649b
+      iaas-console: https://dashboard.ap-jp-1.cloud.sap/btp_fp/cp-cf-jp01/home
+      dynatrace: https://live.jp1.apm.services.cloud.sap/e/526f2a2b-6d43-4377-9a28-64da482e649b
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/271375753/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.194.181
       jumpbox2: 10.190.181.185
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-jp01-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-jp01-landscape
       region: ap-jp-1
       slack-channel: ls-ccee-cf-jp01
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.jp01.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.jp01.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.jp01.hana.ondemand.com
   - name: cf-jp10
     title: Japan (Tokyo)
     description: Japan (Tokyo) AWS
@@ -1080,19 +1188,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-jp10
-      apm-infra-environment: https://live.jp10.apm.services.cloud.sap/e/7e99fa53-7cfd-4eb1-adf5-d683ce104e32
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-jp10
+      dynatrace: https://live.jp10.apm.services.cloud.sap/e/7e99fa53-7cfd-4eb1-adf5-d683ce104e32
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/102342/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 54.95.90.37
       jumpbox2: 52.192.188.131
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-jp10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-jp10-landscape
       region: ap-northeast-1
       slack-channel: ls-aws-cf-jp10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.jp10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.jp10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.jp10.hana.ondemand.com
   - name: cf-jp20
     title: Japan (Tokyo) 20
     description: Japan (Tokyo) Azure
@@ -1100,19 +1210,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/a8e7b685-3883-4d8a-bf3b-c87a5ac52e13/resourceGroups/rg-cf-jp20/overview
-      apm-infra-environment: https://live.jp20.apm.services.cloud.sap/e/c7137c0c-fc90-4953-88ed-b76f7180858f
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/a8e7b685-3883-4d8a-bf3b-c87a5ac52e13/resourceGroups/rg-cf-jp20/overview
+      dynatrace: https://live.jp20.apm.services.cloud.sap/e/c7137c0c-fc90-4953-88ed-b76f7180858f
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/1006520/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 52.185.190.233
       jumpbox2: 40.81.201.252
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-jp20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-jp20-landscape
       region: japaneast
       slack-channel: ls-azure-cf-jp20
       type: azure
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.jp20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.jp20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.jp20.hana.ondemand.com
   - name: cf-jp30
     title: Japan (Osaka)
     description: Japan (Osaka) GCP
@@ -1120,19 +1232,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-jp30-live
-      apm-infra-environment: https://live.jp30.apm.services.cloud.sap/e/28ffd354-6478-4024-a63b-29fe8cf8af7c
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-jp30-live
+      dynatrace: https://live.jp30.apm.services.cloud.sap/e/28ffd354-6478-4024-a63b-29fe8cf8af7c
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/170898888/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 34.97.223.173
       jumpbox2: 34.97.231.215
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-jp30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-jp30-landscape
       region: asia-northeast2
       slack-channel: ls-gcp-cf-jp30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.jp30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.jp30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.jp30.hana.ondemand.com
   - name: cf-jp31
     title: Japan (Tokyo) 31
     description: Japan (Tokyo) GCP
@@ -1140,19 +1254,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-jp31-live
-      apm-infra-environment: https://live.jp31.apm.services.cloud.sap/e/a99b4c6c-01cb-40a8-afcd-df6f899852c8
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-jp31-live
+      dynatrace: https://live.jp31.apm.services.cloud.sap/e/a99b4c6c-01cb-40a8-afcd-df6f899852c8
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/236982591/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 35.243.99.39
       jumpbox2: 34.85.82.140
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-jp31-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-jp31-landscape
       region: asia-northeast1
       slack-channel: ls-gcp-cf-jp31
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.jp31.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.jp31.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.jp31.hana.ondemand.com
   - name: cf-sa30
     title: KSA (Dammam)
     description: KSA (Dammam) GCP public sector
@@ -1160,19 +1276,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-sa30-live
-      apm-infra-environment: https://live.sa30.apm.services.cloud.sap/e/697094aa-644d-4f12-a2c0-09a96b492626
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-sa30-live
+      dynatrace: https://live.sa30.apm.services.cloud.sap/e/697094aa-644d-4f12-a2c0-09a96b492626
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/175552764/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 34.166.63.254
       jumpbox2: 34.166.38.27
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-sa30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-sa30-landscape
       region: me-central2
       slack-channel: ls-gcp-cf-sa30
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.sa30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.sa30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.sa30.hana.ondemand.com
   - name: cf-sa31
     title: KSA (Dammam) 31
     description: KSA (Dammam) GCP
@@ -1180,19 +1298,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-sa31-live
-      apm-infra-environment: https://live.sa31.apm.services.cloud.sap/e/59c8eb59-0e07-4d70-bcf1-6dbffa9e7f45
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-sa31-live
+      dynatrace: https://live.sa31.apm.services.cloud.sap/e/59c8eb59-0e07-4d70-bcf1-6dbffa9e7f45
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/235097119/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 34.166.109.22
       jumpbox2: 34.166.96.1
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-sa31-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-sa31-landscape
       region: me-central2
       slack-channel: ls-gcp-cf-sa31
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.sa31.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.sa31.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.sa31.hana.ondemand.com
   - name: cf-uk20
     title: UK South (London)
     description: UK South (London) Azure
@@ -1200,19 +1320,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/7ff55efc-3342-4bc9-a912-617325c0d6a5/overview
-      apm-infra-environment: ""
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/7ff55efc-3342-4bc9-a912-617325c0d6a5/overview
+      dynatrace: ""
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/277148379/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 20.90.167.136
       jumpbox2: 172.187.219.90
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-uk20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-uk20-landscape
       region: uksouth
       slack-channel: ls-azure-cf-uk20
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.uk20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.uk20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.uk20.hana.ondemand.com
   - name: cf-us01
     title: US (Sterling)
     description: US (Sterling) SAP Cloud Infrastructure
@@ -1220,19 +1342,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.na-us-1.cloud.sap/btp_fp/cp-cf-us01/home
-      apm-infra-environment: https://live.us1.apm.services.cloud.sap/e/a31c3f5a-109e-481b-81fe-8dd468a32f59
+      iaas-console: https://dashboard.na-us-1.cloud.sap/btp_fp/cp-cf-us01/home
+      dynatrace: https://live.us1.apm.services.cloud.sap/e/a31c3f5a-109e-481b-81fe-8dd468a32f59
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/276912430/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.195.208
       jumpbox2: 10.190.199.17
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us01-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us01-landscape
       region: na-us-1
       slack-channel: ls-ccee-cf-us01
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us01.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us01.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us01.hana.ondemand.com
   - name: cf-us02
     title: US West (Colorado)
     description: US West (Colorado) SAP Cloud Infrastructure
@@ -1240,19 +1364,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://dashboard.na-us-2.cloud.sap/btp_fp/cp-cf-us02/home
-      apm-infra-environment: https://live.us2.apm.services.cloud.sap/e/a2781537-c495-43a3-963c-c0c79a0476df
+      iaas-console: https://dashboard.na-us-2.cloud.sap/btp_fp/cp-cf-us02/home
+      dynatrace: https://live.us2.apm.services.cloud.sap/e/a2781537-c495-43a3-963c-c0c79a0476df
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/265104426/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 10.190.63.242
       jumpbox2: 10.190.180.218
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us02-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us02-landscape
       region: na-us-2
       slack-channel: ls-ccee-cf-us02
       type: ccee
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us02.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us02.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us02.hana.ondemand.com
   - name: cf-us10
     title: US East (VA)
     description: US East (VA) AWS
@@ -1260,19 +1386,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10
-      apm-infra-environment: https://live.us10.apm.services.cloud.sap/e/f9a35231-8dfd-4ab5-af11-ca291c0f9ee5
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10
+      dynatrace: https://live.us10.apm.services.cloud.sap/e/f9a35231-8dfd-4ab5-af11-ca291c0f9ee5
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65157/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 34.227.144.30
       jumpbox2: 3.227.198.231
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.us10.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.us10.hana.ondemand.com
   - name: cf-us10-001
     title: US East (VA) 001
     description: US East (VA) AWS 001
@@ -1280,19 +1408,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-001
-      apm-infra-environment: https://live.us10.apm.services.cloud.sap/e/fbae27e1-7c36-4aa5-b576-b9e1e812c4b1
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-001
+      dynatrace: https://live.us10.apm.services.cloud.sap/e/fbae27e1-7c36-4aa5-b576-b9e1e812c4b1
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/35653611/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 23.23.184.42
       jumpbox2: 35.153.227.164
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-001-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-001-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-001
       type: aws
       extension: true
+      concourse: https://concourse.cf.us10-001.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-001.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-001-integrate
     title: "US East (VA) - Integrate 001"
     description: "US East (VA) - Integrate 001"
@@ -1300,19 +1430,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-001-integrate
-      apm-infra-environment: https://hotfix.us10.apm.services.cloud.sap/e/5d704fff-ba83-4d03-8d6d-492bbadeb858
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-001-integrate
+      dynatrace: https://hotfix.us10.apm.services.cloud.sap/e/5d704fff-ba83-4d03-8d6d-492bbadeb858
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: ""
       jumpbox: 54.225.175.58
       jumpbox2: 34.198.46.153
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-001-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-001-integrate-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-001-integrate
       type: aws
       extension: true
+      concourse: https://concourse.cf.us10-001-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-001-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-002
     title: US East (VA) 002
     description: US East (VA) AWS 002
@@ -1320,19 +1452,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002
-      apm-infra-environment: https://live.us10.apm.services.cloud.sap/e/05ea2f59-3943-4b7a-93a9-8b93b7f906ec
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002
+      dynatrace: https://live.us10.apm.services.cloud.sap/e/05ea2f59-3943-4b7a-93a9-8b93b7f906ec
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/35945048/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: ""
       jumpbox: 34.198.190.11
       jumpbox2: 54.225.202.239
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-002-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-002-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-002
       type: aws
       extension: true
+      concourse: https://concourse.cf.us10-002.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-002.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-002-hotfix
     title: "US East (VA) - Hotfix 002"
     description: "US East (VA) - Hotfix 002"
@@ -1340,19 +1474,21 @@ landscapes:
     project: cis20
     environment: hotfix
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002-hotfix
-      apm-infra-environment: https://hotfix.us10.apm.services.cloud.sap/e/e0f64175-23c3-4c12-8661-406b53bdddda
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002-hotfix
+      dynatrace: https://hotfix.us10.apm.services.cloud.sap/e/e0f64175-23c3-4c12-8661-406b53bdddda
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: hotfix
       cockpit: ""
       jumpbox: 3.214.196.252
       jumpbox2: 18.209.200.160
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-002-hotfix-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-002-hotfix-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-002-hotfix
       type: aws
       extension: true
+      concourse: https://concourse.cf.us10-002-hotfix.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-002-hotfix.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-002-integrate
     title: US East (VA) 002 Integrate
     description: US East (VA) AWS 002 Integrate
@@ -1360,19 +1496,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002-integrate
-      apm-infra-environment: https://hotfix.us10.apm.services.cloud.sap/e/98fc1ef0-e6b1-4d23-b77f-7deb064c734a
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-002-integrate
+      dynatrace: https://hotfix.us10.apm.services.cloud.sap/e/98fc1ef0-e6b1-4d23-b77f-7deb064c734a
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: ""
       jumpbox: 3.208.38.15
       jumpbox2: 34.195.85.119
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-002-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-002-integrate-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-002-integrate
       type: aws
       extension: true
+      concourse: https://concourse.cf.us10-002-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-002-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-002-staging
     title: "US East (VA) - Extended Scale-Out landscape"
     description: "US East (VA) - Extended Scale-Out landscape"
@@ -1380,19 +1518,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-staging3
-      apm-infra-environment: https://staging.us10.apm.services.cloud.sap/e/2b1519fd-82c3-4ace-9d13-d8435c164b89
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-staging3
+      dynatrace: https://staging.us10.apm.services.cloud.sap/e/2b1519fd-82c3-4ace-9d13-d8435c164b89
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: staging
       cockpit: ""
       jumpbox: 44.195.133.149
       jumpbox2: 34.196.215.209
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-aws-staging3
+      git: https://github.tools.sap/cloudfoundry/landscape-aws-staging3
       region: ""
       slack-channel: ""
       type: aws
       extension: true
+      concourse: https://concourse.cf.stagingaws3.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingaws3.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us10-hotfix
     title: "US East (VA) - Hotfix"
     description: "US East (VA) - Hotfix"
@@ -1400,20 +1540,23 @@ landscapes:
     project: cis20
     environment: hotfix
     metadata:
-      central-region: true
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-hotfix
-      apm-infra-environment: https://hotfix.us10.apm.services.cloud.sap/e/57a5446f-2a00-40f8-952c-a3ec1aeb81f7
+      is-central-region: true
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-hotfix
+      dynatrace: https://hotfix.us10.apm.services.cloud.sap/e/57a5446f-2a00-40f8-952c-a3ec1aeb81f7
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: hotfix
       cockpit: https://cockpit.hotfixaws.hanavlab.ondemand.com
       jumpbox: 34.235.51.142
       jumpbox2: 52.5.18.227
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-hotfix-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-hotfix-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-hotfix
       type: aws
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.hotfixaws.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.hotfixaws.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      control-center: https://cp-control-client-uc2.cfapps.hotfixaws.hanavlab.ondemand.com
+      operations-console: https://operations-console.operationsconsole.cfapps.hotfixaws.hanavlab.ondemand.com
   - name: cf-us10-integrate
     title: "US East (VA) - Integrate"
     description: "US East (VA) - Integrate"
@@ -1421,20 +1564,23 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      central-region: true
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-integrate
-      apm-infra-environment: https://hotfix.us10.apm.services.cloud.sap/e/2c6c42a2-1174-4672-b909-d76a1af7b465
+      is-central-region: true
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-integrate
+      dynatrace: https://hotfix.us10.apm.services.cloud.sap/e/2c6c42a2-1174-4672-b909-d76a1af7b465
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: https://cockpit.us10-integrate.hanavlab.ondemand.com
       jumpbox: 18.213.79.1
       jumpbox2: 52.54.4.91
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us10-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us10-integrate-landscape
       region: us-east-1
       slack-channel: ls-aws-cf-us10-integrate
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us10-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us10-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      control-center: https://cp-control-client-uc2.cfapps.us10-integrate.hanavlab.ondemand.com
+      operations-console: https://operator.operationsconsole.cfapps.us10-integrate.hanavlab.ondemand.com
   - name: cf-us10-staging
     title: "US East (VA) - Staging"
     description: "US East (VA) - Staging"
@@ -1442,20 +1588,23 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      central-region: true
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-staging
-      apm-infra-environment: https://staging.us10.apm.services.cloud.sap/e/121ba5cc-bee6-4007-9103-80b0f498503e
+      is-central-region: true
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us10-staging
+      dynatrace: https://staging.us10.apm.services.cloud.sap/e/121ba5cc-bee6-4007-9103-80b0f498503e
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: staging
       cockpit: https://staging.cockpit.btp.int.sap
       jumpbox: 34.224.110.77
       jumpbox2: 34.234.145.99
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-aws-staging
+      git: https://github.tools.sap/cloudfoundry/landscape-aws-staging
       region: ""
       slack-channel: ""
       type: aws
-      oc-prefix: operation-console.operationsconsole
+      concourse: https://concourse.cf.stagingaws.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingaws.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      control-center: https://cp-control-client-uc2.cfapps.stagingaws.hanavlab.ondemand.com
+      operations-console: https://operation-console.operationsconsole.cfapps.stagingaws.hanavlab.ondemand.com
   - name: cf-us11
     title: US West (Oregon)
     description: US West (Oregon) AWS
@@ -1463,19 +1612,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us11
-      apm-infra-environment: https://live.us11.apm.services.cloud.sap/e/1f6d0d8d-2d7d-4751-b41f-c7f4817cd1e4
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us11
+      dynatrace: https://live.us11.apm.services.cloud.sap/e/1f6d0d8d-2d7d-4751-b41f-c7f4817cd1e4
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/218163279/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 44.226.201.60
       jumpbox2: 44.224.47.189
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us11-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us11-landscape
       region: us-west-2
       slack-channel: ls-aws-cf-us11
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us11.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us11.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us11.hana.ondemand.com
   - name: cf-us20
     title: US West (WA)
     description: US West (WA) Azure
@@ -1483,19 +1634,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/d05c1a3e-dcd9-4624-af01-a610cf0352d8/resourceGroups/rg-cf-us20/overview
-      apm-infra-environment: https://live.us20.apm.services.cloud.sap/e/de441ccd-c8da-47dd-8e0f-0a2307d20cb7
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/d05c1a3e-dcd9-4624-af01-a610cf0352d8/resourceGroups/rg-cf-us20/overview
+      dynatrace: https://live.us20.apm.services.cloud.sap/e/de441ccd-c8da-47dd-8e0f-0a2307d20cb7
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/902943/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%2G0on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 52.233.88.238
       jumpbox2: 52.156.152.109
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us20-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us20-landscape
       region: westus2
       slack-channel: ls-azure-cf-us20
       type: azure
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.us20.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us20.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.us20.hana.ondemand.com
   - name: cf-us21
     title: US East (VA) Azure
     description: US East (VA) Azure
@@ -1503,19 +1656,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/947dd26e-9a13-4c3a-9c8e-70aa18f8b868/resourceGroups/rg-cf-us21/overview
-      apm-infra-environment: https://live.us21.apm.services.cloud.sap/e/b8cb49e7-672f-427b-b3e5-58c62ee119c1
+      iaas-console: https://portal.azure.com/#@sap.onmicrosoft.com/resource/subscriptions/947dd26e-9a13-4c3a-9c8e-70aa18f8b868/resourceGroups/rg-cf-us21/overview
+      dynatrace: https://live.us21.apm.services.cloud.sap/e/b8cb49e7-672f-427b-b3e5-58c62ee119c1
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/1193428/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 20.42.107.136
       jumpbox2: 20.42.81.45
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us21-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us21-landscape
       region: eastus
       slack-channel: ls-azure-cf-us21
       type: azure
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.us21.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us21.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.us21.hana.ondemand.com
   - name: cf-us22
     title: US East (Virginia) 22
     description: US East (Virginia) Azure
@@ -1523,19 +1678,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/03162a65-d3ab-4272-b76c-49131f13c230/overview
-      apm-infra-environment: https://live.us22.apm.services.cloud.sap/e/b6802014-2e00-4659-b2a7-b36574c7e198
+      iaas-console: https://portal.azure.com/#@sapsharedtenant.onmicrosoft.com/resource/subscriptions/03162a65-d3ab-4272-b76c-49131f13c230/overview
+      dynatrace: https://live.us22.apm.services.cloud.sap/e/b6802014-2e00-4659-b2a7-b36574c7e198
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/265104428/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 74.249.3.154
       jumpbox2: 135.237.186.136
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us22-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us22-landscape
       region: eastus2
       slack-channel: ls-azure-cf-us22
       type: azure
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us22.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us22.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us22.hana.ondemand.com
   - name: cf-us30
     title: US Central (IA)
     description: US Central (IA) GCP
@@ -1543,19 +1700,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-gcp-hcp-cf-live-us30
-      apm-infra-environment: https://live.us30.apm.services.cloud.sap/e/d6af77d6-3082-47d2-8b65-71632d99ce11
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-gcp-hcp-cf-live-us30
+      dynatrace: https://live.us30.apm.services.cloud.sap/e/d6af77d6-3082-47d2-8b65-71632d99ce11
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/65159/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://emea.cockpit.btp.cloud.sap
       jumpbox: 104.198.163.205
       jumpbox2: 34.132.88.249
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us30-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us30-landscape
       region: us-central1
       slack-channel: ls-gcp-cf-us30
       type: gcp
-      oc-prefix: operations-console.operationsconsole
+      concourse: https://concourse.cf.us30.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us30.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operations-console.operationsconsole.cfapps.us30.hana.ondemand.com
   - name: cf-us30-integrate
     title: "Iowa - Integrate"
     description: "Iowa - Integrate"
@@ -1563,19 +1722,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-us30-integrate
-      apm-infra-environment: https://canary.us31.apm.services.cloud.sap/e/dd9d6f15-a5c0-464c-8cc8-9523c5b09d7e
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-us30-integrate
+      dynatrace: https://canary.us31.apm.services.cloud.sap/e/dd9d6f15-a5c0-464c-8cc8-9523c5b09d7e
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: integrate
       cockpit: https://cockpit.us10-integrate.hanavlab.ondemand.com
       jumpbox: 35.238.55.98
       jumpbox2: 34.67.221.153
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us30-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us30-integrate-landscape
       region: us-central1
       slack-channel: ls-gcp-cf-us30-integrate
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us30-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us30-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us30-integrate.hanavlab.ondemand.com
   - name: cf-us30-staging
     title: "gcp staging"
     description: "gcp staging"
@@ -1583,19 +1744,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-gcp-hcp-cf-staging
-      apm-infra-environment: https://staging.eu30.apm.services.cloud.sap/e/fa851a4b-0aff-4d0c-b0f3-e96928bdd1dc
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-gcp-hcp-cf-staging
+      dynatrace: https://staging.eu30.apm.services.cloud.sap/e/fa851a4b-0aff-4d0c-b0f3-e96928bdd1dc
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: staging
       cockpit: https://staging.cockpit.btp.int.sap
       jumpbox: 35.195.62.131
       jumpbox2: 146.148.12.167
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-gcp-staging
+      git: https://github.tools.sap/cloudfoundry/landscape-gcp-staging
       region: europe-west1
       slack-channel: ""
       type: gcp
-      oc-prefix: operation-console.operationsconsole
+      concourse: https://concourse.cf.staginggcp.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.staginggcp.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operation-console.operationsconsole.cfapps.staginggcp.hanavlab.ondemand.com
   - name: cf-us31
     title: US Central (IA) 31
     description: US Central (IA) GCP Canary
@@ -1603,19 +1766,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-us31
-      apm-infra-environment: https://canary.us31.apm.services.cloud.sap/e/605e9429-4c57-4484-a057-135e59bae01c/
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=sap-cp-cf-us31
+      dynatrace: https://canary.us31.apm.services.cloud.sap/e/605e9429-4c57-4484-a057-135e59bae01c/
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/75024444/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Canary%29
       ccf-universe: canary
       cockpit: https://canary.cockpit.btp.int.sap
       jumpbox: 35.184.65.222
       jumpbox2: 35.202.144.173
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us31-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us31-landscape
       region: us-central1
       slack-channel: ls-gcp-cf-us31
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us31.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us31.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us31.hana.ondemand.com
   - name: cf-us32
     title: US East (Virginia)
     description: US East (Virginia) GCP
@@ -1623,19 +1788,21 @@ landscapes:
     project: cis20
     environment: live
     metadata:
-      IaaS-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-us32-live
-      apm-infra-environment: https://live.us32.apm.services.cloud.sap/e/83f9abf7-dc66-49d2-9523-866bcd45cd02/
+      iaas-console: https://console.cloud.google.com/home/dashboard?project=cp-cf-us32-live
+      dynatrace: https://live.us32.apm.services.cloud.sap/e/83f9abf7-dc66-49d2-9523-866bcd45cd02/
       avs-aggregated-monitor: https://availability.cfapps.us10.hana.ondemand.com/index.html#/evaluation/267394733/LAST_HOUR
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Live%29
       ccf-universe: live
       cockpit: https://cockpit.btp.cloud.sap
       jumpbox: 35.245.222.78
       jumpbox2: 34.48.17.43
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us32-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us32-landscape
       region: us-east4
       slack-channel: ls-gcp-cf-us32
       type: gcp
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us32.hana.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us32.hana.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us32.hana.ondemand.com
   - name: cf-us50-canary
     title: "US Gov West - Canary"
     description: "US Gov West - Canary"
@@ -1643,19 +1810,21 @@ landscapes:
     project: cis20
     environment: canary
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-canary
-      apm-infra-environment: https://canary.us50.apm.services.cloud.sap/e/46ef8887-c2f6-49ec-b2a5-884d625584ba
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-canary
+      dynatrace: https://canary.us50.apm.services.cloud.sap/e/46ef8887-c2f6-49ec-b2a5-884d625584ba
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E1DB7A11ED99E95BC0C36DF4E229
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile_uuid=00163E1DB7A11ED99E95BC0C36DF4E229
       ccf-universe: gov-cloud canary
       cockpit: https://cockpit.canary.scp.sapns2.us
       jumpbox: 15.200.12.167
       jumpbox2: 96.127.99.182
-      landscape-repository: https://scp-dev.nonprod.scs.sap/scp-canary/landscape-awsgc-canary
+      git: https://scp-dev.nonprod.scs.sap/scp-canary/landscape-awsgc-canary
       region: us-gov-west-1
       slack-channel: ls-awsgc-cf-us50-canary
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.canary.scp.sapns2.us/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.canary.scp.sapns2.us/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.canary.scp.sapns2.us
   - name: cf-us50-integrate
     title: "US Gov West Integrate"
     description: "US Gov West Integrate"
@@ -1663,19 +1832,21 @@ landscapes:
     project: cis20
     environment: integrate
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-integrate
-      apm-infra-environment: https://canary.us50.apm.services.cloud.sap/e/874c3f02-2c98-40c2-9cec-8a4d33c30003
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-integrate
+      dynatrace: https://canary.us50.apm.services.cloud.sap/e/874c3f02-2c98-40c2-9cec-8a4d33c30003
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Hotfix%29
       ccf-universe: gov-cloud integrate
       cockpit: https://cockpit.us50-integrate.hanavlab.ondemand.com
       jumpbox: 15.200.78.117
       jumpbox2: 52.61.19.255
-      landscape-repository: https://github.tools.sap/cf-live-realm/cf-us50-integrate-landscape
+      git: https://github.tools.sap/cf-live-realm/cf-us50-integrate-landscape
       region: us-gov-west-1
       slack-channel: ls-aws-cf-us50-integrate
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.us50-integrate.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.us50-integrate.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.us50-integrate.hanavlab.ondemand.com
   - name: cf-us50-staging
     title: "US Gov West - Staging"
     description: "US Gov West - Staging"
@@ -1683,19 +1854,21 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-staging
-      apm-infra-environment: https://staging.us50.apm.services.cloud.sap/e/37e5dc37-f2d5-466c-966b-baf61e020ca3
+      iaas-console: https://opscurity.accounts.ondemand.com/saml2/idp/sso?sp=cf-us50-staging
+      dynatrace: https://staging.us50.apm.services.cloud.sap/e/37e5dc37-f2d5-466c-966b-baf61e020ca3
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: gov-cloud staging
       cockpit: https://cockpit.stagingawsgc.hanavlab.ondemand.com
       jumpbox: 3.32.178.17
       jumpbox2: 52.61.74.4
-      landscape-repository: https://github.tools.sap/cloudfoundry/cf-us50-staging-landscape
+      git: https://github.tools.sap/cloudfoundry/cf-us50-staging-landscape
       region: us-gov-west-1
       slack-channel: ""
       type: aws
-      oc-prefix: operator.operationsconsole
+      concourse: https://concourse.cf.stagingawsgc.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.stagingawsgc.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+      operations-console: https://operator.operationsconsole.cfapps.stagingawsgc.hanavlab.ondemand.com
   - name: cf-us60-staging
     title: "GDCH staging Landscape"
     description: "GDCH staging Landscape"
@@ -1703,18 +1876,20 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://console.sow.us-west16-b.s.gpcdemolabs.com
-      apm-infra-environment: ""
+      iaas-console: https://console.sow.us-west16-b.s.gpcdemolabs.com
+      dynatrace: ""
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: ""
       cockpit: n/a
       jumpbox: 136.125.53.208
       jumpbox2: ""
-      landscape-repository: https://github.tools.sap/cloudfoundry/cf-us60-staging-landscape
+      git: https://github.tools.sap/cloudfoundry/cf-us60-staging-landscape
       region: ""
       slack-channel: ""
       type: gdch
+      concourse: https://concourse.cf.staginggdch.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.staginggdch.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
   - name: cf-us60-staging1
     title: "GDCH staging 1 Landscape"
     description: "GDCH staging 1 Landscape"
@@ -1722,246 +1897,719 @@ landscapes:
     project: cis20
     environment: staging
     metadata:
-      IaaS-console: https://console.sow.us-west16-b.s.gpcdemolabs.com
-      apm-infra-environment: https://staging.us60.apm.services.cloud.sap/e/f43c1ee7-1546-40ea-bb55-fc6e08c14b38
+      iaas-console: https://console.sow.us-west16-b.s.gpcdemolabs.com
+      dynatrace: https://staging.us60.apm.services.cloud.sap/e/f43c1ee7-1546-40ea-bb55-fc6e08c14b38
       avs-aggregated-monitor: ""
-      cam-profile-devod: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
+      cam: https://spc.ondemand.com/cam/ui/admin?item=request&profile=CP%20CF%20Core%20Developer%20on%20Duty%20Global%20%28Staging%29
       ccf-universe: ""
       cockpit: n/a
       jumpbox: 136.125.53.174
       jumpbox2: 136.125.52.174
-      landscape-repository: https://github.tools.sap/cloudfoundry/landscape-gdch-staging1
+      git: https://github.tools.sap/cloudfoundry/landscape-gdch-staging1
       region: ""
       slack-channel: ""
       type: gdch
-  - name: canary
+      concourse: https://concourse.cf.staging1gdch.hanavlab.ondemand.com/teams/product-cf/pipelines/landscape-update-pipeline
+      kibana: https://logs.cf.staging1gdch.hanavlab.ondemand.com/app/dashboards#/view/Requests-and-Logs
+  - name: usrv-canary
     title: Canary
     description: Canary
     domain: canary.urm-eu10c.shoot.live.k8s-hana.ondemand.com
     project: usrv
     environment: preview
     metadata:
-      landscape-repository: https://github.tools.sap/atom-cfs/landscape-canary
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20Atom%20MoD%2FDoD%20(CANARY)#
+      git: https://github.tools.sap/atom-cfs/landscape-canary
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20Atom%20MoD%2FDoD%20(CANARY)#
       auditlog: https://atom-cfs-canary.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-urm-eu10c--canary.ingress.eu5.aws.seed.live.k8s.ondemand.com/
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-canary
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-canary
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-urm-eu10c/shoots/canary/
       grafana: https://graf.ingress.canary.urm-eu10c.shoot.live.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-da016a0c-111f-4230-9b5f-e0e3a00e085d.cls-02.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
-  - name: dev
+      plutono: https://graf.ingress.canary.urm-eu10c.shoot.live.k8s-hana.ondemand.com
+  - name: usrv-dev
     title: Dev Cluster
     description: Dev Cluster
     domain: '{clusterName}.atom.ondemand.com'
     project: usrv
     environment: development
     metadata:
-      landscape-repository: https://github.tools.sap/atom-cfs/landscape-dev
+      git: https://github.tools.sap/atom-cfs/landscape-dev
       gardener: https://dashboard.garden.canary.k8s.ondemand.com/namespace/garden-atom-dev/shoots/{clusterName}/
-  - name: hotfix
+      plutono: https://graf.ingress.{clusterName}.atom.ondemand.com
+  - name: usrv-hotfix
     title: Hotfix
     description: Hotfix
     domain: hotfix.urm-eu10p.shoot.live.k8s-hana.ondemand.com
     project: usrv
     environment: testing
     metadata:
-      landscape-repository: https://github.tools.sap/cp-core-k8s/ls-urm-eu10-pre-live
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20CFS%20Admin%20Global%20(Dev)#
+      git: https://github.tools.sap/cp-core-k8s/ls-urm-eu10-pre-live
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20CFS%20Admin%20Global%20(Dev)#
       auditlog: https://staging-fc56n2zk.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-urm-eu10p--hotfix.ingress.eu4.aws.seed.live.k8s.ondemand.com/
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-urm-eu10p/shoots/
       grafana: https://graf.ingress.hotfix.urm-eu10p.shoot.live.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-38a0332d-350e-44d1-931f-2bdf2d77c7a5.cls-01.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
-  - name: int
+      plutono: https://graf.ingress.hotfix.urm-eu10p.shoot.live.k8s-hana.ondemand.com
+  - name: usrv-int
     title: Integrate
     description: Integrate
     domain: int.btp.shoot.canary.k8s-hana.ondemand.com
     project: usrv
     environment: testing
     metadata:
-      landscape-repository: https://github.tools.sap/atom-cfs/landscape-int
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20CFS%20Admin%20Global%20(Dev)#
+      git: https://github.tools.sap/atom-cfs/landscape-int
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20CFS%20Admin%20Global%20(Dev)#
       auditlog: https://staging-fc56n2zk.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-btp--int.ingress.eu3.aws.seed.canary.k8s.ondemand.com/
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=cis-dev-aws
       gardener: https://dashboard.garden.canary.k8s.ondemand.com/namespace/garden-btp/shoots/int/
-      grafana:  https://graf.ingress.int.btp.shoot.canary.k8s-hana.ondemand.com/
+      grafana: https://graf.ingress.int.btp.shoot.canary.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-8a453bf5-66d7-4682-91b9-64efd27d19dd.cls-01.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
-  - name: live
+      plutono: https://graf.ingress.int.btp.shoot.canary.k8s-hana.ondemand.com
+  - name: usrv-live
     title: Live
     description: Live
     domain: live.urm-eu10l.shoot.live.k8s-hana.ondemand.com
     project: usrv
     environment: production
     metadata:
-      landscape-repository: https://github.tools.sap/cp-core-k8s/ls-urm-eu10-live
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20Atom%20MoD%2FDoD%20(PROD)#
+      git: https://github.tools.sap/cp-core-k8s/ls-urm-eu10-live
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20Atom%20MoD%2FDoD%20(PROD)#
       auditlog: https://urm-prod-eu-central.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-urm-eu10l--live.ingress.eu2.aws.seed.live.k8s.ondemand.com/
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-live
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-live
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-urm-eu10l/shoots/live/
       grafana: https://graf.ingress.live.urm-eu10l.shoot.live.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-c8717cfb-4d3a-4587-b16b-ff73482d5362.cls-03.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
-  - name: perf
+      plutono: https://graf.ingress.live.urm-eu10l.shoot.live.k8s-hana.ondemand.com
+  - name: usrv-perf
     title: Performance
     description: Performance
     domain: perf.perf.shoot.canary.k8s-hana.ondemand.com
     project: usrv
     environment: testing
     metadata:
-      landscape-repository: https://github.tools.sap/atom-cfs/landscape-perf
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20atom-cfs%20Admin%20Global%20(STAGING)%20142682391806#
+      git: https://github.tools.sap/atom-cfs/landscape-perf
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20atom-cfs%20Admin%20Global%20(STAGING)%20142682391806#
       auditlog: https://atom-staging-nhhljdp4.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-perf--perf.ingress.eu5.aws.seed.canary.k8s.ondemand.com
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-perf
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-perf
       gardener: https://dashboard.garden.canary.k8s.ondemand.com/namespace/garden-perf/shoots/perf/
       grafana: https://graf.ingress.perf.perf.shoot.canary.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-03a0777d-4f4d-4dec-8d8f-42b1d6513ef1.cls-02.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
-  - name: staging
+      plutono: https://graf.ingress.perf.perf.shoot.canary.k8s-hana.ondemand.com
+  - name: usrv-staging
     title: Staging
     description: Staging
     domain: staging.staging.shoot.live.k8s-hana.ondemand.com
     project: usrv
     environment: staging
     metadata:
-      landscape-repository: https://github.tools.sap/atom-cfs/landscape-staging
-      cam-profile-devod: https://spc.ondemand.com/sap/bc/webdynpro/a1sspc/cam_wd_central?item=request&profile=SCP%20atom-cfs%20Admin%20Global%20(STAGING)%20768575953313#
+      git: https://github.tools.sap/atom-cfs/landscape-staging
+      cam: https://cam.int.sap/cam/ui/admin?item=request&profile=SCP%20atom-cfs%20Admin%20Global%20(STAGING)%20768575953313#
       auditlog: https://atom-staging-nhhljdp4.auditlog-viewer.cfapps.eu10.hana.ondemand.com/index.html
       prometheus: https://p-staging--staging.ingress.eu5.aws.seed.live.k8s.ondemand.com
-      IaaS-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-staging
+      iaas-console: https://opscurity-dev.accounts.ondemand.com/saml2/idp/sso?sp=sap-aws-atom-cfs-staging
       gardener: https://dashboard.garden.live.k8s.ondemand.com/namespace/garden-staging/shoots/staging/
       grafana: https://graf.ingress.staging.staging.shoot.live.k8s-hana.ondemand.com/
       kibana: https://kibana-sf-b7e064ae-87ca-4234-80ab-f5837692f28d.cls-01.cloud.logs.services.eu10.hana.ondemand.com/app/dashboards#/view/maintained-by-perfx_k8s-content-package_K8s-Overview
+      plutono: https://graf.ingress.staging.staging.shoot.live.k8s-hana.ondemand.com
   - name: neo-gold
     title: Gold
     description: Gold
     domain: gold.jpaas.sapbydesign.com
     project: neo
     environment: testing
+    metadata:
+      cockpit: https://account.gold.jpaas.sapbydesign.com
+      monitoring: https://monitoring.int.gold.jpaas.sapbydesign.com/cockpit
+      kibana: https://logsearch.gold.jpaas.sapbydesign.com/kibana/app/discover
   - name: neo-qual
     title: Quality
     description: Quality
     domain: qual.jpaas.sapbydesign.com
     project: neo
     environment: testing
+    metadata:
+      cockpit: https://account.qual.jpaas.sapbydesign.com
+      monitoring: https://monitoring.int.qual.jpaas.sapbydesign.com/cockpit
+      kibana: https://logsearch.qual.jpaas.sapbydesign.com/kibana/app/discover
   - name: neo-vlab
     title: Vlab
     description: Vlab
     domain: hanavlab.ondemand.com
     project: neo
     environment: testing
+    metadata:
+      cockpit: https://account.hanavlab.ondemand.com
+      monitoring: https://monitoring.int.hanavlab.ondemand.com/cockpit
+      kibana: https://logsearch.hanavlab.ondemand.com/kibana/app/discover
   - name: neo-perf
     title: Performance
     description: Performance
     domain: perf.hana.ondemand.com
     project: neo
     environment: testing
+    metadata:
+      cockpit: https://account.perf.hana.ondemand.com
+      monitoring: https://monitoring.int.perf.hana.ondemand.com/cockpit
+      kibana: https://logsearch.perf.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://staging.eu1.apm.services.cloud.sap/e/0414883b-7244-47f2-9d84-69ead678048a
   - name: neo-staging
     title: Staging (Rot)
     description: Staging (Rot)
     domain: staging.hanavlab.ondemand.com
     project: neo
     environment: staging
+    metadata:
+      cockpit: https://account.staging.hanavlab.ondemand.com
+      monitoring: https://monitoring.int.staging.hanavlab.ondemand.com/cockpit
+      kibana: https://logsearch.staging.hanavlab.ondemand.com/kibana/app/discover
+      dynatrace: https://staging.eu1.apm.services.cloud.sap/e/174dabc5-7d61-48f3-a42e-a429fa5ad6d7
   - name: neo-staging-eu2
     title: Staging EU2 (MDC)
     description: Staging EU2 (MDC)
     domain: staging.eu2.hana.ondemand.com
     project: neo
     environment: staging
+    metadata:
+      cockpit: https://account.staging.eu2.hana.ondemand.com
+      monitoring: https://monitoring.int.staging.eu2.hana.ondemand.com/cockpit
+      kibana: https://logsearch.staging.eu2.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://staging.eu1.apm.services.cloud.sap/e/b3fe0ad9-17af-4008-af0f-baf49a80f57f
   - name: neo-canary-eu2
     title: Canary EU2 (Frankfurt)
     description: Canary EU2 (Frankfurt)
     domain: int.sap.eu2.hana.ondemand.com
     project: neo
     environment: canary
+    metadata:
+      cockpit: https://account.int.sap.eu2.hana.ondemand.com
+      monitoring: https://monitoring.int.int.sap.eu2.hana.ondemand.com/cockpit
+      kibana: https://logsearch.int.sap.eu2.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://canary.eu1.apm.services.cloud.sap/e/d00632de-3c8d-4d71-9052-ee25cb59676e
   - name: neo-live-ae1
     title: Live - AE1
     description: Live Arab Emirates (Dubai)
     domain: ae1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.ae1.hana.ondemand.com
+      monitoring: https://monitoring.int.ae1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.ae1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.ae1.apm.services.cloud.sap/e/494477a9-8cb8-4d13-8cf8-0c8b7de83e6b
   - name: neo-live-ap1
     title: Live - AP1
     description: Live Australia 1 (Sydney)
     domain: ap1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.ap1.hana.ondemand.com
+      monitoring: https://monitoring.int.ap1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.ap1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.ap20.apm.services.cloud.sap/e/4c886f29-fed4-4b1a-b4f9-6807ce704425
   - name: neo-live-br1
     title: Live - BR1
     description: Live Brazil 1 (S&atilde;o Paulo)
     domain: br1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.br1.hana.ondemand.com
+      monitoring: https://monitoring.int.br1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.br1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.br10.apm.services.cloud.sap/e/7c10dd40-8eb6-4f0b-a172-76b642873262
   - name: neo-live-ca1
     title: Live - CA1
     description: Live Canada 1 (Toronto)
     domain: ca1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.ca1.hana.ondemand.com
+      monitoring: https://monitoring.int.ca1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.ca1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.ca10.apm.services.cloud.sap/e/a419c875-e6ca-4749-bb20-081055c29ec5
   - name: neo-live-cn1
     title: Live - CN1
     description: Live China 1 (Shanghai)
     domain: cn1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.cn1.hana.ondemand.com
+      monitoring: https://monitoring.int.cn1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.cn1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.cn40.apm.services.sapcloud.cn/e/952b07bf-8b4f-4c83-bdc8-0dc24b58bed0
   - name: neo-live-eu1
     title: Live - EU1
     description: Live Europe (Rot)
     domain: eu1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.eu1.hana.ondemand.com
+      monitoring: https://monitoring.int.eu1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.eu1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.eu1.apm.services.cloud.sap/e/0ad98448-d324-4af4-99f6-d42e010b82af
   - name: neo-live-eu2
     title: Live - EU2
     description: Live Europe 2 (Frankfurt)
     domain: eu2.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.eu2.hana.ondemand.com
+      monitoring: https://monitoring.int.eu2.hana.ondemand.com/cockpit
+      kibana: https://logsearch.eu2.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.eu1.apm.services.cloud.sap/e/99ab5780-0e72-4180-85b8-a51e02756768
   - name: neo-live-eu3
     title: Live - EU3
     description: Live Europe 3 (Amsterdam)
     domain: eu3.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.eu3.hana.ondemand.com
+      monitoring: https://monitoring.int.eu3.hana.ondemand.com/cockpit
+      kibana: https://logsearch.eu3.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.eu1.apm.services.cloud.sap/e/216f941d-74cb-45e4-9a49-69a926268df3
   - name: neo-live-jp1
     title: Live - JP1
     description: Live Japan 1 (Tokyo)
     domain: jp1.hana.ondemand.com
     project: neo
     environment: live
-  - name: neo-live-ru1
-    title: Live - RU1
-    description: Live Russia (Moscow)
-    domain: ru1.hana.ondemand.com
-    project: neo
-    environment: live
+    metadata:
+      cockpit: https://account.jp1.hana.ondemand.com
+      monitoring: https://monitoring.int.jp1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.jp1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.jp20.apm.services.cloud.sap/e/7926cf07-802f-4709-babe-ef2ac0bd5d76
   - name: neo-live-sa1
     title: Live - SA1
     description: Live Saudi Arabia (Riyadh)
     domain: sa1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.sa1.hana.ondemand.com
+      monitoring: https://monitoring.int.sa1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.sa1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.sa1.apm.services.cloud.sap/e/adef9112-78d0-4b6a-a34e-5f5696d0bf36
   - name: neo-live-us1
     title: Live - US1
     description: Live United States 1 (Ashburn)
     domain: us1.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.us1.hana.ondemand.com
+      monitoring: https://monitoring.int.us1.hana.ondemand.com/cockpit
+      kibana: https://logsearch.us1.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.us1.apm.services.cloud.sap/e/c8e11c9a-7bc8-4741-81dd-83bbf775f49b
   - name: neo-live-us2
     title: Live - US2
     description: Live United States 2 (Phoenix, Chandler)
     domain: us2.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.us2.hana.ondemand.com
+      monitoring: https://monitoring.int.us2.hana.ondemand.com/cockpit
+      kibana: https://logsearch.us2.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.us1.apm.services.cloud.sap/e/28503542-2e35-4818-a204-ce12785655be
   - name: neo-live-us3
     title: Live - US3
     description: Live United States 3 (Sterling)
     domain: us3.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.us3.hana.ondemand.com
+      monitoring: https://monitoring.int.us3.hana.ondemand.com/cockpit
+      kibana: https://logsearch.us3.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.us1.apm.services.cloud.sap/e/95a1f5df-280e-489b-81ad-cd159f023572
   - name: neo-live-us4
     title: Live - US4
     description: Live United States 4 (Colorado Springs)
     domain: us4.hana.ondemand.com
     project: neo
     environment: live
+    metadata:
+      cockpit: https://account.us4.hana.ondemand.com
+      monitoring: https://monitoring.int.us4.hana.ondemand.com/cockpit
+      kibana: https://logsearch.us4.hana.ondemand.com/kibana/app/discover
+      dynatrace: https://live.us1.apm.services.cloud.sap/e/e2f6f810-e292-4e1a-bad7-7339410a60ac
+  - name: cf-eu10
+    title: Europe (Frankfurt)
+    description: Europe (Frankfurt)
+    domain: eu10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu10.apm.services.cloud.sap/e/c7c03030-12e3-474e-bb26-2805ea06a604
+  - name: cf-eu11
+    title: Europe (Frankfurt) EU access
+    description: Europe (Frankfurt)-Europe (Frankfurt) AWS EU access-Europe (Frankfurt) EU access-Europe (Frankfurt) EU access
+    domain: eu11.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu11.apm.services.cloud.sap/e/f5e9a579-b464-4c72-81f4-b06723879ecc
+  - name: cf-eu20
+    title: Europe (Netherlands)
+    description: Europe West-Europe (Netherlands) Azure-Europe (Netherlands)-Europe (Netherlands)
+    domain: eu20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu20.apm.services.cloud.sap/e/7a86811f-8258-4a60-bdfb-794bb50e7845
+  - name: cf-eu30
+    title: Europe (Frankfurt) GCP
+    description: Europe (Frankfurt)-Europe (Frankfurt) GCP-Europe (Frankfurt)-Europe (Frankfurt)
+    domain: eu30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu30.apm.services.cloud.sap/e/7de1c6a7-ef01-4d80-98f0-410b446492c7
+  - name: cf-il30
+    title: Israel (Tel Aviv)
+    description: Israel (Tel Aviv) GCP-Israel (Tel Aviv)-Israel (Tel Aviv)
+    domain: il30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.il30.apm.services.cloud.sap/e/0218928c-6785-4d06-8743-e342cbd395c8
+  - name: cf-ch20
+    title: Switzerland (Zurich) EU Access
+    description: Switzerland (Zurich)-Switzerland (Zurich) Azure EU Access-Switzerland (Zurich) EU Access-Switzerland (Zurich) EU Access
+    domain: ch20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ch20.apm.services.cloud.sap/e/71b251e0-c877-4dad-a4d2-ed9b6aa12715
+  - name: cf-ap10
+    title: Australia (Sydney)
+    description: Asia Pacific (Sydney)-Australia (Sydney) AWS-Australia (Sydney)-Australia (Sydney)
+    domain: ap10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap10.apm.services.cloud.sap/e/0aa71c72-b361-4fcf-b881-3ce91517e7dc
+  - name: cf-ap11
+    title: Singapore
+    description: Asia Pacific (Singapore)-Singapore AWS-Singapore-Singapore
+    domain: ap11.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap11.apm.services.cloud.sap/e/b194eb8a-867e-4ab9-b8e8-372bfddfc30a
+  - name: cf-ap12
+    title: South Korea (Seoul)
+    description: Asia Pacific (Seoul)-South Korea (Seoul) AWS-South Korea (Seoul)-South Korea (Seoul)
+    domain: ap12.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap12.apm.services.cloud.sap/e/d0c73872-58b0-4af6-a267-9c8f096bba30
+  - name: cf-ap20
+    title: Australia (Sydney) Azure
+    description: Sydney-Australia (Sydney) Azure-Australia (Sydney)-Australia (Sydney)
+    domain: ap20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap20.apm.services.cloud.sap/e/e93f13c8-1bb3-435f-a0fb-f489f65245d3
+  - name: cf-ap21
+    title: Singapore Azure
+    description: Singapore-Singapore Azure-Singapore-Singapore
+    domain: ap21.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap21.apm.services.cloud.sap/e/249e49c5-1ad9-4955-a7fb-49a9e8d41439
+  - name: cf-ap30
+    title: Australia (Sydney) GCP
+    description: Australia (Sydney) GCP-Australia (Sydney)-Australia (Sydney)
+    domain: ap30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap30.apm.services.cloud.sap/e/3022937b-cd89-44e8-bc77-5e79873f5fd7
+  - name: cf-cn20
+    title: China (North 3)
+    description: azure china live-China (North 3) Azure-China (North 3)-China (North3)
+    domain: cn20.platform.sapcloud.cn
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.cn20.apm.services.sapcloud.cn/e/8e04de8c-5923-4ae8-82ac-cf090313f9ba
+  - name: cf-in30
+    title: India (Mumbai)
+    description: India (Mumbai)-India (Mumbai) GCP-India (Mumbai)-India (Mumbai)
+    domain: in30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.in30.apm.services.cloud.sap/e/871bcfb2-48b4-499c-9381-474e5adb937f
+  - name: cf-jp10
+    title: Japan (Tokyo)
+    description: Japan (Tokyo)-Japan (Tokyo) AWS-Japan (Tokyo)-Japan (Tokyo)
+    domain: jp10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.jp10.apm.services.cloud.sap/e/7e99fa53-7cfd-4eb1-adf5-d683ce104e32
+  - name: cf-jp20
+    title: Japan (Tokyo) Azure
+    description: Japan East-Japan (Tokyo) Azure-Japan (Tokyo)-Japan (Tokyo)
+    domain: jp20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.jp20.apm.services.cloud.sap/e/c7137c0c-fc90-4953-88ed-b76f7180858f
+  - name: cf-jp30
+    title: Japan (Osaka)
+    description: Japan (Osaka) GCP-Japan (Osaka)-Japan (Osaka)
+    domain: jp30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.jp30.apm.services.cloud.sap/e/28ffd354-6478-4024-a63b-29fe8cf8af7c
+  - name: cf-jp31
+    title: Japan (Tokyo) GCP
+    description: Japan (Tokyo) GCP-Japan (Tokyo)-Japan (Tokyo)
+    domain: jp31.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.jp31.apm.services.cloud.sap/e/a99b4c6c-01cb-40a8-afcd-df6f899852c8
+  - name: cf-sa30
+    title: KSA (Dammam) public sector
+    description: KSA (Dammam) GCP public sector-KSA (Dammam)-KSA (Dammam) GCP publicsector
+    domain: sa30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.sa30.apm.services.cloud.sap/e/697094aa-644d-4f12-a2c0-09a96b492626
+  - name: cf-sa31
+    title: KSA (Dammam)
+    description: KSA (Dammam) GCP-KSA (Dammam)-KSA (Dammam)
+    domain: sa31.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.sa31.apm.services.cloud.sap/e/59c8eb59-0e07-4d70-bcf1-6dbffa9e7f45
+  - name: cf-br10
+    title: Brazil (São Paulo)
+    description: Brazil (São Paulo)-Brazil (São Paulo) AWS-Brazil (São Paulo)-Brazil (São Paulo)
+    domain: br10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.br10.apm.services.cloud.sap/e/3c6e79c1-b583-4c01-8cf2-ddf8686a46b1
+  - name: cf-br20
+    title: Brazil (São Paulo) Azure
+    description: Brazil (São Paulo) Azure-Brazil (São Paulo)-Brazil (São Paulo)
+    domain: br20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.br20.apm.services.cloud.sap/e/5753f6c4-a2b9-4f96-9622-5e0d3d2b64ec
+  - name: cf-br30
+    title: Brazil (São Paulo) GCP
+    description: Brazil (São Paulo) GCP-Brazil (São Paulo)-Brazil (São Paulo)
+    domain: br30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.br30.apm.services.cloud.sap/e/1cabe793-ebf2-4756-8462-e2bb4de4c935
+  - name: cf-ca10
+    title: Canada (Montreal)
+    description: Canada (Montreal)-Canada (Montreal) AWS-Canada (Montreal)-Canada (Montreal)
+    domain: ca10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ca10.apm.services.cloud.sap/e/b349e002-8cb3-4b1d-a86b-b0db024f6c90
+  - name: cf-ca20
+    title: Canada Central (Toronto)
+    description: Canada Central (Toronto) AZURE-Canada Central (Toronto)-Canada Central (Toronto)
+    domain: ca20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ca20.apm.services.cloud.sap/e/6bb4518d-5cd2-451a-b1cc-7f78de2aa16f
+  - name: cf-us10
+    title: US East (VA)
+    description: US East (VA)-US East (VA) AWS-US East (VA)-US East (VA)
+    domain: us10.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us10.apm.services.cloud.sap/e/f9a35231-8dfd-4ab5-af11-ca291c0f9ee5
+  - name: cf-us11
+    title: US West (Oregon)
+    description: US West (Oregon) AWS-US West (Oregon)-US West (Oregon)
+    domain: us11.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us11.apm.services.cloud.sap/e/1f6d0d8d-2d7d-4751-b41f-c7f4817cd1e4
+  - name: cf-us20
+    title: US West (WA)
+    description: West US 2-US West (WA) Azure-US West (WA)-US West (WA)
+    domain: us20.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us20.apm.services.cloud.sap/e/de441ccd-c8da-47dd-8e0f-0a2307d20cb7
+  - name: cf-us21
+    title: US East (VA) Azure
+    description: Virginia-US East (VA) Azure-US East (VA)-US East (VA)
+    domain: us21.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us21.apm.services.cloud.sap/e/b8cb49e7-672f-427b-b3e5-58c62ee119c1
+  - name: cf-us30
+    title: US Central (IA)
+    description: Iowa-US Central (IA) GCP-US Central (IA)-US Central (IA)
+    domain: us30.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us30.apm.services.cloud.sap/e/d6af77d6-3082-47d2-8b65-71632d99ce11
+  - name: cf-eu31
+    title: Europe (Netherlands) GCP
+    description: Europe (Netherlands) GCP-Europe (Netherlands)-Europe (Netherlands)
+    domain: eu31.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu31.apm.services.cloud.sap/e/68939597-758b-4631-ba51-2903dd5547d8
+  - name: cf-ap31
+    title: Singapore GCP
+    description: Singapore GCP-Singapore-Singapore
+    domain: ap31.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap31.apm.services.cloud.sap/e/6dcbce33-95ba-494d-a9e9-c2a45ac305e2
+  - name: cf-ap01
+    title: Australia (Sydney) SAP Cloud Infrastructure
+    description: Australia (Sydney) SAP Cloud Infrastructure-Australia (Sydney)-Australia(Sydney)
+    domain: ap01.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ap1.apm.services.cloud.sap/e/a39b1af0-f4f8-4046-951f-5810a3136778
+  - name: cf-ae01
+    title: UAE (Dubai)
+    description: UAE (Dubai) SAP Cloud Infrastructure-UAE (Dubai)-UAE (Dubai)
+    domain: ae01.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.ae1.apm.services.cloud.sap/e/c76f031a-1922-4004-9388-7a50aec8e5ff
+  - name: cf-us22
+    title: US East (Virginia) Azure
+    description: US East (Virginia) Azure-US East (Virginia)-US East (Virginia)
+    domain: us22.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us22.apm.services.cloud.sap/e/b6802014-2e00-4659-b2a7-b36574c7e198
+  - name: cf-eu01
+    title: Europe (Frankfurt) EUA only
+    description: Europe (Frankfurt) SAP Live, EU access only-Europe (Frankfurt) EUA only-Europe (Frankfurt) Live, EUA only
+    domain: eu01.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu1.apm.services.cloud.sap/e/9a4c808a-eb1e-496b-a2ea-ab61b401d1ac
+  - name: cf-eu13
+    title: Europe (Milan)
+    description: Europe (Milan) AWS-Europe (Milan)-Europe (Milan)
+    domain: eu13.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.eu13.apm.services.cloud.sap/e/ce947f72-16c6-4d24-b996-91fba4151c8c
+  - name: cf-us32
+    title: US East (Virginia) GCP
+    description: US East (Virginia) GCP-US East (Virginia)-US East (Virginia)
+    domain: us32.hana.ondemand.com
+    project: btp-monitoring
+    environment: live
+    metadata:
+      dynatrace: https://live.us32.apm.services.cloud.sap/e/83f9abf7-dc66-49d2-9523-866bcd45cd02/
+  - name: cf-eu12
+    title: Europe (Frankfurt) Canary
+    description: Europe (Frankfurt)
+    domain: eu12.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.eu12.apm.services.cloud.sap/e/33877c4a-9c15-4a93-833b-6da12d4587aa
+  - name: cf-eu21
+    title: Europe West Multi AZ Test
+    description: Europe West - Multi AZ Test
+    domain: eu21.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.eu21.apm.services.cloud.sap/e/d236c273-b35c-4606-8bdc-efda3ad45860
+  - name: cf-eu01-canary
+    title: Europe (Frankfurt) CCEE Canary
+    description: Europe (Frankfurt) CCEE Canary
+    domain: eu01-canary.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.eu1.apm.services.cloud.sap/e/df7437a5-ee71-4580-806d-4dd012674823
+  - name: cf-us31
+    title: US Central (IA) Canary
+    description: US - (Iowa)
+    domain: us31.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.us31.apm.services.cloud.sap/e/605e9429-4c57-4484-a057-135e59bae01c/
+  - name: cf-eu10-canary
+    title: Europe (Frankfurt) Canary
+    description: Europe (Frankfurt)
+    domain: sap.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.eu10.apm.services.cloud.sap/e/3c24485f-e6cd-4212-8020-290cde919b36
+  - name: cf-cn20-canary
+    title: China (North 3) Canary
+    description: azure china canary-China (North 3) Azure Canary-China (North 3)-China (North 3) Canary
+    domain: canaryaz.vlab-sapcloudplatformdev.cn
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.cn20.apm.services.sapcloud.cn/e/3fc7c8d5-4b3c-48f0-8d02-6b0eb6f08fdb
+  - name: cf-eu23-canary
+    title: Europe (Frankfurt) Azure Canary
+    description: Europe (Frankfurt) Azure Canary-Europe (Frankfurt) Canary-Europe (Frankfurt)
+    domain: eu23-canary.hana.ondemand.com
+    project: btp-monitoring
+    environment: canary
+    metadata:
+      dynatrace: https://canary.eu23.apm.services.cloud.sap/e/8d70219d-1f3b-41c5-9ea4-d471fcfdc5b5
+  - name: cf-us10-staging
+    title: US East (VA) Staging
+    description: US East (VA) - Staging
+    domain: stagingaws.hanavlab.ondemand.com
+    project: btp-monitoring
+    environment: staging
+    metadata:
+      dynatrace: https://staging.us10.apm.services.cloud.sap/e/121ba5cc-bee6-4007-9103-80b0f498503e

@@ -1,0 +1,1 @@
+# paste here the console output of metadata_check.sh. This file is ready by metadata_insert.sh

@@ -181,7 +181,8 @@ func (suite *LandscapeRepositoryTestSuite) TestGetByOrganizationIDWithPagination
 
 	// Create multiple test landscapes
 	for i := 0; i < 5; i++ {
-		landscape := suite.factories.Landscape.WithName(suite.T().Name() + "-landscape-" + uuid.New().String()[:8])
+		// Ensure unique names within 40-char limit (BaseModel.Name max 40)
+		landscape := suite.factories.Landscape.WithName("ls-" + uuid.New().String()[:16])
 		landscape.ProjectID = org.ID
 		err := suite.repo.Create(landscape)
 		suite.NoError(err)
