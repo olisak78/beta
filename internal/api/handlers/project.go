@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"developer-portal-backend/internal/service"
 
@@ -30,51 +31,16 @@ type Project struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 
-// ProjectMinimalResponse represents a trimmed project projection for list endpoints
-type ProjectMinimalResponse struct {
+// ProjectResponse represents a trimmed project projection for list endpoints
+type ProjectResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	// Enriched nested fields extracted from metadata
-	Alerts   map[string]interface{} `json:"alerts,omitempty"`
-	Health   map[string]interface{} `json:"health,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
-
-// ProjectEnrichment holds enriched metadata fields and remaining metadata
-type ProjectEnrichment struct {
-	Alerts            map[string]interface{}
-	Health            map[string]interface{}
-	RemainingMetadata map[string]interface{}
-}
-
-// enrichProjectMetadata extracts alerts and health from metadata, keeps remaining metadata
-func enrichProjectMetadata(metadata map[string]interface{}) ProjectEnrichment {
-	enr := ProjectEnrichment{
-		Alerts:            make(map[string]interface{}),
-		Health:            make(map[string]interface{}),
-		RemainingMetadata: make(map[string]interface{}),
-	}
-
-	// Extract alerts and health, keep everything else in remaining metadata
-	for k, v := range metadata {
-		switch k {
-		case "alerts":
-			if alertsMap, ok := v.(map[string]interface{}); ok {
-				enr.Alerts = alertsMap
-			}
-		case "health":
-			if healthMap, ok := v.(map[string]interface{}); ok {
-				enr.Health = healthMap
-			}
-		default:
-			// Keep all other metadata fields
-			enr.RemainingMetadata[k] = v
-		}
-	}
-
-	return enr
+	// Enriched fields extracted from metadata
+	Alerts            string `json:"alerts,omitempty"`
+	Views             string `json:"views,omitempty"`
+	ComponentsMetrics bool   `json:"components-metrics"`
 }
 
 // GetAllProjects handles GET /projects
@@ -85,7 +51,7 @@ func (h *ProjectHandler) GetAllProjects(c *gin.Context) {
 		return
 	}
 
-	var responses []ProjectMinimalResponse
+	var responses []ProjectResponse
 	for _, sp := range serviceProjects {
 		// Unmarshal Metadata from json.RawMessage to map[string]interface{}
 		var metadata map[string]interface{}
@@ -97,26 +63,27 @@ func (h *ProjectHandler) GetAllProjects(c *gin.Context) {
 			metadata = map[string]interface{}{}
 		}
 
-		// Enrich metadata (following landscape pattern)
-		enr := enrichProjectMetadata(metadata)
+		alerts, _ := metadata["alerts"].(string)
+		componentsMetrics, _ := metadata["components-metrics"].(bool)
 
-		// Create response struct directly with enriched fields (following landscape pattern)
-		response := ProjectMinimalResponse{
-			ID:          sp.ID.String(),
-			Name:        sp.Name,
-			Title:       sp.Title,
-			Description: sp.Description,
+		// Extract views from metadata.views (array) and join with commas
+		rawViews, _ := metadata["views"].([]interface{})
+		views := make([]string, 0, len(rawViews))
+		for _, v := range rawViews {
+			if s, ok := v.(string); ok {
+				views = append(views, s)
+			}
 		}
+		viewsStr := strings.Join(views, ",")
 
-		// Only add alerts, health, and metadata if they contain data
-		if len(enr.Alerts) > 0 {
-			response.Alerts = enr.Alerts
-		}
-		if len(enr.Health) > 0 {
-			response.Health = enr.Health
-		}
-		if len(enr.RemainingMetadata) > 0 {
-			response.Metadata = enr.RemainingMetadata
+		response := ProjectResponse{
+			ID:                sp.ID.String(),
+			Name:              sp.Name,
+			Title:             sp.Title,
+			Description:       sp.Description,
+			Alerts:            alerts,
+			Views:             viewsStr,
+			ComponentsMetrics: componentsMetrics,
 		}
 
 		responses = append(responses, response)

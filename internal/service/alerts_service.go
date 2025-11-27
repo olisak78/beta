@@ -63,10 +63,8 @@ func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr strin
 	}
 
 	alertsRepo := ""
-	if alerts, ok := metadata["alerts"].(map[string]interface{}); ok {
-		if repo, ok := alerts["repo"].(string); ok && repo != "" {
-			alertsRepo = repo
-		}
+	if repo, ok := metadata["alerts"].(string); ok && repo != "" {
+		alertsRepo = repo
 	}
 
 	if alertsRepo == "" {
@@ -111,7 +109,7 @@ func (s *AlertsService) CreateAlertPR(ctx context.Context, projectIDStr string, 
 		return "", errors.New("failed to parse project metadata")
 	}
 
-	alertsRepo, ok := metadata["alerts-repo"].(string)
+	alertsRepo, ok := metadata["alerts"].(string)
 	if !ok || alertsRepo == "" {
 		return "", errors.New("alerts repository not configured for this project")
 	}

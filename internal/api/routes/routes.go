@@ -97,7 +97,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	userHandler := handlers.NewUserHandler(userService, teamRepo)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	projectHandler := handlers.NewProjectHandler(projectService)
-	componentHandler := handlers.NewComponentHandler(componentService, teamService)
+	componentHandler := handlers.NewComponentHandlerWithLandscape(componentService, landscapeService, teamService)
 	landscapeHandler := handlers.NewLandscapeHandler(landscapeService)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	linkHandler := handlers.NewLinkHandler(linkService)
@@ -191,6 +191,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		components := v1.Group("/components")
 		{
 			components.GET("", componentHandler.ListComponents)
+			components.GET("/health", componentHandler.ComponentHealth) // GET /api/v1/components/health?component-id=<>&landscape-id=<>
 		}
 
 		// Query-param endpoint: /api/v1/landscapes?project-name=<project_name>

@@ -4,8 +4,8 @@ set -euo pipefail
 # Helper script to insert attributes to metadata by reading values from text file and inserting them to a copy of landscapes.yaml (can be changed to other)
 
 INPUT_FILE="input.txt"
-YAML_FILE="../landscapes.yaml"
-OUTPUT_FILE="../landscapes.updated.yaml"
+YAML_FILE="../landscapes.yaml" # YAML_FILE="../components.yaml"
+OUTPUT_FILE="../landscapes.updated.yaml" # OUTPUT_FILE="../components.updated.yaml"
 PREFIX_VALUE="operator.operationsconsole"
 #PREFIX_VALUE="operation-console.operationsconsole"
 #PREFIX_VALUE="operations-console.operationsconsole"
@@ -26,6 +26,7 @@ while IFS= read -r line; do
   echo "Updating: $first_word to $second_word"
 
   # 1) Ensure metadata exists on the matched item(s)
+  # .components
   yq eval -i \
     "(.landscapes[] | select(.name == \"$first_word\")).metadata |= (. // {})" \
     "$OUTPUT_FILE"

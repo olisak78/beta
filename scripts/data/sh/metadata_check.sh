@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Helper script to test metadata: search by conditions, echo and/or open browser with URL
 # Requires yq (brew install yq)
+#INPUT_FILE="${1:-../components.yaml}"
 INPUT_FILE="${1:-../landscapes.yaml}"
 
 # Iterate over matching entries (project=cis20, environment=?)
@@ -11,6 +12,7 @@ INPUT_FILE="${1:-../landscapes.yaml}"
 # and (.metadata | has("extension") | not)
 # and (.metadata | has("oc-prefix"))
 # and (.metadata | has("central-region"))
+# yq -r '.components[]
 yq -r '.landscapes[]
   | select(
                 .project == "cis20"

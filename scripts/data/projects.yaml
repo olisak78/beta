@@ -2,23 +2,39 @@ projects:
   - name: neo
     title: CIS@Neo
     description: SAP BTP, Neo environment is an enterprise platform-as-a-service (enterprise PaaS) that provides comprehensive application development services and capabilities.
+    metadata:
+      views:
+        - grid
   - name: cis20
     title: CIS@2.0
     description: SAP BTP is a platform engineered to integrate, automate, extend, and build AI-supported business applications and processes across your enterprise.
     metadata:
-      alerts:
-        repo: "https://github.tools.sap/btp-monitoring/monitoring-configs/tree/main/charts/monitoring-configs/templates/alerts"
-      health:
-        endpoint: "<component.metadata.subdomain>.<component.name>.cfapp.<landscape.metadata.domain>/health"
+      alerts: "https://github.tools.sap/btp-monitoring/monitoring-configs/tree/main/charts/monitoring-configs/templates/alerts"
+      components-metrics: true
+      views:
+        - grid
+        - table
   - name: ca
     title: Cloud Automation
     description: Cloud Automation
+    metadata:
+      views:
+        - grid
   - name: usrv
     title: Unified Services
     description: Unified Services
+    metadata:
+      views:
+        - grid
   - name: developer-portal
     title: Developer Portal
     description: Developer Portal - this project.
+    metadata:
+      views:
+        - grid
   - name: btp-monitoring
     title: BTP Monitoring
     description: BTP Monitoring
+    metadata:
+      views:
+        - grid

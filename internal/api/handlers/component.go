@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/logger"
+	"developer-portal-backend/internal/service"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
-
-	apperrors "developer-portal-backend/internal/errors"
-	"developer-portal-backend/internal/service"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,15 +18,113 @@ import (
 // ComponentHandler handles HTTP requests for component operations
 type ComponentHandler struct {
 	componentService *service.ComponentService
+	landscapeService service.LandscapeServiceInterface
 	teamService      service.TeamServiceInterface
 }
 
-// NewComponentHandler creates a new component handler
+// NewComponentHandler creates a new component handler (backwards-compatible signature)
 func NewComponentHandler(componentService *service.ComponentService, teamService service.TeamServiceInterface) *ComponentHandler {
+	return NewComponentHandlerWithLandscape(componentService, nil, teamService)
+}
+
+// NewComponentHandlerWithLandscape creates a new component handler with landscape service
+func NewComponentHandlerWithLandscape(componentService *service.ComponentService, landscapeService service.LandscapeServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
 	return &ComponentHandler{
 		componentService: componentService,
+		landscapeService: landscapeService,
 		teamService:      teamService,
 	}
+}
+
+// ComponentHealth handles GET /components/health
+// @Param component-id query string false "Component ID (UUID)"
+// @Param landscape-id query string false "Landscape ID (UUID)"
+// @Security BearerAuth
+// @Router /components/health [get]
+func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
+	componentIDStr := c.Query("component-id")
+	landscapeIDStr := c.Query("landscape-id")
+	if componentIDStr != "" && landscapeIDStr != "" {
+		compID, err := uuid.Parse(componentIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid component-id"})
+			return
+		}
+		landID, err := uuid.Parse(landscapeIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid landscape-id"})
+			return
+		}
+
+		component, err := h.componentService.GetByID(compID)
+		if err != nil {
+			if errors.Is(err, apperrors.ErrComponentNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Ensure landscape service is configured
+		if h.landscapeService == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "landscape service not configured"})
+			return
+		}
+		landscape, err := h.landscapeService.GetLandscapeByID(landID)
+		if err != nil {
+			if errors.Is(err, apperrors.ErrLandscapeNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// if exists, concatenate subdomain to component.Name
+		subdomain := component.Name
+		if len(component.Metadata) > 0 {
+			var meta map[string]interface{}
+			if err := json.Unmarshal(component.Metadata, &meta); err == nil {
+				if sdRaw, ok := meta["subdomain"]; ok {
+					if sdStr, ok := sdRaw.(string); ok && sdStr != "" {
+						subdomain = fmt.Sprintf("%s.%s", sdStr, subdomain)
+					}
+				}
+			}
+		}
+
+		// Build health URL
+		url := fmt.Sprintf("https://%s.cfapps.%s/health", subdomain, landscape.Domain)
+
+		// Log the URL to console
+		logger.FromGinContext(c).Infof("components health proxy URL=%s", url)
+
+		// Fetch URL with timeout
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch component health", "details": err.Error(), "url": url})
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy relevant headers (at least content-type)
+		if ct := resp.Header.Get("Content-Type"); ct != "" {
+			c.Writer.Header().Set("Content-Type", ct)
+		}
+
+		// Pass through status and body
+		c.Status(resp.StatusCode)
+		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+			// Can't send JSON after headers/body may have been sent; just log the error
+			logger.FromGinContext(c).Warnf("failed to stream response body: %v", err)
+		}
+		return
+	}
+
+	// Missing parameters: both component-id and landscape-id are required
+	c.JSON(http.StatusBadRequest, gin.H{"error": "component-id and landscape-id parameters are required"})
 }
 
 // ListComponents handles GET /components
@@ -35,13 +136,13 @@ func NewComponentHandler(componentService *service.ComponentService, teamService
 // @Param team-id query string false "Team ID (UUID) to filter by owner_id"
 // @Param project-name query string false "Project name"
 // @Success 200 {array} object "Successfully retrieved components"
-// @Failure 400 {object} map[string]interface{} "team-id or project-name parameter is required"
+// @Failure 400 {object} map[string]interface{} "Invalid parameters"
+// @Failure 404 {object} map[string]interface{} "Not found"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Security BearerAuth
 // @Router /components [get]
 func (h *ComponentHandler) ListComponents(c *gin.Context) {
 	projectName := c.Query("project-name")
-
 	// If team-id is provided, return components owned by that team (uses pagination)
 	teamIDStr := c.Query("team-id")
 	if teamIDStr != "" {
@@ -61,12 +162,14 @@ func (h *ComponentHandler) ListComponents(c *gin.Context) {
 		}
 		// Build minimal view items with project info (same fields as project-name view plus project_id and project_title)
 		items := make([]gin.H, len(components))
-		for i, c := range components {
+		for i, comp := range components {
 			// Extract qos, sonar, github from metadata if present
 			var qos, sonar, github string
-			if len(c.Metadata) > 0 {
+			var centralService, isLibrary, health *bool
+
+			if len(comp.Metadata) > 0 {
 				var meta map[string]interface{}
-				if err := json.Unmarshal(c.Metadata, &meta); err == nil {
+				if err := json.Unmarshal(comp.Metadata, &meta); err == nil {
 					// qos from metadata.ci.qos
 					if ciRaw, ok := meta["ci"]; ok {
 						if ciMap, ok := ciRaw.(map[string]interface{}); ok {
@@ -87,7 +190,7 @@ func (h *ComponentHandler) ListComponents(c *gin.Context) {
 							}
 						}
 					}
-					// github from metadata.github.url
+					// GitHub from metadata.github.url
 					if ghRaw, ok := meta["github"]; ok {
 						if ghMap, ok := ghRaw.(map[string]interface{}); ok {
 							if urlRaw, ok := ghMap["url"]; ok {
@@ -97,26 +200,58 @@ func (h *ComponentHandler) ListComponents(c *gin.Context) {
 							}
 						}
 					}
+					// central-service from metadata["central-service"]
+					if csRaw, ok := meta["central-service"]; ok {
+						if csBool, ok := csRaw.(bool); ok {
+							b := csBool
+							centralService = &b
+						}
+					}
+					// is-library from metadata["isLibrary"] (mapped to is-library)
+					if ilRaw, ok := meta["isLibrary"]; ok {
+						if ilBool, ok := ilRaw.(bool); ok {
+							b := ilBool
+							isLibrary = &b
+						}
+					}
+					// health from metadata["health"] (boolean)
+					if hRaw, ok := meta["health"]; ok {
+						if hBool, ok := hRaw.(bool); ok {
+							b := hBool
+							health = &b
+						}
+					}
 				}
 			}
+
 			// Fetch project title (non-fatal if not found)
 			projectTitle := ""
-			if title, err := h.componentService.GetProjectTitleByID(c.ProjectID); err == nil {
+			if title, err := h.componentService.GetProjectTitleByID(comp.ProjectID); err == nil {
 				projectTitle = title
 			}
 
-			items[i] = gin.H{
-				"id":            c.ID,
-				"owner_id":      c.OwnerID,
-				"name":          c.Name,
-				"title":         c.Title,
-				"description":   c.Description,
+			m := gin.H{
+				"id":            comp.ID,
+				"owner_id":      comp.OwnerID,
+				"name":          comp.Name,
+				"title":         comp.Title,
+				"description":   comp.Description,
 				"qos":           qos,
 				"sonar":         sonar,
 				"github":        github,
-				"project_id":    c.ProjectID,
+				"project_id":    comp.ProjectID,
 				"project_title": projectTitle,
 			}
+			if centralService != nil {
+				m["central-service"] = *centralService
+			}
+			if isLibrary != nil {
+				m["is-library"] = *isLibrary
+			}
+			if health != nil {
+				m["health"] = *health
+			}
+			items[i] = m
 		}
 		c.JSON(http.StatusOK, items)
 		return

@@ -175,6 +175,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:accounts-service
       technology: java
+      health: true
   - name: account-context-service
     title: Account Context Service
     description: account-context-service managed by team-zohar
@@ -190,6 +191,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:account-context-service
       technology: java
+      health: true
   - name: cis-common
     title: Cis Common
     description: cis-common managed by team-eli
@@ -223,6 +225,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:cis-service-broker
       technology: java
+      health: true
   - name: cloud-automation-service
     title: Cp Formations
     description: cp-formations managed by team-zohar
@@ -235,6 +238,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:cp-formations
       technology: java
+      health: true
   - name: order-processing
     title: Order Processing
     description: order-processing managed by team-lior
@@ -247,6 +251,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:order-processing
       technology: java
+      health: true
   - name: active-monitoring-service
     title: Active Monitoring Service
     description: active-monitoring-service managed by team-coe
@@ -259,6 +264,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:active-monitoring-service
       technology: java_docker
+      health: true
   - name: entitlements-service
     title: Entitlements Service
     description: entitlements-service managed by team-zohar
@@ -271,6 +277,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:entitlements-service
       technology: java
+      health: true
   - name: account-budgets-service
     title: Account Budgets Service
     description: account-budgets-service managed by team-lior
@@ -286,6 +293,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:account-budgets-service
       technology: java
+      health: true
   - name: events-service
     title: Events Service
     description: events-service managed by team-eli
@@ -297,6 +305,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:events-service
       technology: java
+      health: true
   - name: external-provider-registry
     title: External Provider Registry
     description: external-provider-registry managed by team-eli
@@ -309,6 +318,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:external-provider-registry
       technology: java
+      health: true
   - name: operation-console
     title: Operation Console
     description: operation-console managed by team-naomi
@@ -321,6 +331,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:operation-console
       technology: nodejs
+      health: true
   - name: operation-console-service-manager
     title: Operation Console Service Manager
     description: operation-console-service-manager managed by team-naomi
@@ -347,6 +358,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:saas-registry
       technology: java
+      health: true
   - name: tenant-onboarding
     title: Tenant Onboarding Gateway
     description: tenant-onboarding-gateway managed by team-eli
@@ -358,6 +370,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:tenant-onboarding-gateway
       technology: java
+      health: true
   - name: cross-registry-service
     title: Cross Registry Service
     description: cross-registry-service managed by team-eli
@@ -370,6 +383,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:cross-registry-service
       technology: java
+      health: true
   - name: cloudfoundry-client
     title: Cloudfoundry Client
     description: cloudfoundry-client managed by team-eli
@@ -393,6 +407,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:cloudfoundry-environment-broker
       technology: java
+      health: true
   - name: provisioning-service
     title: Provisioning Service
     description: provisioning-service managed by team-eli
@@ -407,6 +422,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:provisioning-service
       technology: java
+      health: true
   - name: cis-cli-backend
     title: Cis Cli Backend
     description: cis-cli-backend managed by team-zohar
@@ -418,6 +434,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:cis-cli-backend
       technology: java
+      health: true
   - name: subscription-management-dashboard
     title: Subscription Management Dashboard
     description: subscription-management-dashboard managed by team-naomi
@@ -430,6 +447,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:subscription-management-dashboard
       technology: nodejs
+      health: true
   - name: task-management
     title: Task Management
     description: task-management managed by team-eli
@@ -445,6 +463,7 @@ components:
       sonar:
         project_id: com.sap.core.commercial.service:task-management
       technology: java
+      health: true
   - name: workflow-adapter
     title: Workflow Adapter
     description: workflow-adapter managed by team-yael

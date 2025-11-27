@@ -306,7 +306,7 @@ func (suite *ProjectHandlerTestSuite) TestGetAllProjects_Success_WithEnrichedMet
 				Name:        "enriched-test",
 				Title:       "Enriched Test Project",
 				Description: "Testing enriched metadata structure",
-				Metadata:    json.RawMessage(`{"alerts": {"repo": "https://github.com/example/repo"}, "health": {"endpoint": "https://api.example.com/health"}, "version": "2.0.0"}`),
+				Metadata:    json.RawMessage(`{"alerts": "https://github.com/example/repo", "components-metrics": true, "views": ["overview","cis"], "version": "2.0.0"}`),
 			},
 		},
 	}
@@ -334,25 +334,26 @@ func (suite *ProjectHandlerTestSuite) TestGetAllProjects_Success_WithEnrichedMet
 
 	// Verify enriched nested structures
 	assert.Contains(suite.T(), project, "alerts")
-	assert.Contains(suite.T(), project, "health")
 
-	alerts, ok := project["alerts"].(map[string]interface{})
+	// alerts is a flattened string (not nested under repo)
+	alertsStr, ok := project["alerts"].(string)
 	assert.True(suite.T(), ok)
-	assert.Equal(suite.T(), "https://github.com/example/repo", alerts["repo"])
+	assert.Equal(suite.T(), "https://github.com/example/repo", alertsStr)
 
-	health, ok := project["health"].(map[string]interface{})
+	// components-metrics should be present as a boolean
+	assert.Contains(suite.T(), project, "components-metrics")
+	cmBool, ok := project["components-metrics"].(bool)
 	assert.True(suite.T(), ok)
-	assert.Equal(suite.T(), "https://api.example.com/health", health["endpoint"])
+	assert.True(suite.T(), cmBool)
 
-	// Verify remaining metadata is included
-	assert.Contains(suite.T(), project, "metadata")
-	metadata, ok := project["metadata"].(map[string]interface{})
+	// views should be a flattened string from metadata.views array
+	assert.Contains(suite.T(), project, "views")
+	viewsStr, ok := project["views"].(string)
 	assert.True(suite.T(), ok)
-	assert.Equal(suite.T(), "2.0.0", metadata["version"])
+	assert.Equal(suite.T(), "overview,cis", viewsStr)
 
-	// Verify extracted fields are not in metadata
-	assert.NotContains(suite.T(), metadata, "alerts")
-	assert.NotContains(suite.T(), metadata, "health")
+	// Metadata should not be included at top level
+	assert.NotContains(suite.T(), project, "metadata")
 
 	// Verify extracted fields are not at top level
 	assert.NotContains(suite.T(), project, "repo")

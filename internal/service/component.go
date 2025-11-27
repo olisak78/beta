@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
 
@@ -33,20 +34,22 @@ func NewComponentService(repo *repository.ComponentRepository, orgRepo *reposito
 
 // ComponentProjectView is a minimal view for /components?project-name=<name>
 type ComponentProjectView struct {
-	ID          uuid.UUID       `json:"id"`
-	OwnerID     uuid.UUID       `json:"owner_id"`
-	Name        string          `json:"name"`
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	QOS         string          `json:"qos,omitempty"`
-	Sonar       string          `json:"sonar,omitempty"`
-	GitHub      string          `json:"github,omitempty"`
-	Metadata    json.RawMessage `json:"metadata,omitempty" swaggertype:"object"`
+	ID             uuid.UUID `json:"id"`
+	OwnerID        uuid.UUID `json:"owner_id"`
+	Name           string    `json:"name"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	QOS            string    `json:"qos,omitempty"`
+	Sonar          string    `json:"sonar,omitempty"`
+	GitHub         string    `json:"github,omitempty"`
+	CentralService *bool     `json:"central-service,omitempty"`
+	IsLibrary      *bool     `json:"is-library,omitempty"`
+	Health         *bool     `json:"health,omitempty"`
 }
 
 // GetByProjectNameAllView returns ALL components for a project (unpaginated) with a minimal view:
 // - Omits project_id, created_at, updated_at, metadata
-// - Adds fields: qos (metadata.ci.qos), sonar (metadata.sonar.project_id), github (metadata.github.url)
+// - Adds fields: qos (metadata.ci.qos), sonar (metadata.sonar.project_id), github (metadata.github.url), central-service (metadata["central-service"]), is-library (metadata["isLibrary"])
 func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]ComponentProjectView, error) {
 	if projectName == "" {
 		return []ComponentProjectView{}, nil
@@ -57,9 +60,6 @@ func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]Compon
 			return nil, apperrors.ErrProjectNotFound
 		}
 		return nil, fmt.Errorf("failed to resolve project by name: %w", err)
-	}
-	if project == nil {
-		return nil, apperrors.ErrProjectNotFound
 	}
 
 	components, _, err := s.repo.GetComponentsByProjectID(project.ID, 1000000, 0)
@@ -75,10 +75,9 @@ func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]Compon
 			Name:        c.Name,
 			Title:       c.Title,
 			Description: c.Description,
-			Metadata:    c.Metadata, // Include full metadata for filtering
 		}
 
-		// Extract qos, sonar, github from metadata if present
+		// Extract qos, sonar, github, central-service, is-library, health from metadata if present
 		if len(c.Metadata) > 0 {
 			var meta map[string]interface{}
 			if err := json.Unmarshal(c.Metadata, &meta); err == nil {
@@ -112,6 +111,27 @@ func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]Compon
 						}
 					}
 				}
+				// central-service from metadata["central-service"]
+				if csRaw, ok := meta["central-service"]; ok {
+					if csBool, ok := csRaw.(bool); ok {
+						b := csBool
+						views[i].CentralService = &b
+					}
+				}
+				// is-library from metadata["isLibrary"] (mapped to is-library)
+				if ilRaw, ok := meta["isLibrary"]; ok {
+					if ilBool, ok := ilRaw.(bool); ok {
+						b := ilBool
+						views[i].IsLibrary = &b
+					}
+				}
+				// health from metadata["health"] (boolean)
+				if hRaw, ok := meta["health"]; ok {
+					if hBool, ok := hRaw.(bool); ok {
+						b := hBool
+						views[i].Health = &b
+					}
+				}
 			}
 		}
 	}
@@ -128,8 +148,17 @@ func (s *ComponentService) GetProjectTitleByID(id uuid.UUID) (string, error) {
 		}
 		return "", fmt.Errorf("failed to get project: %w", err)
 	}
-	if project == nil {
-		return "", apperrors.ErrProjectNotFound
-	}
 	return project.Title, nil
+}
+
+// GetByID returns a component by its ID
+func (s *ComponentService) GetByID(id uuid.UUID) (*models.Component, error) {
+	component, err := s.repo.GetByID(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrComponentNotFound
+		}
+		return nil, fmt.Errorf("failed to get component: %w", err)
+	}
+	return component, nil
 }

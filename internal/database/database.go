@@ -176,6 +176,8 @@ func CreateIndexes(db *gorm.DB) error {
 	return nil
 }
 
+// ErrorsFix removes known erroneous data from early versions of the database.
+// most of those fixes can be removed after a version was deployed to 'dev' and 'prod' environments, as they are one-time fixes.
 func ErrorsFix(db *gorm.DB) error {
 	// remove components which belong to project 'internal' - this was a test project created in early versions:
 	if err := db.Exec(`DELETE FROM components WHERE project_id IN (SELECT id FROM projects WHERE name = ?)`, "internal").Error; err != nil {
@@ -183,6 +185,10 @@ func ErrorsFix(db *gorm.DB) error {
 	}
 	// remove projects with name 'noe' or 'internal' - these were test projects created in early versions:
 	if err := db.Exec(`DELETE FROM projects WHERE name IN (?,?)`, "noe", "internal").Error; err != nil {
+		return err
+	}
+	// remove 'health' metadata entries from all projects - these had invalid data structures in early versions:
+	if err := db.Exec(`UPDATE projects SET metadata = jsonb_strip_nulls(metadata - 'health') WHERE metadata ? 'health'`).Error; err != nil {
 		return err
 	}
 	return nil
