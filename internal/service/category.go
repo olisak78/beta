@@ -8,22 +8,29 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"time"
+	"developer-portal-backend/internal/cache"
+	"encoding/json"
 )
 
 // CategoryService provides category-related business logic
 type CategoryService struct {
 	repo      repository.CategoryRepositoryInterface
 	validator *validator.Validate
+	cache     cache.CacheService
+    cacheTTL  time.Duration
 }
 
 // Ensure CategoryService implements CategoryServiceInterface
 var _ CategoryServiceInterface = (*CategoryService)(nil)
 
 // NewCategoryService creates a new CategoryService
-func NewCategoryService(repo repository.CategoryRepositoryInterface, validator *validator.Validate) *CategoryService {
+func NewCategoryService(repo repository.CategoryRepositoryInterface, validator *validator.Validate, cacheService cache.CacheService) *CategoryService {
 	return &CategoryService{
 		repo:      repo,
 		validator: validator,
+		cache:     cacheService,
+        cacheTTL:  30 * time.Minute,
 	}
 }
 
@@ -55,6 +62,18 @@ func (s *CategoryService) GetAll(page, pageSize int) (*CategoryListResponse, err
 		pageSize = 1000
 	}
 
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("categories:page=%d:pageSize=%d", page, pageSize)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var response CategoryListResponse
+        if err := json.Unmarshal(cachedData, &response); err == nil {
+            return &response, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
+
 	offset := (page - 1) * pageSize
 	cats, total, err := s.repo.GetAll(pageSize, offset)
 	if err != nil {
@@ -66,12 +85,19 @@ func (s *CategoryService) GetAll(page, pageSize int) (*CategoryListResponse, err
 		responses[i] = s.toResponse(&c)
 	}
 
-	return &CategoryListResponse{
-		Categories: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
+	response := &CategoryListResponse{
+        Categories: responses,
+        Total:      total,
+        Page:       page,
+        PageSize:   pageSize,
+    }
+
+    // CACHE THE RESPONSE
+    if data, err := json.Marshal(response); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
+    return response, nil
 }
 
 // toResponse converts a Category model to API response

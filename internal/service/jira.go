@@ -14,8 +14,10 @@ import (
 	"sync"
 	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 	apperrors "developer-portal-backend/internal/errors"
+	
 )
 
 // JiraService provides methods to interact with Jira
@@ -30,12 +32,14 @@ type JiraService struct {
 
 	// Fixed PAT name including machine identifier
 	patName string
+	cache      cache.CacheService
+	cacheTTLs  *cache.EndpointCacheConfig
 }
 
 /**
  * NewJiraService creates a new Jira service
  */
-func NewJiraService(cfg *config.Config) *JiraService {
+func NewJiraService(cfg *config.Config, cacheService cache.CacheService) *JiraService {
 	// PAT name is environment-scoped: "DeveloperPortal-<env>"
 	envName := strings.TrimSpace(os.Getenv("DEPLOY_ENVIRONMENT"))
 	if envName == "" {
@@ -50,6 +54,8 @@ func NewJiraService(cfg *config.Config) *JiraService {
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
 		patName:    name,
+		cache:      cacheService,
+		cacheTTLs:  cache.DefaultEndpointConfig(),
 	}
 }
 
@@ -352,7 +358,44 @@ func (s *JiraService) GetIssues(filters JiraIssueFilters) (*JiraIssuesResponse, 
 		return nil, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
-	return s.searchIssues(jql, filters, false)
+	// BUILD CACHE KEY
+	params := map[string]string{
+		"project":  filters.Project,
+		"status":   filters.Status,
+		"team":     filters.Team,
+		"user":     filters.User,
+		"assignee": filters.Assignee,
+		"type":     filters.Type,
+		"summary":  filters.Summary,
+		"key":      filters.Key,
+		"page":     fmt.Sprintf("%d", filters.Page),
+		"limit":    fmt.Sprintf("%d", filters.Limit),
+	}
+	cacheKey := cache.JiraCacheKey("issues", filters.User, params)
+
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response JiraIssuesResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			log.Printf("Cache hit for Jira issues: %s", cacheKey)
+			return &response, nil  // CACHE HIT
+		}
+	}
+
+	log.Printf("Cache miss for Jira issues: %s", cacheKey)
+
+	response, err := s.searchIssues(jql, filters, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.JiraIssues)
+		log.Printf("Cached Jira issues: %s", cacheKey)
+	}
+
+	return response, nil
 }
 
 // GetIssuesCount returns the count of Jira issues based on the provided filters.
@@ -366,11 +409,43 @@ func (s *JiraService) GetIssuesCount(filters JiraIssueFilters) (int, error) {
 		return 0, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
+	// BUILD CACHE KEY for count
+	params := map[string]string{
+		"project":  filters.Project,
+		"status":   filters.Status,
+		"team":     filters.Team,
+		"user":     filters.User,
+		"assignee": filters.Assignee,
+		"type":     filters.Type,
+		"count":    "true",  // Distinguish count from regular queries
+	}
+	cacheKey := cache.JiraCacheKey("issues-count", filters.User, params)
+
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var count int
+		if err := json.Unmarshal(cachedData, &count); err == nil {
+			log.Printf("Cache hit for Jira issues count: %s", cacheKey)
+			return count, nil  // CACHE HIT
+		}
+	}
+
+	log.Printf("Cache miss for Jira issues count: %s", cacheKey)
+
 	response, err := s.searchIssues(jql, filters, true)
 	if err != nil {
 		return 0, err
 	}
-	return response.Total, nil
+
+	count := response.Total
+
+	// CACHE THE COUNT
+	if data, err := json.Marshal(count); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.JiraIssues)
+		log.Printf("Cached Jira issues count: %s", cacheKey)
+	}
+
+	return count, nil
 }
 
 // buildJQL constructs the JQL query based on the provided filters with validation

@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"time"
+	"developer-portal-backend/internal/cache"
 )
 
 // LinkService provides link-related business logic
@@ -19,19 +21,23 @@ type LinkService struct {
 	teamRepo     repository.TeamRepositoryInterface
 	categoryRepo repository.CategoryRepositoryInterface
 	validator    *validator.Validate
+	cache        cache.CacheService
+    cacheTTL     time.Duration
 }
 
 // Ensure LinkService implements LinkServiceInterface
 var _ LinkServiceInterface = (*LinkService)(nil)
 
 // NewLinkService creates a new LinkService
-func NewLinkService(linkRepo repository.LinkRepositoryInterface, userRepo repository.UserRepositoryInterface, teamRepo repository.TeamRepositoryInterface, categoryRepo repository.CategoryRepositoryInterface, validator *validator.Validate) *LinkService {
+func NewLinkService(linkRepo repository.LinkRepositoryInterface, userRepo repository.UserRepositoryInterface, teamRepo repository.TeamRepositoryInterface, categoryRepo repository.CategoryRepositoryInterface, validator *validator.Validate, cacheService cache.CacheService) *LinkService {
 	return &LinkService{
 		linkRepo:     linkRepo,
 		userRepo:     userRepo,
 		teamRepo:     teamRepo,
 		categoryRepo: categoryRepo,
 		validator:    validator,
+		cache:        cacheService,
+        cacheTTL:     5 * time.Minute,
 	}
 }
 
@@ -115,6 +121,9 @@ func (s *LinkService) CreateLink(req *CreateLinkRequest) (*LinkResponse, error) 
 		return nil, fmt.Errorf("failed to create link: %w", err)
 	}
 
+	// INVALIDATE owner's link cache
+    s.invalidateLinkCache(req.Owner)
+
 	res := toLinkResponse(link)
 	return &res, nil
 }
@@ -124,6 +133,17 @@ func (s *LinkService) GetByOwnerUserID(ownerUserID string) ([]LinkResponse, erro
 	if strings.TrimSpace(ownerUserID) == "" {
 		return nil, fmt.Errorf("owner user_id is required")
 	}
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("links:owner:%s", ownerUserID)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var res []LinkResponse
+        if err := json.Unmarshal(cachedData, &res); err == nil {
+            return res, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 
 	// Find user by user_id
 	user, err := s.userRepo.GetByUserID(ownerUserID)
@@ -142,6 +162,10 @@ func (s *LinkService) GetByOwnerUserID(ownerUserID string) ([]LinkResponse, erro
 	for i := range links {
 		res = append(res, toLinkResponse(&links[i]))
 	}
+	// CACHE THE RESPONSE
+    if data, err := json.Marshal(res); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
 	return res, nil
 }
 
@@ -154,6 +178,18 @@ func (s *LinkService) GetByOwnerUserIDWithViewer(ownerUserID string, viewerName 
 		// Fallback to non-favorite response if viewer missing
 		return s.GetByOwnerUserID(ownerUserID)
 	}
+
+	// BUILD CACHE KEY (includes viewer for favorite marking)
+    cacheKey := fmt.Sprintf("links:owner:%s:viewer:%s", ownerUserID, viewerName)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var res []LinkResponse
+        if err := json.Unmarshal(cachedData, &res); err == nil {
+            return res, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 
 	// Find owner by user_id
 	owner, err := s.userRepo.GetByUserID(ownerUserID)
@@ -209,6 +245,10 @@ func (s *LinkService) GetByOwnerUserIDWithViewer(ownerUserID string, viewerName 
 		}
 		res = append(res, lr)
 	}
+	// CACHE THE RESPONSE
+    if data, err := json.Marshal(res); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
 	return res, nil
 }
 
@@ -236,9 +276,35 @@ func toLinkResponse(l *models.Link) LinkResponse {
 
 // DeleteLink deletes a link by UUID
 func (s *LinkService) DeleteLink(id uuid.UUID) error {
-	// Delegate to repository; repository Delete is idempotent
-	if err := s.linkRepo.Delete(id); err != nil {
-		return fmt.Errorf("failed to delete link: %w", err)
-	}
-	return nil
+
+    if err := s.linkRepo.Delete(id); err != nil {
+        return fmt.Errorf("failed to delete link: %w", err)
+    }
+    
+    return nil
+}
+
+// invalidateLinkCache invalidates cache entries related to link operations
+func (s *LinkService) invalidateLinkCache(ownerUUIDStr string) {
+    // Get owner UUID
+    ownerUUID, err := uuid.Parse(ownerUUIDStr)
+    if err != nil {
+        return
+    }
+
+    // Try to get the owner as a user to find their user_id
+    if user, err := s.userRepo.GetByID(ownerUUID); err == nil && user != nil {
+        // Invalidate cache by user_id
+        _ = s.cache.Delete(fmt.Sprintf("links:owner:%s", user.UserID))
+        
+        // Invalidate all viewer-specific caches for this owner (we can't know all viewers)
+        // This is a limitation - we'll rely on TTL expiration for viewer caches
+        // Alternatively, you could clear by pattern if your cache supports it
+    }
+
+    // Try to get the owner as a team
+    if team, err := s.teamRepo.GetByID(ownerUUID); err == nil && team != nil {
+        // Invalidate cache by team name
+        _ = s.cache.Delete(fmt.Sprintf("links:owner:%s", team.Name))
+    }
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"time"
+	"developer-portal-backend/internal/cache"
 )
 
 // ComponentService handles business logic for components
@@ -20,15 +22,19 @@ type ComponentService struct {
 	organizationRepo *repository.OrganizationRepository
 	projectRepo      *repository.ProjectRepository
 	validator        *validator.Validate
+	cache            cache.CacheService
+    cacheTTL         time.Duration
 }
 
 // NewComponentService creates a new component service
-func NewComponentService(repo *repository.ComponentRepository, orgRepo *repository.OrganizationRepository, projRepo *repository.ProjectRepository, validator *validator.Validate) *ComponentService {
+func NewComponentService(repo *repository.ComponentRepository, orgRepo *repository.OrganizationRepository, projRepo *repository.ProjectRepository, validator *validator.Validate, cacheService cache.CacheService) *ComponentService {
 	return &ComponentService{
 		repo:             repo,
 		organizationRepo: orgRepo,
 		projectRepo:      projRepo,
 		validator:        validator,
+		cache:            cacheService,
+        cacheTTL:         10 * time.Minute,
 	}
 }
 
@@ -54,6 +60,18 @@ func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]Compon
 	if projectName == "" {
 		return []ComponentProjectView{}, nil
 	}
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("components:project=%s:all", projectName)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var views []ComponentProjectView
+        if err := json.Unmarshal(cachedData, &views); err == nil {
+            return views, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
+
 	project, err := s.projectRepo.GetByName(projectName)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -136,11 +154,28 @@ func (s *ComponentService) GetByProjectNameAllView(projectName string) ([]Compon
 		}
 	}
 
+	// CACHE THE RESPONSE
+    if data, err := json.Marshal(views); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
 	return views, nil
 }
 
 // GetProjectTitleByID returns the project's title by ID
 func (s *ComponentService) GetProjectTitleByID(id uuid.UUID) (string, error) {
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("project:title:%s", id.String())
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var title string
+        if err := json.Unmarshal(cachedData, &title); err == nil {
+            return title, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
+
 	project, err := s.projectRepo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -148,11 +183,29 @@ func (s *ComponentService) GetProjectTitleByID(id uuid.UUID) (string, error) {
 		}
 		return "", fmt.Errorf("failed to get project: %w", err)
 	}
-	return project.Title, nil
+	title := project.Title
+
+    // CACHE THE RESPONSE
+    if data, err := json.Marshal(title); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
+    return title, nil
 }
 
 // GetByID returns a component by its ID
 func (s *ComponentService) GetByID(id uuid.UUID) (*models.Component, error) {
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("component:id:%s", id.String())
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var component models.Component
+        if err := json.Unmarshal(cachedData, &component); err == nil {
+            return &component, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 	component, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,5 +213,9 @@ func (s *ComponentService) GetByID(id uuid.UUID) (*models.Component, error) {
 		}
 		return nil, fmt.Errorf("failed to get component: %w", err)
 	}
+	// CACHE THE RESPONSE
+    if data, err := json.Marshal(component); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
 	return component, nil
 }

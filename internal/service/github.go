@@ -18,25 +18,33 @@ import (
 
 	"github.com/google/go-github/v57/github"
 	"golang.org/x/oauth2"
+	"developer-portal-backend/internal/cache"
+	"github.com/sirupsen/logrus"
 )
 
 // GitHubService provides methods to interact with GitHub API
 type GitHubService struct {
 	authService GitHubAuthService
+	cache       cache.CacheService          
+    cacheTTLs   *cache.EndpointCacheConfig
 }
 
 // NewGitHubService creates a new GitHub service
-func NewGitHubService(authService *auth.AuthService) *GitHubService {
+func NewGitHubService(authService *auth.AuthService, cacheService cache.CacheService) *GitHubService {
 	return &GitHubService{
 		authService: NewAuthServiceAdapter(authService),
+		cache:       cacheService,
+        cacheTTLs:   cache.DefaultEndpointConfig(),
 	}
 }
 
 // NewGitHubServiceWithAdapter creates a new GitHub service with a custom auth service adapter
 // This constructor is primarily for testing with mock auth services
-func NewGitHubServiceWithAdapter(authService GitHubAuthService) *GitHubService {
+func NewGitHubServiceWithAdapter(authService GitHubAuthService, cacheService cache.CacheService) *GitHubService {
 	return &GitHubService{
 		authService: authService,
+		cache:       cacheService,
+		cacheTTLs:   cache.DefaultEndpointConfig(),
 	}
 }
 
@@ -161,6 +169,25 @@ func parseRepositoryFromURL(urlStr string) (owner, repoName, fullName string) {
 
 // GetUserOpenPullRequests retrieves all open pull requests for the authenticated user
 func (s *GitHubService) GetUserOpenPullRequests(ctx context.Context, claims *auth.AuthClaims, state, sort, direction string, perPage, page int) (*PullRequestsResponse, error) {
+	params := map[string]string{
+		"state":     state,
+		"sort":      sort,
+		"direction": direction,
+		"perPage":   fmt.Sprintf("%d", perPage),
+		"page":      fmt.Sprintf("%d", page),
+	}
+	cacheKey := cache.GitHubCacheKey("pull-requests", fmt.Sprintf("%d", claims.UserID), params)
+
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response PullRequestsResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			logrus.Info("Cache hit for GitHub pull requests", "key", cacheKey)
+			return &response, nil  // CACHE HIT - return cached data
+		}
+	}
+	logrus.Info("Cache miss for GitHub pull requests", "key", cacheKey)
+
 	if claims == nil {
 		return nil, fmt.Errorf("authentication required")
 	}
@@ -295,6 +322,11 @@ func (s *GitHubService) GetUserOpenPullRequests(ctx context.Context, claims *aut
 		PullRequests: pullRequests,
 		Total:        result.GetTotal(),
 	}
+	// CACHE THE RESPONSE (ignore cache errors - data is still valid)
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.GitHubPullRequests)
+		logrus.Info("Cached GitHub pull requests", "key", cacheKey, "ttl", s.cacheTTLs.GitHubPullRequests)
+	}
 
 	return response, nil
 }
@@ -349,6 +381,19 @@ func (s *GitHubService) GetUserTotalContributions(ctx context.Context, claims *a
 			}
 		}`, from.Format(time.RFC3339), to.Format(time.RFC3339))
 	}
+
+	// BUILD CACHE KEY
+	params := map[string]string{"period": period}
+	cacheKey := cache.GitHubCacheKey("contributions", fmt.Sprintf("%d", claims.UserID), params)
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response TotalContributionsResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			logrus.Info("Cache hit for GitHub contributions", "key", cacheKey)
+			return &response, nil
+		}
+	}
+	logrus.Info("Cache miss for GitHub contributions", "key", cacheKey)
 
 	// Get GitHub access token using validated JWT claims
 	accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
@@ -482,6 +527,12 @@ func (s *GitHubService) GetUserTotalContributions(ctx context.Context, claims *a
 		To:                 toStr,
 	}
 
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.GitHubContributions)
+		logrus.Info("Cached GitHub contributions", "key", cacheKey)
+	}
+
 	return response, nil
 }
 
@@ -503,6 +554,18 @@ func (s *GitHubService) GetContributionsHeatmap(ctx context.Context, claims *aut
 		log.Errorf("Provider '%s' not configured in auth.yaml", claims.Provider)
 		return nil, fmt.Errorf("%w: provider '%s'. Please check available providers in auth.yaml", apperrors.ErrProviderNotConfigured, claims.Provider)
 	}
+
+	// BUILD CACHE KEY
+	params := map[string]string{"period": period}
+	cacheKey := cache.GitHubCacheKey("heatmap", fmt.Sprintf("%d", claims.UserID), params)	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response ContributionsHeatmapResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			log.Info("Cache hit for GitHub heatmap")
+			return &response, nil
+		}
+	}
+	log.Info("Cache miss for GitHub heatmap")
 
 	// Validate period format early (before making any API calls)
 	var from, to time.Time
@@ -737,6 +800,12 @@ func (s *GitHubService) GetContributionsHeatmap(ctx context.Context, claims *aut
 		To:                 result.Viewer.ContributionsCollection.EndedAt,
 	}
 
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.GitHubContributions)
+		log.Info("Cached GitHub heatmap")
+	}
+
 	log.Infof("Successfully fetched contribution heatmap: %d total contributions from %s to %s",
 		response.TotalContributions, response.From, response.To)
 
@@ -770,6 +839,19 @@ func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, claims *auth.
 		log.Errorf("Invalid period format: %s", period)
 		return nil, fmt.Errorf("%w: %w", apperrors.ErrInvalidPeriodFormat, err)
 	}
+
+	// BUILD CACHE KEY
+	params := map[string]string{"period": period}
+	cacheKey := cache.GitHubCacheKey("pr-merge-time", fmt.Sprintf("%d", claims.UserID), params)
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response AveragePRMergeTimeResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			log.Info("Cache hit for GitHub PR merge time")
+			return &response, nil
+		}
+	}
+	log.Info("Cache miss for GitHub PR merge time")
 
 	log.Debugf("Querying merged PRs from %s to %s", from.Format(time.RFC3339), to.Format(time.RFC3339))
 
@@ -1025,6 +1107,12 @@ func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, claims *auth.
 		From:                    from.Format(time.RFC3339),
 		To:                      to.Format(time.RFC3339),
 		TimeSeries:              timeSeries,
+	}
+
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.GitHubPullRequests)
+		log.Info("Cached GitHub PR merge time")
 	}
 
 	log.Infof("Successfully calculated average PR merge time: %.2f hours across %d PRs", averageHours, validPRCount)
@@ -1570,6 +1658,19 @@ func (s *GitHubService) GetUserPRReviewComments(ctx context.Context, claims *aut
 		return nil, fmt.Errorf("%w: %w", apperrors.ErrInvalidPeriodFormat, err)
 	}
 
+	// BUILD CACHE KEY
+	params := map[string]string{"period": period}
+	cacheKey := cache.GitHubCacheKey("pr-review-comments", fmt.Sprintf("%d", claims.UserID), params)
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response PRReviewCommentsResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			logrus.Info("Cache hit for GitHub PR review comments", "key", cacheKey)
+			return &response, nil
+		}
+	}
+	logrus.Info("Cache miss for GitHub PR review comments", "key", cacheKey)
+
 	// Get GitHub access token using validated JWT claims
 	accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
 	if err != nil {
@@ -1644,10 +1745,18 @@ func (s *GitHubService) GetUserPRReviewComments(ctx context.Context, claims *aut
 		searchOpts.Page = resp.NextPage
 	}
 
-	return &PRReviewCommentsResponse{
+	response := &PRReviewCommentsResponse{
 		TotalComments: totalComments,
 		Period:        parsedPeriod,
 		From:          from.Format(time.RFC3339),
 		To:            to.Format(time.RFC3339),
-	}, nil
+	}
+
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(response); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.GitHubPullRequests)
+		logrus.Info("Cached GitHub PR review comments", "key", cacheKey)
+	}
+
+	return response, nil
 }

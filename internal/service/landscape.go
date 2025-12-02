@@ -11,6 +11,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"time"
+	"developer-portal-backend/internal/cache"
 )
 
 // LandscapeService handles business logic for landscapes
@@ -19,15 +21,19 @@ type LandscapeService struct {
 	organizationRepo *repository.OrganizationRepository
 	projectRepo      *repository.ProjectRepository
 	validator        *validator.Validate
+	cache            cache.CacheService
+    cacheTTL         time.Duration
 }
 
 // NewLandscapeService creates a new landscape service
-func NewLandscapeService(repo *repository.LandscapeRepository, orgRepo *repository.OrganizationRepository, projectRepo *repository.ProjectRepository, validator *validator.Validate) *LandscapeService {
+func NewLandscapeService(repo *repository.LandscapeRepository, orgRepo *repository.OrganizationRepository, projectRepo *repository.ProjectRepository, validator *validator.Validate, cacheService cache.CacheService) *LandscapeService {
 	return &LandscapeService{
 		repo:             repo,
 		organizationRepo: orgRepo,
 		projectRepo:      projectRepo,
 		validator:        validator,
+		cache:            cacheService,
+        cacheTTL:         10 * time.Minute,
 	}
 }
 
@@ -137,11 +143,25 @@ func (s *LandscapeService) CreateLandscape(req *CreateLandscapeRequest) (*Landsc
 		return nil, fmt.Errorf("failed to create landscape: %w", err)
 	}
 
+	// INVALIDATE related caches
+    s.invalidateLandscapeCaches(landscape.ProjectID, landscape.Name)
+
 	return s.toResponse(landscape), nil
 }
 
 // GetLandscapeByID retrieves a landscape by ID
 func (s *LandscapeService) GetLandscapeByID(id uuid.UUID) (*LandscapeResponse, error) {
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("landscape:id:%s", id.String())
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var response LandscapeResponse
+        if err := json.Unmarshal(cachedData, &response); err == nil {
+            return &response, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 	landscape, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -149,12 +169,29 @@ func (s *LandscapeService) GetLandscapeByID(id uuid.UUID) (*LandscapeResponse, e
 		}
 		return nil, fmt.Errorf("failed to get landscape: %w", err)
 	}
+	response := s.toResponse(landscape) 
 
-	return s.toResponse(landscape), nil
+    // CACHE THE RESPONSE
+    if data, err := json.Marshal(response); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
+    return response, nil
 }
 
 // GetByName retrieves a landscape by name (organization scope not applicable in new model)
 func (s *LandscapeService) GetByName(_ uuid.UUID, name string) (*LandscapeResponse, error) {
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("landscape:name:%s", name)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var response LandscapeResponse
+        if err := json.Unmarshal(cachedData, &response); err == nil {
+            return &response, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 	landscape, err := s.repo.GetByName(name)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -163,7 +200,14 @@ func (s *LandscapeService) GetByName(_ uuid.UUID, name string) (*LandscapeRespon
 		return nil, fmt.Errorf("failed to get landscape: %w", err)
 	}
 
-	return s.toResponse(landscape), nil
+	response := s.toResponse(landscape)
+
+    // CACHE THE RESPONSE
+    if data, err := json.Marshal(response); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
+    return response, nil
 }
 
 // GetLandscapesByOrganization retrieves landscapes for an organization with pagination
@@ -302,6 +346,17 @@ func (s *LandscapeService) GetByProject(projectID uuid.UUID, page, pageSize int)
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 20
 	}
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("landscape:project:%s:page=%d:size=%d", projectID.String(), page, pageSize)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var response LandscapeListResponse
+        if err := json.Unmarshal(cachedData, &response); err == nil {
+            return &response, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 
 	offset := (page - 1) * pageSize
 	landscapes, total, err := s.repo.GetLandscapesByProjectID(projectID, pageSize, offset)
@@ -314,12 +369,19 @@ func (s *LandscapeService) GetByProject(projectID uuid.UUID, page, pageSize int)
 		responses[i] = *s.toResponse(&landscape)
 	}
 
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
+	response := &LandscapeListResponse{
+        Landscapes: responses,
+        Total:      total,
+        Page:       page,
+        PageSize:   pageSize,
+    }
+
+    // CACHE THE RESPONSE
+    if data, err := json.Marshal(response); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
+
+    return response, nil
 }
 
 // GetByProjectName resolves a project by name and returns all its landscapes (unpaginated cap)
@@ -351,6 +413,17 @@ func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeM
 	if projectName == "" {
 		return []LandscapeMinimalResponse{}, nil
 	}
+	// BUILD CACHE KEY
+    cacheKey := fmt.Sprintf("landscape:projectname:%s:all", projectName)
+    
+    // TRY CACHE FIRST
+    if cachedData, err := s.cache.Get(cacheKey); err == nil {
+        var responses []LandscapeMinimalResponse
+        if err := json.Unmarshal(cachedData, &responses); err == nil {
+            return responses, nil // CACHE HIT
+        }
+    }
+    // CACHE MISS - fetch from database
 	project, err := s.projectRepo.GetByName(projectName)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -401,6 +474,10 @@ func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeM
 			Health: enr.Health,
 		}
 	}
+	// CACHE THE RESPONSE
+    if data, err := json.Marshal(responses); err == nil {
+        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
+    }
 	return responses, nil
 }
 
@@ -566,13 +643,18 @@ func (s *LandscapeService) UpdateLandscape(id uuid.UUID, req *UpdateLandscapeReq
 		return nil, fmt.Errorf("failed to update landscape: %w", err)
 	}
 
+	// INVALIDATE related caches
+    s.invalidateLandscapeCaches(landscape.ProjectID, landscape.Name)
+    // Also invalidate by ID
+    _ = s.cache.Delete(fmt.Sprintf("landscape:id:%s", id.String()))
+
 	return s.toResponse(landscape), nil
 }
 
 // DeleteLandscape deletes a landscape
 func (s *LandscapeService) DeleteLandscape(id uuid.UUID) error {
-	// Check if landscape exists
-	_, err := s.repo.GetByID(id)
+	 // Check if landscape exists (and save it for cache invalidation)
+    landscape, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.ErrLandscapeNotFound
@@ -583,6 +665,10 @@ func (s *LandscapeService) DeleteLandscape(id uuid.UUID) error {
 	if err := s.repo.Delete(id); err != nil {
 		return fmt.Errorf("failed to delete landscape: %w", err)
 	}
+
+	// INVALIDATE related caches
+    s.invalidateLandscapeCaches(landscape.ProjectID, landscape.Name)  
+    _ = s.cache.Delete(fmt.Sprintf("landscape:id:%s", id.String()))
 
 	return nil
 }
@@ -658,4 +744,20 @@ func (s *LandscapeService) toResponse(landscape *models.Landscape) *LandscapeRes
 		CreatedAt:   landscape.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   landscape.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
+}
+
+// invalidateLandscapeCaches invalidates cache entries related to a landscape
+func (s *LandscapeService) invalidateLandscapeCaches(projectID uuid.UUID, name string) {
+    // Invalidate by name
+    _ = s.cache.Delete(fmt.Sprintf("landscape:name:%s", name))
+    
+    // Invalidate project-based caches (we can't know all page combinations, so clear common ones)
+    for page := 1; page <= 10; page++ {
+        for size := 20; size <= 100; size += 20 {
+            _ = s.cache.Delete(fmt.Sprintf("landscape:project:%s:page=%d:size=%d", projectID.String(), page, size))
+        }
+    }
+    
+    // Invalidate project name cache
+    _ = s.cache.Delete(fmt.Sprintf("landscape:projectname:%s:all", name))
 }

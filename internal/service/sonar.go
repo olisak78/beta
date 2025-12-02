@@ -12,19 +12,25 @@ import (
 
 	"developer-portal-backend/internal/config"
 	"developer-portal-backend/internal/logger"
+	"developer-portal-backend/internal/cache"
+	"github.com/sirupsen/logrus"
 )
 
 // SonarService provides methods to interact with SonarQube APIs
 type SonarService struct {
 	cfg        *config.Config
 	httpClient *http.Client
+	cache      cache.CacheService
+	cacheTTLs  *cache.EndpointCacheConfig
 }
 
 // NewSonarService creates a new Sonar service
-func NewSonarService(cfg *config.Config) *SonarService {
+func NewSonarService(cfg *config.Config, cacheService cache.CacheService) *SonarService {
 	return &SonarService{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 15 * time.Second},
+		cache:      cacheService,
+		cacheTTLs:  cache.DefaultEndpointConfig(),
 	}
 }
 
@@ -64,6 +70,21 @@ func (s *SonarService) GetComponentMeasures(projectKey string) (*SonarCombinedRe
 	if projectKey == "" {
 		return nil, fmt.Errorf("project key (component) is required")
 	}
+
+	// BUILD CACHE KEY
+	metrics := []string{"coverage", "vulnerabilities", "code_smells"}
+	cacheKey := cache.SonarCacheKey(projectKey, metrics)
+	
+	// TRY CACHE FIRST
+	if cachedData, err := s.cache.Get(cacheKey); err == nil {
+		var response SonarCombinedResponse
+		if err := json.Unmarshal(cachedData, &response); err == nil {
+			logrus.Info("Cache hit for Sonar measures", "key", cacheKey)
+			return &response, nil  // CACHE HIT
+		}
+	}
+	
+	logrus.Info("Cache miss for Sonar measures", "key", cacheKey)
 
 	// Normalize base SONAR host URL
 	base := s.cfg.SonarHost
@@ -123,6 +144,12 @@ func (s *SonarService) GetComponentMeasures(projectKey string) (*SonarCombinedRe
 		Measures: measuresResp.Component.Measures,
 		Status:   qgResp.ProjectStatus.Status,
 	}
+	// CACHE THE RESPONSE
+	if data, err := json.Marshal(combined); err == nil {
+		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.SonarMeasures)
+		logrus.Info("Cached Sonar measures", "key", cacheKey)
+	}
+
 	return combined, nil
 }
 
