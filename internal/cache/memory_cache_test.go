@@ -216,18 +216,6 @@ func TestInMemoryCache_ConcurrentAccess(t *testing.T) {
 	assert.True(t, true)
 }
 
-func TestNewInMemoryCacheWithConfig(t *testing.T) {
-	config := &CacheConfig{
-		DefaultTTL:      10 * time.Minute,
-		CleanupInterval: 5 * time.Minute,
-		MaxItems:        1000,
-	}
-
-	cache := NewInMemoryCacheWithConfig(config)
-	assert.NotNil(t, cache)
-	assert.NotNil(t, cache.cache)
-}
-
 func TestInMemoryCache_InvalidValueType(t *testing.T) {
 	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
 

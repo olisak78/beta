@@ -10,27 +10,29 @@ import (
 	"sync"
 	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 	"developer-portal-backend/internal/logger"
-	"developer-portal-backend/internal/cache"
-	"github.com/sirupsen/logrus"
 )
 
 // SonarService provides methods to interact with SonarQube APIs
 type SonarService struct {
-	cfg        *config.Config
-	httpClient *http.Client
-	cache      cache.CacheService
-	cacheTTLs  *cache.EndpointCacheConfig
+	cfg          *config.Config
+	httpClient   *http.Client
+	cache        cache.CacheService
+	cacheWrapper *cache.CacheWrapper
+	cacheTTLs    *cache.EndpointCacheConfig
 }
 
 // NewSonarService creates a new Sonar service
 func NewSonarService(cfg *config.Config, cacheService cache.CacheService) *SonarService {
+	ttls := cache.DefaultEndpointConfig()
 	return &SonarService{
-		cfg:        cfg,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
-		cache:      cacheService,
-		cacheTTLs:  cache.DefaultEndpointConfig(),
+		cfg:          cfg,
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		cache:        cacheService,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, ttls.SonarMeasures),
+		cacheTTLs:    ttls,
 	}
 }
 
@@ -71,86 +73,76 @@ func (s *SonarService) GetComponentMeasures(projectKey string) (*SonarCombinedRe
 		return nil, fmt.Errorf("project key (component) is required")
 	}
 
-	// BUILD CACHE KEY
 	metrics := []string{"coverage", "vulnerabilities", "code_smells"}
 	cacheKey := cache.SonarCacheKey(projectKey, metrics)
-	
-	// TRY CACHE FIRST
-	if cachedData, err := s.cache.Get(cacheKey); err == nil {
-		var response SonarCombinedResponse
-		if err := json.Unmarshal(cachedData, &response); err == nil {
-			logrus.Info("Cache hit for Sonar measures", "key", cacheKey)
-			return &response, nil  // CACHE HIT
-		}
-	}
-	
-	logrus.Info("Cache miss for Sonar measures", "key", cacheKey)
 
-	// Normalize base SONAR host URL
-	base := s.cfg.SonarHost
-	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
-		base = "https://" + base
-	}
-	baseURL, err := url.Parse(strings.TrimRight(base, "/"))
+	var response SonarCombinedResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.SonarMeasures, &response, func() (interface{}, error) {
+		// Normalize base SONAR host URL
+		base := s.cfg.SonarHost
+		if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
+			base = "https://" + base
+		}
+		baseURL, err := url.Parse(strings.TrimRight(base, "/"))
+		if err != nil {
+			return nil, fmt.Errorf("invalid sonar host URL '%s': %w", base, err)
+		}
+
+		// Prepare URLs for measures and quality gate
+		mv := url.Values{}
+		mv.Set("component", projectKey)
+		mv.Set("metricKeys", "coverage,vulnerabilities,code_smells")
+		measuresURL := baseURL.String() + "/api/measures/component?" + mv.Encode()
+
+		qv := url.Values{}
+		qv.Set("projectKey", projectKey)
+		qgURL := baseURL.String() + "/api/qualitygates/project_status?" + qv.Encode()
+
+		// Invoke both Sonar APIs in parallel
+		var measuresResp sonarMeasuresAPIResponse
+		var qgResp sonarQualityGateAPIResponse
+		var wg sync.WaitGroup
+		var firstErr error
+		var mu sync.Mutex
+
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			if err := s.getJSON(measuresURL, &measuresResp); err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("failed to fetch sonar measures: %w", err)
+				}
+				mu.Unlock()
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			if err := s.getJSON(qgURL, &qgResp); err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("failed to fetch sonar quality gate status: %w", err)
+				}
+				mu.Unlock()
+			}
+		}()
+
+		wg.Wait()
+		if firstErr != nil {
+			return nil, firstErr
+		}
+
+		return &SonarCombinedResponse{
+			Measures: measuresResp.Component.Measures,
+			Status:   qgResp.ProjectStatus.Status,
+		}, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("invalid sonar host URL '%s': %w", base, err)
+		return nil, err
 	}
 
-	// 1) Prepare URLs for measures and quality gate
-	mv := url.Values{}
-	mv.Set("component", projectKey)
-	mv.Set("metricKeys", "coverage,vulnerabilities,code_smells")
-	measuresURL := baseURL.String() + "/api/measures/component?" + mv.Encode()
-
-	qv := url.Values{}
-	qv.Set("projectKey", projectKey)
-	qgURL := baseURL.String() + "/api/qualitygates/project_status?" + qv.Encode()
-
-	// 2) Invoke both Sonar APIs in parallel
-	var measuresResp sonarMeasuresAPIResponse
-	var qgResp sonarQualityGateAPIResponse
-	var wg sync.WaitGroup
-	var firstErr error
-	var mu sync.Mutex
-
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		if err := s.getJSON(measuresURL, &measuresResp); err != nil {
-			mu.Lock()
-			if firstErr == nil {
-				firstErr = fmt.Errorf("failed to fetch sonar measures: %w", err)
-			}
-			mu.Unlock()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		if err := s.getJSON(qgURL, &qgResp); err != nil {
-			mu.Lock()
-			if firstErr == nil {
-				firstErr = fmt.Errorf("failed to fetch sonar quality gate status: %w", err)
-			}
-			mu.Unlock()
-		}
-	}()
-
-	wg.Wait()
-	if firstErr != nil {
-		return nil, firstErr
-	}
-
-	combined := &SonarCombinedResponse{
-		Measures: measuresResp.Component.Measures,
-		Status:   qgResp.ProjectStatus.Status,
-	}
-	// CACHE THE RESPONSE
-	if data, err := json.Marshal(combined); err == nil {
-		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.SonarMeasures)
-		logrus.Info("Cached Sonar measures", "key", cacheKey)
-	}
-
-	return combined, nil
+	return &response, nil
 }
 
 // getJSON performs an authenticated GET request and decodes JSON into out.

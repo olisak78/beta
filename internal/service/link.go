@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/repository"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"time"
-	"developer-portal-backend/internal/cache"
 )
 
 // LinkService provides link-related business logic
@@ -22,7 +22,8 @@ type LinkService struct {
 	categoryRepo repository.CategoryRepositoryInterface
 	validator    *validator.Validate
 	cache        cache.CacheService
-    cacheTTL     time.Duration
+	cacheWrapper *cache.CacheWrapper
+	cacheTTL     time.Duration
 }
 
 // Ensure LinkService implements LinkServiceInterface
@@ -37,7 +38,8 @@ func NewLinkService(linkRepo repository.LinkRepositoryInterface, userRepo reposi
 		categoryRepo: categoryRepo,
 		validator:    validator,
 		cache:        cacheService,
-        cacheTTL:     5 * time.Minute,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, 5*time.Minute),
+		cacheTTL:     5 * time.Minute,
 	}
 }
 
@@ -122,7 +124,7 @@ func (s *LinkService) CreateLink(req *CreateLinkRequest) (*LinkResponse, error) 
 	}
 
 	// INVALIDATE owner's link cache
-    s.invalidateLinkCache(req.Owner)
+	s.invalidateLinkCache(req.Owner)
 
 	res := toLinkResponse(link)
 	return &res, nil
@@ -133,39 +135,36 @@ func (s *LinkService) GetByOwnerUserID(ownerUserID string) ([]LinkResponse, erro
 	if strings.TrimSpace(ownerUserID) == "" {
 		return nil, fmt.Errorf("owner user_id is required")
 	}
-	// BUILD CACHE KEY
-    cacheKey := fmt.Sprintf("links:owner:%s", ownerUserID)
-    
-    // TRY CACHE FIRST
-    if cachedData, err := s.cache.Get(cacheKey); err == nil {
-        var res []LinkResponse
-        if err := json.Unmarshal(cachedData, &res); err == nil {
-            return res, nil // CACHE HIT
-        }
-    }
-    // CACHE MISS - fetch from database
 
-	// Find user by user_id
-	user, err := s.userRepo.GetByUserID(ownerUserID)
-	if err != nil || user == nil {
-		return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
-	}
+	cacheKey := fmt.Sprintf("links:owner:%s", ownerUserID)
 
-	// Fetch links by owner UUID
-	links, err := s.linkRepo.GetByOwner(user.ID)
+	var res []LinkResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &res, func() (interface{}, error) {
+		// Find user by user_id
+		user, err := s.userRepo.GetByUserID(ownerUserID)
+		if err != nil || user == nil {
+			return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
+		}
+
+		// Fetch links by owner UUID
+		links, err := s.linkRepo.GetByOwner(user.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get links by owner: %w", err)
+		}
+
+		// Map to response type, omitting audit and owner fields
+		linkResponses := make([]LinkResponse, 0, len(links))
+		for i := range links {
+			linkResponses = append(linkResponses, toLinkResponse(&links[i]))
+		}
+
+		return linkResponses, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get links by owner: %w", err)
+		return nil, err
 	}
 
-	// Map to response type, omitting audit and owner fields
-	res := make([]LinkResponse, 0, len(links))
-	for i := range links {
-		res = append(res, toLinkResponse(&links[i]))
-	}
-	// CACHE THE RESPONSE
-    if data, err := json.Marshal(res); err == nil {
-        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
-    }
 	return res, nil
 }
 
@@ -179,76 +178,72 @@ func (s *LinkService) GetByOwnerUserIDWithViewer(ownerUserID string, viewerName 
 		return s.GetByOwnerUserID(ownerUserID)
 	}
 
-	// BUILD CACHE KEY (includes viewer for favorite marking)
-    cacheKey := fmt.Sprintf("links:owner:%s:viewer:%s", ownerUserID, viewerName)
-    
-    // TRY CACHE FIRST
-    if cachedData, err := s.cache.Get(cacheKey); err == nil {
-        var res []LinkResponse
-        if err := json.Unmarshal(cachedData, &res); err == nil {
-            return res, nil // CACHE HIT
-        }
-    }
-    // CACHE MISS - fetch from database
+	cacheKey := fmt.Sprintf("links:owner:%s:viewer:%s", ownerUserID, viewerName)
 
-	// Find owner by user_id
-	owner, err := s.userRepo.GetByUserID(ownerUserID)
-	if err != nil || owner == nil {
-		return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
-	}
+	var res []LinkResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &res, func() (interface{}, error) {
+		// Find owner by user_id
+		owner, err := s.userRepo.GetByUserID(ownerUserID)
+		if err != nil || owner == nil {
+			return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
+		}
 
-	// Find viewer by name (mapped from bearer token 'username')
-	viewer, err := s.userRepo.GetByName(viewerName)
-	if err != nil || viewer == nil {
-		// Fallback to non-favorite response if viewer not found
-		return s.GetByOwnerUserID(ownerUserID)
-	}
+		// Find viewer by name (mapped from bearer token 'username')
+		viewer, err := s.userRepo.GetByName(viewerName)
+		if err != nil || viewer == nil {
+			// Fallback to non-favorite response if viewer not found
+			return s.GetByOwnerUserID(ownerUserID)
+		}
 
-	// Parse favorites from viewer.Metadata
-	favSet := make(map[uuid.UUID]struct{})
-	if len(viewer.Metadata) > 0 {
-		var meta map[string]interface{}
-		if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
-			if v, ok := meta["favorites"]; ok && v != nil {
-				switch arr := v.(type) {
-				case []interface{}:
-					for _, it := range arr {
-						if str, ok := it.(string); ok && str != "" {
-							if id, err := uuid.Parse(strings.TrimSpace(str)); err == nil {
-								favSet[id] = struct{}{}
+		// Parse favorites from viewer.Metadata
+		favSet := make(map[uuid.UUID]struct{})
+		if len(viewer.Metadata) > 0 {
+			var meta map[string]interface{}
+			if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
+				if v, ok := meta["favorites"]; ok && v != nil {
+					switch arr := v.(type) {
+					case []interface{}:
+						for _, it := range arr {
+							if str, ok := it.(string); ok && str != "" {
+								if id, err := uuid.Parse(strings.TrimSpace(str)); err == nil {
+									favSet[id] = struct{}{}
+								}
 							}
 						}
-					}
-				case []string:
-					for _, s2 := range arr {
-						if id, err := uuid.Parse(strings.TrimSpace(s2)); err == nil {
-							favSet[id] = struct{}{}
+					case []string:
+						for _, s2 := range arr {
+							if id, err := uuid.Parse(strings.TrimSpace(s2)); err == nil {
+								favSet[id] = struct{}{}
+							}
 						}
 					}
 				}
 			}
 		}
-	}
 
-	// Fetch links by owner UUID
-	links, err := s.linkRepo.GetByOwner(owner.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get links by owner: %w", err)
-	}
-
-	// Map to response type, omitting audit and owner fields; mark favorites
-	res := make([]LinkResponse, 0, len(links))
-	for i := range links {
-		lr := toLinkResponse(&links[i])
-		if _, ok := favSet[links[i].ID]; ok {
-			lr.Favorite = true
+		// Fetch links by owner UUID
+		links, err := s.linkRepo.GetByOwner(owner.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get links by owner: %w", err)
 		}
-		res = append(res, lr)
+
+		// Map to response type, omitting audit and owner fields; mark favorites
+		linkResponses := make([]LinkResponse, 0, len(links))
+		for i := range links {
+			lr := toLinkResponse(&links[i])
+			if _, ok := favSet[links[i].ID]; ok {
+				lr.Favorite = true
+			}
+			linkResponses = append(linkResponses, lr)
+		}
+
+		return linkResponses, nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
-	// CACHE THE RESPONSE
-    if data, err := json.Marshal(res); err == nil {
-        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
-    }
+
 	return res, nil
 }
 
@@ -276,35 +271,34 @@ func toLinkResponse(l *models.Link) LinkResponse {
 
 // DeleteLink deletes a link by UUID
 func (s *LinkService) DeleteLink(id uuid.UUID) error {
+	if err := s.linkRepo.Delete(id); err != nil {
+		return fmt.Errorf("failed to delete link: %w", err)
+	}
 
-    if err := s.linkRepo.Delete(id); err != nil {
-        return fmt.Errorf("failed to delete link: %w", err)
-    }
-    
-    return nil
+	return nil
 }
 
 // invalidateLinkCache invalidates cache entries related to link operations
 func (s *LinkService) invalidateLinkCache(ownerUUIDStr string) {
-    // Get owner UUID
-    ownerUUID, err := uuid.Parse(ownerUUIDStr)
-    if err != nil {
-        return
-    }
+	// Get owner UUID
+	ownerUUID, err := uuid.Parse(ownerUUIDStr)
+	if err != nil {
+		return
+	}
 
-    // Try to get the owner as a user to find their user_id
-    if user, err := s.userRepo.GetByID(ownerUUID); err == nil && user != nil {
-        // Invalidate cache by user_id
-        _ = s.cache.Delete(fmt.Sprintf("links:owner:%s", user.UserID))
-        
-        // Invalidate all viewer-specific caches for this owner (we can't know all viewers)
-        // This is a limitation - we'll rely on TTL expiration for viewer caches
-        // Alternatively, you could clear by pattern if your cache supports it
-    }
+	// Try to get the owner as a user to find their user_id
+	if user, err := s.userRepo.GetByID(ownerUUID); err == nil && user != nil {
+		// Invalidate cache by user_id
+		_ = s.cache.Delete(fmt.Sprintf("links:owner:%s", user.UserID))
 
-    // Try to get the owner as a team
-    if team, err := s.teamRepo.GetByID(ownerUUID); err == nil && team != nil {
-        // Invalidate cache by team name
-        _ = s.cache.Delete(fmt.Sprintf("links:owner:%s", team.Name))
-    }
+		// Invalidate all viewer-specific caches for this owner (we can't know all viewers)
+		// This is a limitation - we'll rely on TTL expiration for viewer caches
+		// Alternatively, you could clear by pattern if your cache supports it
+	}
+
+	// Try to get the owner as a team
+	if team, err := s.teamRepo.GetByID(ownerUUID); err == nil && team != nil {
+		// Invalidate cache by team name
+		_ = s.cache.Delete(fmt.Sprintf("links:owner:%s", team.Name))
+	}
 }

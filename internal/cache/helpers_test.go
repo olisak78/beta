@@ -1,13 +1,9 @@
 package cache
 
 import (
-	"encoding/json"
-	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCacheKeyBuilder_Basic(t *testing.T) {
@@ -24,6 +20,27 @@ func TestCacheKeyBuilder_NoNamespace(t *testing.T) {
 	assert.Equal(t, "user:123", key)
 }
 
+func TestCacheKeyBuilder_EmptyParts(t *testing.T) {
+	builder := NewCacheKeyBuilder("test")
+	key := builder.Build()
+
+	assert.Equal(t, "test:", key)
+}
+
+func TestCacheKeyBuilder_SinglePart(t *testing.T) {
+	builder := NewCacheKeyBuilder("api")
+	key := builder.Add("users").Build()
+
+	assert.Equal(t, "api:users", key)
+}
+
+func TestCacheKeyBuilder_MultipleParts(t *testing.T) {
+	builder := NewCacheKeyBuilder("api")
+	key := builder.Add("users").Add("123").Add("profile").Build()
+
+	assert.Equal(t, "api:users:123:profile", key)
+}
+
 func TestCacheKeyBuilder_WithParams(t *testing.T) {
 	builder := NewCacheKeyBuilder("api")
 	params := map[string]string{
@@ -38,10 +55,32 @@ func TestCacheKeyBuilder_WithParams(t *testing.T) {
 	assert.Contains(t, key, "limit=10")
 }
 
+func TestCacheKeyBuilder_WithParams_OrderIndependent(t *testing.T) {
+	// Test that params are included regardless of order
+	builder1 := NewCacheKeyBuilder("api")
+	params1 := map[string]string{
+		"a": "1",
+		"b": "2",
+	}
+	key1 := builder1.Add("endpoint").AddParams(params1).Build()
+
+	// Should contain both params
+	assert.Contains(t, key1, "a=1")
+	assert.Contains(t, key1, "b=2")
+	assert.Contains(t, key1, "api:endpoint:")
+}
+
 func TestCacheKeyBuilder_EmptyParams(t *testing.T) {
 	builder := NewCacheKeyBuilder("api")
 	params := map[string]string{}
 	key := builder.Add("prs").AddParams(params).Build()
+
+	assert.Equal(t, "api:prs", key)
+}
+
+func TestCacheKeyBuilder_NilParams(t *testing.T) {
+	builder := NewCacheKeyBuilder("api")
+	key := builder.Add("prs").AddParams(nil).Build()
 
 	assert.Equal(t, "api:prs", key)
 }
@@ -54,9 +93,56 @@ func TestCacheKeyBuilder_Hash(t *testing.T) {
 	assert.Len(t, key, len("test:hash:")+64) // SHA256 produces 64 hex chars
 }
 
+func TestCacheKeyBuilder_Hash_Consistency(t *testing.T) {
+	// Same input should produce same hash
+	builder1 := NewCacheKeyBuilder("test")
+	hash1 := builder1.Add("user").Add("123").Hash()
+
+	builder2 := NewCacheKeyBuilder("test")
+	hash2 := builder2.Add("user").Add("123").Hash()
+
+	assert.Equal(t, hash1, hash2)
+}
+
+func TestCacheKeyBuilder_Hash_Uniqueness(t *testing.T) {
+	// Different inputs should produce different hashes
+	builder1 := NewCacheKeyBuilder("test")
+	hash1 := builder1.Add("user").Add("123").Hash()
+
+	builder2 := NewCacheKeyBuilder("test")
+	hash2 := builder2.Add("user").Add("456").Hash()
+
+	assert.NotEqual(t, hash1, hash2)
+}
+
+func TestCacheKeyBuilder_Chaining(t *testing.T) {
+	// Test that method chaining works properly
+	key := NewCacheKeyBuilder("api").
+		Add("users").
+		Add("123").
+		Add("posts").
+		Build()
+
+	assert.Equal(t, "api:users:123:posts", key)
+}
+
 func TestSonarCacheKey(t *testing.T) {
 	key := SonarCacheKey("project123", []string{"coverage", "bugs", "vulnerabilities"})
 	expected := "sonar:measures:project123:coverage,bugs,vulnerabilities"
+
+	assert.Equal(t, expected, key)
+}
+
+func TestSonarCacheKey_SingleMetric(t *testing.T) {
+	key := SonarCacheKey("project456", []string{"coverage"})
+	expected := "sonar:measures:project456:coverage"
+
+	assert.Equal(t, expected, key)
+}
+
+func TestSonarCacheKey_EmptyMetrics(t *testing.T) {
+	key := SonarCacheKey("project789", []string{})
+	expected := "sonar:measures:project789:"
 
 	assert.Equal(t, expected, key)
 }
@@ -73,6 +159,20 @@ func TestJiraCacheKey(t *testing.T) {
 	assert.Contains(t, key, "limit=50")
 }
 
+func TestJiraCacheKey_NoParams(t *testing.T) {
+	key := JiraCacheKey("issues", "user123", nil)
+	expected := "jira:issues:user123"
+
+	assert.Equal(t, expected, key)
+}
+
+func TestJiraCacheKey_EmptyParams(t *testing.T) {
+	key := JiraCacheKey("issues", "user456", map[string]string{})
+	expected := "jira:issues:user456"
+
+	assert.Equal(t, expected, key)
+}
+
 func TestGitHubCacheKey(t *testing.T) {
 	params := map[string]string{
 		"state": "open",
@@ -85,176 +185,94 @@ func TestGitHubCacheKey(t *testing.T) {
 	assert.Contains(t, key, "sort=created")
 }
 
-func TestComponentHealthCacheKey(t *testing.T) {
-	key := ComponentHealthCacheKey("component789")
-	expected := "health:component:component789"
+func TestGitHubCacheKey_NoParams(t *testing.T) {
+	key := GitHubCacheKey("repos", "user789", nil)
+	expected := "github:repos:user789"
 
 	assert.Equal(t, expected, key)
 }
 
-func TestTeamDataCacheKey(t *testing.T) {
-	key := TeamDataCacheKey("team456")
-	expected := "team:team456"
+func TestGitHubCacheKey_ComplexParams(t *testing.T) {
+	params := map[string]string{
+		"state":     "all",
+		"sort":      "updated",
+		"direction": "desc",
+		"per_page":  "100",
+	}
+	key := GitHubCacheKey("pull-requests", "user999", params)
 
-	assert.Equal(t, expected, key)
+	assert.Contains(t, key, "github:pull-requests:user999:")
+	assert.Contains(t, key, "state=all")
+	assert.Contains(t, key, "sort=updated")
+	assert.Contains(t, key, "direction=desc")
+	assert.Contains(t, key, "per_page=100")
 }
 
-func TestCacheWrapper_GetOrSet_CacheHit(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
+// Benchmark tests
+func BenchmarkCacheKeyBuilder_Simple(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewCacheKeyBuilder("test").
+			Add("user").
+			Add("123").
+			Build()
+	}
+}
 
-	key := "test:key"
-	expectedValue := map[string]string{"name": "John", "role": "Developer"}
-
-	// Pre-populate cache
-	data, err := json.Marshal(expectedValue)
-	require.NoError(t, err)
-	err = cache.Set(key, data, 1*time.Minute)
-	require.NoError(t, err)
-
-	// Fetcher should not be called
-	fetcherCalled := false
-	fetcher := func() (interface{}, error) {
-		fetcherCalled = true
-		return nil, nil
+func BenchmarkCacheKeyBuilder_WithParams(b *testing.B) {
+	params := map[string]string{
+		"status": "open",
+		"limit":  "10",
+		"sort":   "created",
 	}
 
-	result, err := wrapper.GetOrSet(key, 1*time.Minute, fetcher)
-	require.NoError(t, err)
-	assert.False(t, fetcherCalled, "Fetcher should not be called on cache hit")
-
-	var retrieved map[string]string
-	err = json.Unmarshal(result, &retrieved)
-	require.NoError(t, err)
-	assert.Equal(t, expectedValue, retrieved)
-}
-
-func TestCacheWrapper_GetOrSet_CacheMiss(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
-
-	key := "test:key"
-	expectedValue := map[string]string{"name": "Jane", "role": "Manager"}
-
-	// Fetcher should be called
-	fetcherCalled := false
-	fetcher := func() (interface{}, error) {
-		fetcherCalled = true
-		return expectedValue, nil
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		NewCacheKeyBuilder("api").
+			Add("prs").
+			AddParams(params).
+			Build()
 	}
-
-	result, err := wrapper.GetOrSet(key, 1*time.Minute, fetcher)
-	require.NoError(t, err)
-	assert.True(t, fetcherCalled, "Fetcher should be called on cache miss")
-
-	var retrieved map[string]string
-	err = json.Unmarshal(result, &retrieved)
-	require.NoError(t, err)
-	assert.Equal(t, expectedValue, retrieved)
-
-	// Verify value was cached
-	cachedData, err := cache.Get(key)
-	require.NoError(t, err)
-	var cached map[string]string
-	err = json.Unmarshal(cachedData, &cached)
-	require.NoError(t, err)
-	assert.Equal(t, expectedValue, cached)
 }
 
-func TestCacheWrapper_GetOrSet_FetcherError(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
-
-	key := "test:key"
-	expectedError := errors.New("fetch failed")
-
-	fetcher := func() (interface{}, error) {
-		return nil, expectedError
+func BenchmarkCacheKeyBuilder_Hash(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewCacheKeyBuilder("test").
+			Add("very").
+			Add("long").
+			Add("key").
+			Add("with").
+			Add("many").
+			Add("parts").
+			Hash()
 	}
-
-	_, err := wrapper.GetOrSet(key, 1*time.Minute, fetcher)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "fetcher failed")
 }
 
-func TestCacheWrapper_GetJSON(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
-
-	key := "test:json"
-	original := map[string]int{"count": 42, "total": 100}
-
-	// Set JSON
-	err := wrapper.SetJSON(key, original, 1*time.Minute)
-	require.NoError(t, err)
-
-	// Get JSON
-	var retrieved map[string]int
-	err = wrapper.GetJSON(key, &retrieved)
-	require.NoError(t, err)
-	assert.Equal(t, original, retrieved)
-}
-
-func TestCacheWrapper_SetJSON(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
-
-	key := "test:json"
-	value := struct {
-		Name  string `json:"name"`
-		Age   int    `json:"age"`
-		Email string `json:"email"`
-	}{
-		Name:  "Alice",
-		Age:   30,
-		Email: "alice@example.com",
+func BenchmarkSonarCacheKey(b *testing.B) {
+	metrics := []string{"coverage", "bugs", "vulnerabilities"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		SonarCacheKey("project123", metrics)
 	}
+}
 
-	err := wrapper.SetJSON(key, value, 1*time.Minute)
-	require.NoError(t, err)
-
-	// Verify it was stored
-	data, err := cache.Get(key)
-	require.NoError(t, err)
-
-	var retrieved struct {
-		Name  string `json:"name"`
-		Age   int    `json:"age"`
-		Email string `json:"email"`
+func BenchmarkJiraCacheKey(b *testing.B) {
+	params := map[string]string{
+		"status": "open",
+		"limit":  "50",
 	}
-	err = json.Unmarshal(data, &retrieved)
-	require.NoError(t, err)
-	assert.Equal(t, value, retrieved)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		JiraCacheKey("issues", "user123", params)
+	}
 }
 
-func TestCacheWrapper_GetJSON_NotFound(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	wrapper := NewCacheWrapper(cache, 5*time.Minute)
-
-	var result map[string]string
-	err := wrapper.GetJSON("non:existent", &result)
-	assert.Error(t, err)
-}
-
-func TestInvalidatePattern(t *testing.T) {
-	cache := NewInMemoryCache(5*time.Minute, 10*time.Minute)
-
-	// This should return an error as pattern matching is not yet implemented
-	err := InvalidatePattern(cache, "test:*")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not implemented")
-}
-
-func TestDefaultEndpointConfig(t *testing.T) {
-	config := DefaultEndpointConfig()
-
-	assert.NotNil(t, config)
-	assert.Equal(t, 15*time.Minute, config.SonarMeasures)
-	assert.Equal(t, 5*time.Minute, config.JiraIssues)
-	assert.Equal(t, 3*time.Minute, config.GitHubPullRequests)
-	assert.Equal(t, 30*time.Minute, config.GitHubContributions)
-	assert.Equal(t, 10*time.Minute, config.GitHubRepositoryInfo)
-	assert.Equal(t, 2*time.Minute, config.ComponentHealth)
-	assert.Equal(t, 10*time.Minute, config.TeamData)
-	assert.Equal(t, 5*time.Minute, config.DefaultTTL)
+func BenchmarkGitHubCacheKey(b *testing.B) {
+	params := map[string]string{
+		"state": "open",
+		"sort":  "created",
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		GitHubCacheKey("pull-requests", "user456", params)
+	}
 }

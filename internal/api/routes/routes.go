@@ -8,7 +8,6 @@ import (
 	"developer-portal-backend/internal/repository"
 	"developer-portal-backend/internal/service"
 	"log"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

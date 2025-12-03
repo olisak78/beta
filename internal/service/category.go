@@ -2,23 +2,23 @@ package service
 
 import (
 	"fmt"
+	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/repository"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"time"
-	"developer-portal-backend/internal/cache"
-	"encoding/json"
 )
 
 // CategoryService provides category-related business logic
 type CategoryService struct {
-	repo      repository.CategoryRepositoryInterface
-	validator *validator.Validate
-	cache     cache.CacheService
-    cacheTTL  time.Duration
+	repo         repository.CategoryRepositoryInterface
+	validator    *validator.Validate
+	cache        cache.CacheService
+	cacheWrapper *cache.CacheWrapper
+	cacheTTL     time.Duration
 }
 
 // Ensure CategoryService implements CategoryServiceInterface
@@ -27,10 +27,11 @@ var _ CategoryServiceInterface = (*CategoryService)(nil)
 // NewCategoryService creates a new CategoryService
 func NewCategoryService(repo repository.CategoryRepositoryInterface, validator *validator.Validate, cacheService cache.CacheService) *CategoryService {
 	return &CategoryService{
-		repo:      repo,
-		validator: validator,
-		cache:     cacheService,
-        cacheTTL:  30 * time.Minute,
+		repo:         repo,
+		validator:    validator,
+		cache:        cacheService,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, 30*time.Minute),
+		cacheTTL:     30 * time.Minute,
 	}
 }
 
@@ -62,42 +63,34 @@ func (s *CategoryService) GetAll(page, pageSize int) (*CategoryListResponse, err
 		pageSize = 1000
 	}
 
-	// BUILD CACHE KEY
-    cacheKey := fmt.Sprintf("categories:page=%d:pageSize=%d", page, pageSize)
-    
-    // TRY CACHE FIRST
-    if cachedData, err := s.cache.Get(cacheKey); err == nil {
-        var response CategoryListResponse
-        if err := json.Unmarshal(cachedData, &response); err == nil {
-            return &response, nil // CACHE HIT
-        }
-    }
-    // CACHE MISS - fetch from database
+	cacheKey := fmt.Sprintf("categories:page=%d:pageSize=%d", page, pageSize)
 
-	offset := (page - 1) * pageSize
-	cats, total, err := s.repo.GetAll(pageSize, offset)
+	var response CategoryListResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
+		offset := (page - 1) * pageSize
+		cats, total, err := s.repo.GetAll(pageSize, offset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get categories: %w", err)
+		}
+
+		responses := make([]CategoryResponse, len(cats))
+		for i, c := range cats {
+			responses[i] = s.toResponse(&c)
+		}
+
+		return &CategoryListResponse{
+			Categories: responses,
+			Total:      total,
+			Page:       page,
+			PageSize:   pageSize,
+		}, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get categories: %w", err)
+		return nil, err
 	}
 
-	responses := make([]CategoryResponse, len(cats))
-	for i, c := range cats {
-		responses[i] = s.toResponse(&c)
-	}
-
-	response := &CategoryListResponse{
-        Categories: responses,
-        Total:      total,
-        Page:       page,
-        PageSize:   pageSize,
-    }
-
-    // CACHE THE RESPONSE
-    if data, err := json.Marshal(response); err == nil {
-        _ = s.cache.Set(cacheKey, data, s.cacheTTL)
-    }
-
-    return response, nil
+	return &response, nil
 }
 
 // toResponse converts a Category model to API response

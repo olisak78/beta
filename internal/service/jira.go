@@ -17,7 +17,6 @@ import (
 	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 	apperrors "developer-portal-backend/internal/errors"
-	
 )
 
 // JiraService provides methods to interact with Jira
@@ -31,9 +30,10 @@ type JiraService struct {
 	tokenMu   sync.Mutex
 
 	// Fixed PAT name including machine identifier
-	patName string
-	cache      cache.CacheService
-	cacheTTLs  *cache.EndpointCacheConfig
+	patName      string
+	cache        cache.CacheService
+	cacheWrapper *cache.CacheWrapper
+	cacheTTLs    *cache.EndpointCacheConfig
 }
 
 /**
@@ -47,15 +47,15 @@ func NewJiraService(cfg *config.Config, cacheService cache.CacheService) *JiraSe
 	}
 
 	name := fmt.Sprintf("DeveloperPortal-%s", envName)
-	// Print to console for visibility
-	//log.Printf("Jira PAT name configured: %s", name)
 
+	ttls := cache.DefaultEndpointConfig()
 	return &JiraService{
-		cfg:        cfg,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
-		patName:    name,
-		cache:      cacheService,
-		cacheTTLs:  cache.DefaultEndpointConfig(),
+		cfg:          cfg,
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		patName:      name,
+		cache:        cacheService,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, ttls.JiraIssues),
+		cacheTTLs:    ttls,
 	}
 }
 
@@ -265,8 +265,8 @@ type JiraIssueFields struct {
 
 // JiraParent represents the parent issue of a subtask
 type JiraParent struct {
-	ID     string        `json:"id"`
-	Key    string        `json:"key"`
+	ID     string           `json:"id"`
+	Key    string           `json:"key"`
 	Fields JiraParentFields `json:"fields"`
 }
 
@@ -280,9 +280,9 @@ type JiraParentFields struct {
 
 // JiraSubtask represents a subtask of an issue
 type JiraSubtask struct {
-	ID     string              `json:"id"`
-	Key    string              `json:"key"`
-	Fields JiraSubtaskFields   `json:"fields"`
+	ID     string            `json:"id"`
+	Key    string            `json:"key"`
+	Fields JiraSubtaskFields `json:"fields"`
 }
 
 // JiraSubtaskFields represents basic fields of a subtask
@@ -358,7 +358,6 @@ func (s *JiraService) GetIssues(filters JiraIssueFilters) (*JiraIssuesResponse, 
 		return nil, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
-	// BUILD CACHE KEY
 	params := map[string]string{
 		"project":  filters.Project,
 		"status":   filters.Status,
@@ -373,29 +372,16 @@ func (s *JiraService) GetIssues(filters JiraIssueFilters) (*JiraIssuesResponse, 
 	}
 	cacheKey := cache.JiraCacheKey("issues", filters.User, params)
 
-	// TRY CACHE FIRST
-	if cachedData, err := s.cache.Get(cacheKey); err == nil {
-		var response JiraIssuesResponse
-		if err := json.Unmarshal(cachedData, &response); err == nil {
-			log.Printf("Cache hit for Jira issues: %s", cacheKey)
-			return &response, nil  // CACHE HIT
-		}
-	}
+	var response JiraIssuesResponse
+	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.JiraIssues, &response, func() (interface{}, error) {
+		return s.searchIssues(jql, filters, false)
+	})
 
-	log.Printf("Cache miss for Jira issues: %s", cacheKey)
-
-	response, err := s.searchIssues(jql, filters, false)
 	if err != nil {
 		return nil, err
 	}
 
-	// CACHE THE RESPONSE
-	if data, err := json.Marshal(response); err == nil {
-		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.JiraIssues)
-		log.Printf("Cached Jira issues: %s", cacheKey)
-	}
-
-	return response, nil
+	return &response, nil
 }
 
 // GetIssuesCount returns the count of Jira issues based on the provided filters.
@@ -409,7 +395,6 @@ func (s *JiraService) GetIssuesCount(filters JiraIssueFilters) (int, error) {
 		return 0, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
-	// BUILD CACHE KEY for count
 	params := map[string]string{
 		"project":  filters.Project,
 		"status":   filters.Status,
@@ -417,32 +402,21 @@ func (s *JiraService) GetIssuesCount(filters JiraIssueFilters) (int, error) {
 		"user":     filters.User,
 		"assignee": filters.Assignee,
 		"type":     filters.Type,
-		"count":    "true",  // Distinguish count from regular queries
+		"count":    "true", // Distinguish count from regular queries
 	}
 	cacheKey := cache.JiraCacheKey("issues-count", filters.User, params)
 
-	// TRY CACHE FIRST
-	if cachedData, err := s.cache.Get(cacheKey); err == nil {
-		var count int
-		if err := json.Unmarshal(cachedData, &count); err == nil {
-			log.Printf("Cache hit for Jira issues count: %s", cacheKey)
-			return count, nil  // CACHE HIT
+	var count int
+	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.JiraIssues, &count, func() (interface{}, error) {
+		response, err := s.searchIssues(jql, filters, true)
+		if err != nil {
+			return nil, err
 		}
-	}
+		return response.Total, nil
+	})
 
-	log.Printf("Cache miss for Jira issues count: %s", cacheKey)
-
-	response, err := s.searchIssues(jql, filters, true)
 	if err != nil {
 		return 0, err
-	}
-
-	count := response.Total
-
-	// CACHE THE COUNT
-	if data, err := json.Marshal(count); err == nil {
-		_ = s.cache.Set(cacheKey, data, s.cacheTTLs.JiraIssues)
-		log.Printf("Cached Jira issues count: %s", cacheKey)
 	}
 
 	return count, nil
