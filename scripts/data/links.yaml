@@ -345,4 +345,21 @@ links:
     description: Jenkins Job Finder
     category: ci-cd
     tags: xmake, build
+  
+  - title: SAP IL Attendance (Synerion)
+    url: https://sapilattendance.il.c.eu-de-1.cloud.sap/SynerionWeb#/dailyBrowser
+    description: Attendance portal for SAP IL
+    category: hr
+    tags: attendance
 
+  - title: SAP One
+    url: https://one.int.sap/home
+    description: SAP One Main portal
+    category: hr
+
+  - title: Unified Ticketing
+    url: https://sapit-home-prod-004.launchpad.cfapps.eu10.hana.ondemand.com/site#unifiedticketing-Display
+    description: Unified Ticketing portal
+    category: hr
+
+  

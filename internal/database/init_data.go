@@ -43,6 +43,9 @@ func InitDataFromYAMLs(db *gorm.DB, dataDir string) error {
 	if err := handleLinksFromYAML(db, dataDir); err != nil {
 		return err
 	}
+	if err := handlePluginsFromYAML(db, dataDir); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -116,6 +119,14 @@ func decodeLinks(b []byte) ([]LinkData, error) {
 		return nil, err
 	}
 	return file.Links, nil
+}
+
+func decodePlugins(b []byte) ([]PluginData, error) {
+	var file PluginsFile
+	if err := yaml.Unmarshal(b, &file); err != nil {
+		return nil, err
+	}
+	return file.Plugins, nil
 }
 
 func handleOrganizationsFromYAML(db *gorm.DB, dataDir string) error {
@@ -998,6 +1009,104 @@ func handleLinksFromYAML(db *gorm.DB, dataDir string) error {
 		}
 
 		log.Printf("Links handling completed. %d created, %d updated, %d unchanged, %d total in YAML", created, updated, unchanged, len(items))
+		return nil
+	})
+}
+
+func handlePluginsFromYAML(db *gorm.DB, dataDir string) error {
+	items, err := loadFromYAMLFile[PluginData](dataDir, "plugins.yaml", decodePlugins)
+	if err != nil {
+		return fmt.Errorf("load Plugins from YAML: %w", err)
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		created := 0
+		updated := 0
+		unchanged := 0
+
+		for _, p := range items {
+			// Lookup by unique key (name)
+			var plugin models.Plugin
+			pluginTx := tx.Where("name = ?", p.Name).Limit(1).Find(&plugin)
+			if pluginTx.Error != nil {
+				return fmt.Errorf("query plugin %s: %w", p.Name, pluginTx.Error)
+			}
+
+			if pluginTx.RowsAffected == 0 {
+				// Create new plugin
+				metadataJSON, _ := json.Marshal(p.Metadata)
+				newPlugin := models.Plugin{
+					BaseModel: models.BaseModel{
+						Name:        p.Name,
+						Title:       p.Title,
+						Description: p.Description,
+						CreatedBy:   "cis.devops",
+						Metadata:    metadataJSON,
+					},
+					Icon:               p.Icon,
+					ReactComponentPath: p.ReactComponentPath,
+					BackendServerURL:   p.BackendServerURL,
+					Owner:              p.Owner,
+				}
+				if err := tx.Create(&newPlugin).Error; err != nil {
+					return fmt.Errorf("failed to create plugin: %w", err)
+				}
+				created++
+				continue
+			}
+
+			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
+			yamlMD, _ := json.Marshal(p.Metadata)
+			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
+			var mergedMD []byte
+			if p.Metadata != nil {
+				if md, err := mergeJSON(plugin.Metadata, yamlMD); err == nil {
+					mergedMD = md
+				} else {
+					// Fallback to YAML if merge fails
+					mergedMD = yamlMD
+				}
+			}
+			identical := plugin.Title == p.Title &&
+				plugin.Description == p.Description &&
+				plugin.Icon == p.Icon &&
+				plugin.ReactComponentPath == p.ReactComponentPath &&
+				plugin.BackendServerURL == p.BackendServerURL &&
+				plugin.Owner == p.Owner &&
+				(p.Metadata == nil || jsonEqual(plugin.Metadata, mergedMD))
+
+			if identical {
+				unchanged++
+				continue // no-op
+			}
+
+			// Update mutable fields (do not touch id, created_at, created_by)
+			updates := map[string]interface{}{
+				"title":                p.Title,
+				"description":          p.Description,
+				"icon":                 p.Icon,
+				"react_component_path": p.ReactComponentPath,
+				"backend_server_url":   p.BackendServerURL,
+				"owner":                p.Owner,
+				"updated_by":           "cis.devops",
+				"updated_at":           gorm.Expr("CURRENT_TIMESTAMP"),
+			}
+			// Update metadata only if provided in YAML (merge DB + YAML where YAML overrides)
+			if p.Metadata != nil {
+				if mergedMD != nil {
+					updates["metadata"] = mergedMD
+				} else {
+					updates["metadata"] = yamlMD
+				}
+			}
+
+			if err := tx.Model(&plugin).Updates(updates).Error; err != nil {
+				return fmt.Errorf("update plugin %s: %w", p.Name, err)
+			}
+			updated++
+		}
+
+		log.Printf("Plugins handling completed. %d created, %d updated, %d unchanged, %d total in YAML", created, updated, unchanged, len(items))
 		return nil
 	})
 }

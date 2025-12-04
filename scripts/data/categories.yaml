@@ -35,3 +35,7 @@ categories:
     title: Community & Support
     icon: HelpCircle
     color: bg-orange-500
+  - name: hr
+    title: HR & Attendance
+    icon: Users
+    color: bg-pink-500

@@ -140,3 +140,20 @@ type LinkData struct {
 type LinksFile struct {
 	Links []LinkData `yaml:"links"`
 }
+
+// PluginData represents plugin YAML structure in plugins.yaml
+type PluginData struct {
+	Name               string                 `yaml:"name"`
+	Title              string                 `yaml:"title"`
+	Description        string                 `yaml:"description"`
+	Icon               string                 `yaml:"icon"`
+	ReactComponentPath string                 `yaml:"react_component_path"`
+	BackendServerURL   string                 `yaml:"backend_server_url"`
+	Owner              string                 `yaml:"owner"`
+	Metadata           map[string]interface{} `yaml:"metadata,omitempty"`
+}
+
+// PluginsFile wraps the plugins array
+type PluginsFile struct {
+	Plugins []PluginData `yaml:"plugins"`
+}

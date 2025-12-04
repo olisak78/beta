@@ -3,11 +3,10 @@ package main
 import (
 	"log"
 	"os"
-    "time"
+
 	"developer-portal-backend/internal/api/routes"
 	"developer-portal-backend/internal/config"
 	"developer-portal-backend/internal/database"
-	"developer-portal-backend/internal/cache"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -57,20 +56,13 @@ func main() {
 		logrus.Fatal("Failed to initialize database:", err)
 	}
 
-	logrus.Info("Initializing cache service...")
-	cacheService := cache.NewInMemoryCache(
-    	5 * time.Minute,  // defaultTTL
-    	10 * time.Minute, // cleanupInterval
-	)
-	logrus.Info("Cache service initialized successfully")
-
 	// Set Gin mode
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// Initialize router
-	router := routes.SetupRoutes(db, cfg, cacheService)
+	router := routes.SetupRoutes(db, cfg)
 
 	// Start server
 	port := cfg.Port

@@ -656,6 +656,11 @@ users:
     phone_number: '+972503881001'
     team_domain: developer
     team_role: scm
+    metadata:
+      ai_instances:
+        - cfs-agentic-platform
+      ai_core_member_of:
+        - cfs-agentic-platform
   - name: I074932
     team_name: team-sasha
     first_name: Sasha
@@ -808,6 +813,11 @@ users:
     phone_number: '+972545992947'
     team_domain: developer
     team_role: member
+    metadata:
+      ai_instances:
+        - cfs-agentic-platform
+      ai_core_member_of:
+        - cfs-agentic-platform
   - name: I353686
     team_name: team-alex
     first_name: Dror
@@ -1110,6 +1120,9 @@ users:
       portal_admin: true
       ai_instances:
         - ask-ai
+        - cfs-agentic-platform
+      ai_core_member_of:
+        - cfs-agentic-platform
   - name: I572966
     team_name: team-eyal
     first_name: Dor

@@ -1,0 +1,13 @@
+plugins:
+  - name: sample-plugin
+    title: Sample Developer Plugin
+    description: A sample plugin demonstrating the plugin system functionality
+    icon: Puzzle
+    react_component_path: /plugins/sample-plugin/SamplePlugin.jsx
+    backend_server_url: http://localhost:3001
+    owner: Developer Portal Team
+    metadata:
+      version: "1.0.0"
+      category: "development"
+      tags: ["sample", "demo", "development"]
+      documentation_url: "https://docs.example.com/plugins/sample"

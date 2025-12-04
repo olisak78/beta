@@ -4,12 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
-	"developer-portal-backend/internal/logger"
 	"developer-portal-backend/internal/repository"
 
 	"github.com/go-playground/validator/v10"
@@ -26,13 +23,10 @@ type TeamService struct {
 	linkRepo         repository.LinkRepositoryInterface
 	componentRepo    *repository.ComponentRepository
 	validator        *validator.Validate
-	cache            cache.CacheService
-	cacheWrapper     *cache.CacheWrapper
-	cacheTTL         time.Duration
 }
 
 // NewTeamService creates a new team service
-func NewTeamService(repo *repository.TeamRepository, groupRepo repository.GroupRepositoryInterface, orgRepo *repository.OrganizationRepository, userRepo *repository.UserRepository, linkRepo repository.LinkRepositoryInterface, compRepo *repository.ComponentRepository, validator *validator.Validate, cacheService cache.CacheService) *TeamService {
+func NewTeamService(repo *repository.TeamRepository, groupRepo repository.GroupRepositoryInterface, orgRepo *repository.OrganizationRepository, userRepo *repository.UserRepository, linkRepo repository.LinkRepositoryInterface, compRepo *repository.ComponentRepository, validator *validator.Validate) *TeamService {
 	return &TeamService{
 		repo:             repo,
 		groupRepo:        groupRepo,
@@ -41,9 +35,6 @@ func NewTeamService(repo *repository.TeamRepository, groupRepo repository.GroupR
 		linkRepo:         linkRepo,
 		componentRepo:    compRepo,
 		validator:        validator,
-		cache:            cacheService,
-		cacheWrapper:     cache.NewCacheWrapper(cacheService, 10*time.Minute),
-		cacheTTL:         10 * time.Minute,
 	}
 }
 
@@ -102,92 +93,40 @@ type TeamWithMembersResponse struct {
 
 // GetByID retrieves a team by ID
 func (s *TeamService) GetByID(id uuid.UUID) (*TeamResponse, error) {
-	cacheKey := fmt.Sprintf("team:id:%s", id.String())
-
-	var response TeamResponse
-	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
-		team, err := s.repo.GetByID(id)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, apperrors.ErrTeamNotFound
-			}
-			return nil, fmt.Errorf("failed to get team: %w", err)
-		}
-		return s.toResponse(team), nil
-	})
-
+	team, err := s.repo.GetByID(id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrTeamNotFound
+		}
+		return nil, fmt.Errorf("failed to get team: %w", err)
 	}
 
-	return &response, nil
+	return s.toResponse(team), nil
 }
 
 // GetAllTeams retrieves teams for a specific organization or all teams if organizationID is nil
 func (s *TeamService) GetAllTeams(organizationID *uuid.UUID, page, pageSize int) (*TeamListResponse, error) {
-	var cacheKey string
 	if organizationID != nil {
-		cacheKey = fmt.Sprintf("teams:org:%s:page=%d:size=%d", organizationID.String(), page, pageSize)
-	} else {
-		cacheKey = "teams:all"
-	}
-
-	var response TeamListResponse
-	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
-		if organizationID != nil {
-			// Validate organization exists
-			_, err := s.organizationRepo.GetByID(*organizationID)
-			if err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return nil, apperrors.ErrOrganizationNotFound
-				}
-				return nil, fmt.Errorf("failed to verify organization: %w", err)
+		// Validate organization exists
+		_, err := s.organizationRepo.GetByID(*organizationID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.ErrOrganizationNotFound
 			}
-
-			if page < 1 {
-				page = 1
-			}
-			if pageSize < 1 || pageSize > 100 {
-				pageSize = 20
-			}
-
-			offset := (page - 1) * pageSize
-			teams, total, err := s.repo.GetByOrganizationID(*organizationID, pageSize, offset)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get teams: %w", err)
-			}
-
-			// Filter out the technical team
-			filteredTeams := make([]models.Team, 0, len(teams))
-			for _, team := range teams {
-				if team.Name != "team-developer-portal-technical" {
-					filteredTeams = append(filteredTeams, team)
-				}
-			}
-
-			responses := make([]TeamResponse, len(filteredTeams))
-			for i, team := range filteredTeams {
-				responses[i] = *s.toResponse(&team)
-			}
-
-			// Adjust total count to exclude filtered teams
-			adjustedTotal := total
-			if len(teams) > len(filteredTeams) {
-				adjustedTotal = total - int64(len(teams)-len(filteredTeams))
-			}
-
-			return &TeamListResponse{
-				Teams:    responses,
-				Total:    adjustedTotal,
-				Page:     page,
-				PageSize: pageSize,
-			}, nil
+			return nil, fmt.Errorf("failed to verify organization: %w", err)
 		}
 
-		// Get all teams across all organizations
-		teams, err := s.repo.GetAll()
+		if page < 1 {
+			page = 1
+		}
+		if pageSize < 1 || pageSize > 100 {
+			pageSize = 20
+		}
+
+		offset := (page - 1) * pageSize
+		teams, total, err := s.repo.GetByOrganizationID(*organizationID, pageSize, offset)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get all teams: %w", err)
+			return nil, fmt.Errorf("failed to get teams: %w", err)
 		}
 
 		// Filter out the technical team
@@ -203,19 +142,45 @@ func (s *TeamService) GetAllTeams(organizationID *uuid.UUID, page, pageSize int)
 			responses[i] = *s.toResponse(&team)
 		}
 
+		// Adjust total count to exclude filtered teams
+		adjustedTotal := total
+		if len(teams) > len(filteredTeams) {
+			adjustedTotal = total - int64(len(teams)-len(filteredTeams))
+		}
+
 		return &TeamListResponse{
 			Teams:    responses,
-			Total:    int64(len(filteredTeams)),
-			Page:     1,
-			PageSize: len(filteredTeams),
+			Total:    adjustedTotal,
+			Page:     page,
+			PageSize: pageSize,
 		}, nil
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
-	return &response, nil
+	// Get all teams across all organizations (no pagination since user mentioned <100 teams)
+	teams, err := s.repo.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all teams: %w", err)
+	}
+
+	// Filter out the technical team
+	filteredTeams := make([]models.Team, 0, len(teams))
+	for _, team := range teams {
+		if team.Name != "team-developer-portal-technical" {
+			filteredTeams = append(filteredTeams, team)
+		}
+	}
+
+	responses := make([]TeamResponse, len(filteredTeams))
+	for i, team := range filteredTeams {
+		responses[i] = *s.toResponse(&team)
+	}
+
+	return &TeamListResponse{
+		Teams:    responses,
+		Total:    int64(len(filteredTeams)),
+		Page:     1,
+		PageSize: len(filteredTeams),
+	}, nil
 }
 
 // GetTeamComponentsByID retrieves components owned by a team by team ID
@@ -250,135 +215,113 @@ func (s *TeamService) GetBySimpleName(teamName string) (*TeamWithMembersResponse
 		return nil, fmt.Errorf("team name is required")
 	}
 
-	cacheKey := fmt.Sprintf("team:name:%s:with-members", teamName)
-
-	var response TeamWithMembersResponse
-	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
-		team, err := s.repo.GetByNameGlobal(teamName)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, apperrors.ErrTeamNotFound
-			}
-			return nil, fmt.Errorf("failed to get team by name: %w", err)
-		}
-
-		// Get all members of the team (no pagination)
-		members, _, err := s.userRepo.GetByTeamID(team.ID, 1000, 0)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get team members: %w", err)
-		}
-
-		// Convert team to response
-		teamResp := s.toResponse(team)
-
-		// Convert members to UserResponse
-		memberResponses := make([]UserResponse, len(members))
-		for i, m := range members {
-			memberResponses[i] = UserResponse{
-				ID:         m.UserID,
-				UUID:       m.BaseModel.ID.String(),
-				TeamID:     m.TeamID,
-				FirstName:  m.FirstName,
-				LastName:   m.LastName,
-				Email:      m.Email,
-				Mobile:     m.Mobile,
-				TeamDomain: string(m.TeamDomain),
-				TeamRole:   string(m.TeamRole),
-			}
-		}
-
-		// Fetch links owned by team
-		var linkResponses []LinkResponse
-		if s.linkRepo != nil {
-			if teamLinks, err := s.linkRepo.GetByOwner(team.ID); err == nil {
-				linkResponses = make([]LinkResponse, 0, len(teamLinks))
-				for i := range teamLinks {
-					linkResponses = append(linkResponses, toLinkResponse(&teamLinks[i]))
-				}
-			}
-		}
-
-		return &TeamWithMembersResponse{
-			TeamResponse: *teamResp,
-			Members:      memberResponses,
-			Links:        linkResponses,
-		}, nil
-	})
-
+	team, err := s.repo.GetByNameGlobal(teamName)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrTeamNotFound
+		}
+		return nil, fmt.Errorf("failed to get team by name: %w", err)
 	}
 
-	return &response, nil
+	// Get all members of the team (no pagination)
+	members, _, err := s.userRepo.GetByTeamID(team.ID, 1000, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team members: %w", err)
+	}
+
+	// Convert team to response
+	teamResp := s.toResponse(team)
+
+	// Convert members to UserResponse including metadata fallback
+	memberResponses := make([]UserResponse, len(members))
+	for i, m := range members {
+		memberResponses[i] = UserResponse{
+			ID:         m.UserID,
+			UUID:       m.BaseModel.ID.String(),
+			TeamID:     m.TeamID,
+			FirstName:  m.FirstName,
+			LastName:   m.LastName,
+			Email:      m.Email,
+			Mobile:     m.Mobile,
+			TeamDomain: string(m.TeamDomain),
+			TeamRole:   string(m.TeamRole),
+		}
+	}
+
+	// Fetch links owned by team
+	var linkResponses []LinkResponse
+	if s.linkRepo != nil {
+		if teamLinks, err := s.linkRepo.GetByOwner(team.ID); err == nil {
+			linkResponses = make([]LinkResponse, 0, len(teamLinks))
+			for i := range teamLinks {
+				linkResponses = append(linkResponses, toLinkResponse(&teamLinks[i]))
+			}
+		}
+	}
+
+	return &TeamWithMembersResponse{
+		TeamResponse: *teamResp,
+		Members:      memberResponses,
+		Links:        linkResponses,
+	}, nil
 }
 
 // GetBySimpleNameWithViewer retrieves a team by name across all organizations (with members and links)
 // and marks each link's Favorite=true if the logged-in viewer has the link UUID in their metadata.favorites.
 func (s *TeamService) GetBySimpleNameWithViewer(teamName string, viewerName string) (*TeamWithMembersResponse, error) {
-	cacheKey := fmt.Sprintf("team:name:%s:viewer:%s:with-members", teamName, viewerName)
+	// Reuse the base implementation
+	resp, err := s.GetBySimpleName(teamName)
+	if err != nil {
+		return nil, err
+	}
+	if viewerName == "" {
+		// No viewer information available; return as-is
+		return resp, nil
+	}
 
-	var response TeamWithMembersResponse
-	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
-		// Reuse the base implementation
-		resp, err := s.GetBySimpleName(teamName)
-		if err != nil {
-			return nil, err
-		}
-		if viewerName == "" {
-			// No viewer information available; return as-is
-			return resp, nil
-		}
+	// Load viewer by name and parse favorites
+	viewer, err := s.userRepo.GetByName(viewerName)
+	if err != nil || viewer == nil {
+		// Viewer not found; return unmodified
+		return resp, nil
+	}
 
-		// Load viewer by name and parse favorites
-		viewer, err := s.userRepo.GetByName(viewerName)
-		if err != nil || viewer == nil {
-			// Viewer not found; return unmodified
-			return resp, nil
-		}
-
-		// Build a set of favorite link UUIDs as strings
-		favSet := make(map[string]struct{})
-		if len(viewer.Metadata) > 0 {
-			var meta map[string]interface{}
-			if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
-				if v, ok := meta["favorites"]; ok && v != nil {
-					switch arr := v.(type) {
-					case []interface{}:
-						for _, it := range arr {
-							if s, ok := it.(string); ok && s != "" {
-								if _, parseErr := uuid.Parse(s); parseErr == nil {
-									favSet[s] = struct{}{}
-								}
+	// Build a set of favorite link UUIDs as strings
+	favSet := make(map[string]struct{})
+	if len(viewer.Metadata) > 0 {
+		var meta map[string]interface{}
+		if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
+			if v, ok := meta["favorites"]; ok && v != nil {
+				switch arr := v.(type) {
+				case []interface{}:
+					for _, it := range arr {
+						if s, ok := it.(string); ok && s != "" {
+							if _, parseErr := uuid.Parse(s); parseErr == nil {
+								favSet[s] = struct{}{}
 							}
 						}
-					case []string:
-						for _, s2 := range arr {
-							if _, parseErr := uuid.Parse(s2); parseErr == nil {
-								favSet[s2] = struct{}{}
-							}
+					}
+				case []string:
+					for _, s2 := range arr {
+						if _, parseErr := uuid.Parse(s2); parseErr == nil {
+							favSet[s2] = struct{}{}
 						}
 					}
 				}
 			}
 		}
-
-		// Mark favorites in-place
-		if len(favSet) > 0 {
-			for i := range resp.Links {
-				if _, ok := favSet[resp.Links[i].ID]; ok {
-					resp.Links[i].Favorite = true
-				}
-			}
-		}
-
-		return resp, nil
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
-	return &response, nil
+	// Mark favorites in-place
+	if len(favSet) > 0 {
+		for i := range resp.Links {
+			if _, ok := favSet[resp.Links[i].ID]; ok {
+				resp.Links[i].Favorite = true
+			}
+		}
+	}
+
+	return resp, nil
 }
 
 // toResponse converts a team model to response
@@ -449,9 +392,6 @@ func (s *TeamService) UpdateTeamMetadata(id uuid.UUID, newMetadata json.RawMessa
 		return nil, fmt.Errorf("failed to update team metadata: %w", err)
 	}
 
-	// INVALIDATE related caches
-	s.invalidateTeamCaches(team.ID, team.Name)
-
 	// Get organization ID through group (for backwards compatibility)
 	var organizationID uuid.UUID
 	if group, err := s.groupRepo.GetByID(team.GroupID); err == nil {
@@ -470,28 +410,4 @@ func (s *TeamService) UpdateTeamMetadata(id uuid.UUID, newMetadata json.RawMessa
 		PictureURL:     team.PictureURL,
 		Metadata:       team.Metadata,
 	}, nil
-}
-
-// invalidateTeamCaches invalidates cache entries related to a team
-func (s *TeamService) invalidateTeamCaches(teamID uuid.UUID, teamName string) {
-	// Invalidate by ID
-	if err := s.cache.Delete(fmt.Sprintf("team:id:%s", teamID.String())); err != nil {
-		logger.New().WithFields(map[string]interface{}{
-			"team_id":   teamID.String(),
-			"cache_key": fmt.Sprintf("team:id:%s", teamID.String()),
-		}).WithError(err).Warn("Failed to invalidate team cache by ID")
-	}
-
-	// Invalidate by name (with and without members)
-	if err := s.cache.Delete(fmt.Sprintf("team:name:%s:with-members", teamName)); err != nil {
-		logger.New().WithFields(map[string]interface{}{
-			"team_name": teamName,
-			"cache_key": fmt.Sprintf("team:name:%s:with-members", teamName),
-		}).WithError(err).Warn("Failed to invalidate team cache by name")
-	}
-
-	// Invalidate all teams list cache
-	if err := s.cache.Delete("teams:all"); err != nil {
-		logger.New().WithField("cache_key", "teams:all").WithError(err).Warn("Failed to invalidate teams cache")
-	}
 }

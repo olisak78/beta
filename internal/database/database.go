@@ -84,6 +84,7 @@ func Initialize(dsn string, opts *Options) (*gorm.DB, error) {
 			&models.Component{},
 			&models.Category{},
 			&models.Link{},
+			&models.Plugin{},
 			//&models.TeamComponentOwnership{},
 			//&models.TeamLeadership{},
 			//&models.ComponentDeployment{},

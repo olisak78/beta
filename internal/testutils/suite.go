@@ -122,6 +122,7 @@ func (s *BaseTestSuite) CleanTestDB() {
 		return
 	}
 	tables := []string{
+		"plugins",
 		"links",
 		"components",
 		"landscapes",
