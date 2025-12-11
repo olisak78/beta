@@ -44,47 +44,9 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		}
 
 		// Set user context
-		c.Set("user_id", claims.UserID)
+		c.Set("user_uuid", claims.UUID)
 		c.Set("username", claims.Username)
 		c.Set("email", claims.Email)
-		c.Set("provider", claims.Provider)
-		c.Set("auth_claims", claims)
-
-		c.Next()
-	}
-}
-
-// OptionalAuth validates JWT tokens if present but doesn't require them
-func (m *AuthMiddleware) OptionalAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			// No auth header, continue without setting user context
-			c.Next()
-			return
-		}
-
-		// Extract token from Bearer header
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			// Invalid format, continue without setting user context
-			c.Next()
-			return
-		}
-
-		// Validate token
-		claims, err := m.service.ValidateJWT(tokenString)
-		if err != nil {
-			// Invalid token, continue without setting user context
-			c.Next()
-			return
-		}
-
-		// Set user context if token is valid
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("email", claims.Email)
-		c.Set("provider", claims.Provider)
 		c.Set("auth_claims", claims)
 
 		c.Next()

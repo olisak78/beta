@@ -48,6 +48,7 @@ func (suite *LinkHandlerTestSuite) newRouter(withViewer bool, viewerName string)
 	}
 	r.GET("/links", suite.handler.ListLinks)
 	r.POST("/links", suite.handler.CreateLink)
+	r.PUT("/links/:id", suite.handler.UpdateLink)
 	r.DELETE("/links/:id", suite.handler.DeleteLink)
 	return r
 }
@@ -237,6 +238,140 @@ func (suite *LinkHandlerTestSuite) TestCreateLink_BadRequest_FromService() {
 
 	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), "validation failed")
+}
+
+func (suite *LinkHandlerTestSuite) TestUpdateLink_InvalidUUID() {
+	router := suite.newRouter(false, "")
+
+	req := httptest.NewRequest(http.MethodPut, "/links/not-a-uuid", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "invalid link ID")
+}
+
+func (suite *LinkHandlerTestSuite) TestUpdateLink_Unauthorized_NoUsername() {
+	router := suite.newRouter(false, "")
+
+	id := uuid.New()
+	categoryID := uuid.New().String()
+	body := `{
+		"name":"Updated Doc",
+		"description":"Updated Docs",
+		"url":"https://example.com/updated",
+		"category_id":"` + categoryID + `",
+		"tags":"c,d"
+	}`
+	req := httptest.NewRequest(http.MethodPut, "/links/"+id.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "missing username in token")
+}
+
+func (suite *LinkHandlerTestSuite) TestUpdateLink_Success() {
+	router := suite.newRouter(true, "cis.devops")
+
+	id := uuid.New()
+	categoryID := uuid.New().String()
+	body := `{
+		"name":"Updated Doc",
+		"description":"Updated Docs",
+		"url":"https://example.com/updated",
+		"category_id":"` + categoryID + `",
+		"tags":"c,d"
+	}`
+
+	suite.mockLink.EXPECT().
+		UpdateLink(id, gomock.Any()).
+		DoAndReturn(func(linkID uuid.UUID, req *service.UpdateLinkRequest) (*service.LinkResponse, error) {
+			// Validate UpdatedBy is mapped from context username
+			assert.Equal(suite.T(), "cis.devops", req.UpdatedBy)
+			assert.Equal(suite.T(), "Updated Doc", req.Name)
+			assert.Equal(suite.T(), "Updated Docs", req.Description)
+			assert.Equal(suite.T(), "https://example.com/updated", req.URL)
+			assert.Equal(suite.T(), categoryID, req.CategoryID)
+
+			return &service.LinkResponse{
+				ID:          id.String(),
+				Name:        req.Name,
+				Title:       req.Name,
+				Description: req.Description,
+				URL:         req.URL,
+				CategoryID:  req.CategoryID,
+				Tags:        []string{"c", "d"},
+			}, nil
+		})
+
+	req := httptest.NewRequest(http.MethodPut, "/links/"+id.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+	var got service.LinkResponse
+	err := json.Unmarshal(w.Body.Bytes(), &got)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "Updated Doc", got.Name)
+	assert.Equal(suite.T(), "Updated Doc", got.Title) // mirrors name
+	assert.Equal(suite.T(), "https://example.com/updated", got.URL)
+	assert.Equal(suite.T(), categoryID, got.CategoryID)
+	assert.ElementsMatch(suite.T(), []string{"c", "d"}, got.Tags)
+}
+
+func (suite *LinkHandlerTestSuite) TestUpdateLink_NotFound() {
+	router := suite.newRouter(true, "cis.devops")
+
+	id := uuid.New()
+	categoryID := uuid.New().String()
+	body := `{
+		"name":"Updated Doc",
+		"description":"Updated Docs",
+		"url":"https://example.com/updated",
+		"category_id":"` + categoryID + `",
+		"tags":"c,d"
+	}`
+
+	suite.mockLink.EXPECT().
+		UpdateLink(id, gomock.Any()).
+		Return(nil, errors.New("link not found"))
+
+	req := httptest.NewRequest(http.MethodPut, "/links/"+id.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "failed to update link")
+}
+
+func (suite *LinkHandlerTestSuite) TestUpdateLink_BadRequest_FromService() {
+	router := suite.newRouter(true, "cis.devops")
+
+	id := uuid.New()
+	categoryID := uuid.New().String()
+	body := `{
+		"name":"",
+		"description":"Updated Docs",
+		"url":"https://example.com/updated",
+		"category_id":"` + categoryID + `",
+		"tags":""
+	}`
+
+	suite.mockLink.EXPECT().
+		UpdateLink(id, gomock.Any()).
+		Return(nil, errors.New("validation failed: name is required"))
+
+	req := httptest.NewRequest(http.MethodPut, "/links/"+id.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "failed")
 }
 
 func (suite *LinkHandlerTestSuite) TestDeleteLink_InvalidUUID() {

@@ -735,9 +735,324 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/validate": {
+        "/alert-history/alerts/{project}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve alerts for a specific project with optional filtering and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alert-history"
+                ],
+                "summary": "Get alerts by project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name (must be one of cis2, usrv, cloud_automation)",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (min 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page (min 1, max 100)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by severity (e.g., critical, warning, info)",
+                        "name": "severity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by region label",
+                        "name": "region",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by landscape",
+                        "name": "landscape",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "firing",
+                            "resolved"
+                        ],
+                        "type": "string",
+                        "description": "Filter by status (firing or resolved)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by component label",
+                        "name": "component",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by alert name",
+                        "name": "alertname",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter alerts after this time (RFC3339 format)",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter alerts before this time (RFC3339 format)",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved alerts",
+                        "schema": {
+                            "$ref": "#/definitions/client.AlertHistoryPaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alert-history/alerts/{project}/{fingerprint}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific alert by its unique fingerprint within a project",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alert-history"
+                ],
+                "summary": "Get alert by fingerprint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name (alphanumeric, dashes, underscores)",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alert fingerprint (hexadecimal string, max 128 chars)",
+                        "name": "fingerprint",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved alert",
+                        "schema": {
+                            "$ref": "#/definitions/client.AlertHistoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Alert not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alert-history/alerts/{project}/{fingerprint}/label": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update or add a label for a specific alert",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alert-history"
+                ],
+                "summary": "Update alert label",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name (alphanumeric, dashes, underscores)",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Alert fingerprint (hexadecimal string, max 128 chars)",
+                        "name": "fingerprint",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Label update request with 'key' and 'value' fields",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Label updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/client.UpdateLabelResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters or body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Alert not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alert-history/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of all available projects configured in the alert history system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alert-history"
+                ],
+                "summary": "Get all alert history projects",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved projects",
+                        "schema": {
+                            "$ref": "#/definitions/client.ProjectsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
             "post": {
-                "description": "Validate JWT token and return token claims",
+                "description": "Logout user and invalidate authentication session",
                 "consumes": [
                     "application/json"
                 ],
@@ -747,26 +1062,90 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Validate JWT token",
+                "summary": "Logout user",
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
-                        "description": "Bearer token to validate",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
+                        "description": "Environment (development, staging, production)",
+                        "name": "env",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Token is valid with claims",
+                        "description": "Successfully logged out",
                         "schema": {
-                            "$ref": "#/definitions/auth.AuthValidateResponse"
+                            "$ref": "#/definitions/auth.AuthLogoutResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid provider",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Logout failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/refresh": {
+            "get": {
+                "description": "Refresh or validate authentication token using Authorization header or session cookies",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Refresh authentication token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Environment (development, staging, production)",
+                        "name": "env",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
+                        "description": "Bearer token for validation",
+                        "name": "Authorization",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully refreshed token",
+                        "schema": {
+                            "$ref": "#/definitions/auth.AuthRefreshResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid provider",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "401": {
-                        "description": "Authorization header required or token invalid",
+                        "description": "Authentication required or token invalid",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Token refresh failed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -838,130 +1217,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Invalid request parameters",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/auth/{provider}/logout": {
-            "post": {
-                "description": "Logout user and invalidate authentication session",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authentication"
-                ],
-                "summary": "Logout user",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "OAuth provider (githubtools or githubwdf)",
-                        "name": "provider",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully logged out",
-                        "schema": {
-                            "$ref": "#/definitions/auth.AuthLogoutResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid provider",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Logout failed",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/auth/{provider}/refresh": {
-            "get": {
-                "description": "Refresh or validate authentication token using refresh token, Authorization header, or session cookies",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authentication"
-                ],
-                "summary": "Refresh authentication token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "OAuth provider (githubtools or githubwdf)",
-                        "name": "provider",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Refresh token to use for getting new access token",
-                        "name": "refresh_token",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
-                        "description": "Bearer token for validation",
-                        "name": "Authorization",
-                        "in": "header"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully refreshed token",
-                        "schema": {
-                            "$ref": "#/definitions/auth.AuthRefreshResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid provider",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Authentication required or token invalid",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Token refresh failed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1284,7 +1539,14 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "team-id or project-name parameter is required",
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1298,6 +1560,30 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/components/health": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Component ID (UUID)",
+                        "name": "component-id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Landscape ID (UUID)",
+                        "name": "landscape-id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
             }
         },
         "/documentations": {
@@ -2648,6 +2934,78 @@ const docTemplate = `{
             }
         },
         "/links/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates an existing link. Title will mirror name. Validates category_id exists. Tags are optional. Owner field cannot be changed.\nupdated_by is derived from the bearer token 'username' claim and is NOT required in the payload.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "links"
+                ],
+                "summary": "Update a link by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Link ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Link data",
+                        "name": "link",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.UpdateLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated link",
+                        "schema": {
+                            "$ref": "#/definitions/service.LinkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or validation failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Link not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -2695,14 +3053,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/projects": {
+        "/plugins": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves all projects from the database",
+                "description": "Retrieve all plugins with pagination. When subscribed=true, returns only plugins the authenticated user is subscribed to. When subscribed=false or omitted, returns all plugins with subscription status marked for authenticated users.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2710,17 +3068,430 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "projects"
+                    "plugins"
                 ],
-                "summary": "Get all projects",
+                "summary": "Get all plugins or only subscribed plugins",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of items to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Number of items to skip",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "When true, return only subscribed plugins. When false, return all plugins with subscription status.",
+                        "name": "subscribed",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved all projects",
+                        "description": "Successfully retrieved plugins list",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/handlers.ProjectResponse"
+                            "$ref": "#/definitions/service.PluginListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required when subscribed=true",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new plugin with the provided information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Create a new plugin",
+                "parameters": [
+                    {
+                        "description": "Plugin creation request",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.CreatePluginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.PluginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or validation error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Plugin with same name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/plugins/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a specific plugin by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Get plugin by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.PluginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid plugin ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Plugin not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing plugin with the provided information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Update a plugin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Plugin update request",
+                        "name": "plugin",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/service.UpdatePluginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.PluginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid plugin ID or request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Plugin not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Plugin with same name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a plugin by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Delete a plugin",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully deleted plugin"
+                    },
+                    "400": {
+                        "description": "Invalid plugin ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Plugin not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/plugins/{id}/proxy": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Proxy requests to plugin backend server with 30-second timeout, caching (5 minutes for successful GET responses), and standardized response format. Always returns 200 OK with metadata including actual backend status, response time, and success flag.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Proxy requests to plugin backend",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Plugin ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target path to proxy to plugin backend (e.g., /api/health, /api/status)",
+                        "name": "path",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proxy response with metadata - always returns 200 OK regardless of backend status",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "data": {
+                                    "type": "object"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "pluginSuccess": {
+                                    "type": "boolean"
+                                },
+                                "responseTime": {
+                                    "type": "integer"
+                                },
+                                "statusCode": {
+                                    "type": "integer"
+                                }
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid plugin ID format or missing path parameter",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Plugin not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error (e.g., database connection issues)",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/plugins/{id}/ui": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the TSX React component content from GitHub for a specific plugin",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Get plugin UI content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved plugin UI content",
+                        "schema": {
+                            "$ref": "#/definitions/service.PluginUIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid plugin ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Plugin not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
@@ -3409,7 +4180,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved current user",
                         "schema": {
-                            "$ref": "#/definitions/service.UserWithLinksResponse"
+                            "$ref": "#/definitions/service.UserWithLinksAndPluginsResponse"
                         }
                     },
                     "401": {
@@ -3508,7 +4279,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved user",
                         "schema": {
-                            "$ref": "#/definitions/service.UserWithLinksResponse"
+                            "$ref": "#/definitions/service.UserWithLinksAndPluginsResponse"
                         }
                     },
                     "400": {
@@ -3655,51 +4426,265 @@ const docTemplate = `{
                     }
                 }
             }
-        }
-    },
-    "definitions": {
-        "auth.AuthClaims": {
-            "type": "object",
-            "properties": {
-                "aud": {
-                    "type": "string",
-                    "example": "developer-portal"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "john.doe@example.com"
-                },
-                "exp": {
-                    "type": "integer",
-                    "example": 1672531200
-                },
-                "iat": {
-                    "type": "integer",
-                    "example": 1672527600
-                },
-                "iss": {
-                    "description": "Standard JWT fields",
-                    "type": "string",
-                    "example": "developer-portal-backend"
-                },
-                "provider": {
-                    "type": "string",
-                    "example": "githubtools"
-                },
-                "sub": {
-                    "type": "string",
-                    "example": "12345"
-                },
-                "user_id": {
-                    "type": "integer",
-                    "example": 12345
-                },
-                "username": {
-                    "type": "string",
-                    "example": "johndoe"
+        },
+        "/users/{user_id}/plugins/{plugin_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds the given plugin_id to the user's metadata.subscribed array. Initializes metadata and subscribed if missing, and avoids duplicates.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Add a subscribed plugin to a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (I/C/D user id, e.g. cis.devops)",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "plugin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully added subscribed plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user_id or plugin_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the given plugin_id from the user's metadata.subscribed array. Initializes metadata if missing. Idempotent if plugin not present.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Remove a subscribed plugin from a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (I/C/D user id, e.g. cis.devops)",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "plugin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully removed subscribed plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user_id or plugin_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
                 }
             }
         },
+        "/users/{user_id}/subscribed/{plugin_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds the given plugin_id to the user's metadata.subscribed array. Initializes metadata and subscribed if missing, and avoids duplicates.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Add a subscribed plugin to a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (I/C/D user id, e.g. cis.devops)",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "plugin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully added subscribed plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user_id or plugin_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the given plugin_id from the user's metadata.subscribed array. Initializes metadata if missing. Idempotent if plugin not present.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Remove a subscribed plugin from a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID (I/C/D user id, e.g. cis.devops)",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Plugin ID (UUID)",
+                        "name": "plugin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully removed subscribed plugin",
+                        "schema": {
+                            "$ref": "#/definitions/service.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user_id or plugin_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
         "auth.AuthLogoutResponse": {
             "type": "object",
             "properties": {
@@ -3737,18 +4722,6 @@ const docTemplate = `{
                 }
             }
         },
-        "auth.AuthValidateResponse": {
-            "type": "object",
-            "properties": {
-                "claims": {
-                    "$ref": "#/definitions/auth.AuthClaims"
-                },
-                "valid": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
         "auth.UserProfile": {
             "type": "object",
             "properties": {
@@ -3761,14 +4734,116 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "memberId": {
-                    "description": "ID of member with matching email",
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "User UUID from database table",
+                    "type": "string"
+                }
+            }
+        },
+        "client.AlertHistoryPaginatedResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/client.AlertHistoryResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "totalCount": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "client.AlertHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "alertname": {
+                    "type": "string"
+                },
+                "annotations": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "endsAt": {
+                    "type": "string"
+                },
+                "fingerprint": {
+                    "type": "string"
+                },
+                "labels": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "landscape": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "startsAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "client.ProjectsResponse": {
+            "type": "object",
+            "properties": {
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "client.UpdateLabelResponse": {
+            "type": "object",
+            "properties": {
+                "fingerprint": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string"
+                        },
+                        "value": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "project": {
                     "type": "string"
                 }
             }
@@ -4003,47 +5078,6 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "queued"
-                }
-            }
-        },
-        "handlers.ProjectResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
-                },
-                "created_by": {
-                    "type": "string",
-                    "example": "user123"
-                },
-                "description": {
-                    "type": "string",
-                    "example": "This is a sample project"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "name": {
-                    "type": "string",
-                    "example": "my-project"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "My Project"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2023-01-01T00:00:00Z"
-                },
-                "updated_by": {
-                    "type": "string",
-                    "example": "user123"
                 }
             }
         },
@@ -4832,7 +5866,50 @@ const docTemplate = `{
                 },
                 "url": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 2000
+                }
+            }
+        },
+        "service.CreatePluginRequest": {
+            "type": "object",
+            "required": [
+                "backend_server_url",
+                "icon",
+                "name",
+                "react_component_path",
+                "title"
+            ],
+            "properties": {
+                "backend_server_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 1
+                },
+                "owner": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "react_component_path": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
                 }
             }
         },
@@ -5144,8 +6221,11 @@ const docTemplate = `{
         "service.LandscapeMinimalResponse": {
             "type": "object",
             "properties": {
-                "central-region": {
-                    "type": "boolean"
+                "auditlog": {
+                    "type": "string"
+                },
+                "cam": {
+                    "type": "string"
                 },
                 "cockpit": {
                     "type": "string"
@@ -5156,13 +6236,7 @@ const docTemplate = `{
                 "control-center": {
                     "type": "string"
                 },
-                "debug": {
-                    "type": "string"
-                },
                 "description": {
-                    "type": "string"
-                },
-                "destinations": {
                     "type": "string"
                 },
                 "domain": {
@@ -5181,7 +6255,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "git": {
-                    "description": "Enriched top-level fields (replaces exposing raw metadata in this endpoint)",
                     "type": "string"
                 },
                 "grafana": {
@@ -5190,13 +6263,19 @@ const docTemplate = `{
                 "health": {
                     "type": "string"
                 },
+                "iaas-console": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "is-central-region": {
+                    "type": "boolean"
                 },
                 "kibana": {
                     "type": "string"
                 },
-                "logs": {
+                "monitoring": {
                     "type": "string"
                 },
                 "name": {
@@ -5205,16 +6284,10 @@ const docTemplate = `{
                 "operation-console": {
                     "type": "string"
                 },
-                "overview": {
-                    "type": "string"
-                },
                 "plutono": {
                     "type": "string"
                 },
                 "prometheus": {
-                    "type": "string"
-                },
-                "roles": {
                     "type": "string"
                 },
                 "title": {
@@ -5296,6 +6369,69 @@ const docTemplate = `{
                 "total_comments": {
                     "type": "integer",
                     "example": 42
+                }
+            }
+        },
+        "service.PluginListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "plugins": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.PluginResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.PluginResponse": {
+            "type": "object",
+            "properties": {
+                "backend_server_url": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "react_component_path": {
+                    "type": "string"
+                },
+                "subscribed": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.PluginUIResponse": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
                 }
             }
         },
@@ -5444,6 +6580,73 @@ const docTemplate = `{
                 }
             }
         },
+        "service.UpdateLinkRequest": {
+            "type": "object",
+            "required": [
+                "category_id",
+                "name",
+                "url"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 1
+                },
+                "tags": {
+                    "description": "optional CSV string",
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 2000
+                }
+            }
+        },
+        "service.UpdatePluginRequest": {
+            "type": "object",
+            "properties": {
+                "backend_server_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "icon": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 1
+                },
+                "owner": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "react_component_path": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                }
+            }
+        },
         "service.UserResponse": {
             "type": "object",
             "properties": {
@@ -5478,7 +6681,7 @@ const docTemplate = `{
                 }
             }
         },
-        "service.UserWithLinksResponse": {
+        "service.UserWithLinksAndPluginsResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -5501,6 +6704,13 @@ const docTemplate = `{
                 },
                 "mobile": {
                     "type": "string"
+                },
+                "plugins": {
+                    "description": "subscribed plugins",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.PluginResponse"
+                    }
                 },
                 "portal_admin": {
                     "type": "boolean"
@@ -5553,7 +6763,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:7008",
+	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Developer Portal Backend API",

@@ -91,6 +91,8 @@ auth:
   # OAuth redirect URL - must match your backend's public URL
   # OAuth callback will be: {redirectUrl}/api/auth/{provider}/handler/frame
   redirectUrl: "https://dev.backend.developer-portal.cfs.c.eu-de-2.cloud.sap"
+  # Session duration for stored provider access tokens (in months)
+  expirationDays: 14
 # Database Configuration
 database:
   # Use internal PostgreSQL subchart
@@ -107,6 +109,7 @@ database:
 # JWT Configuration
 jwt:
   secret: "change-me-in-production"
+  expiresInSeconds: 3600
 # LDAP Configuration
 ldap:
   host: "ldap.example.com"
@@ -138,6 +141,8 @@ github:
 # OAuth Encryption
 oauth:
   encryptionKey: "change-me-in-production"
+token:
+  secret: "change-me-in-production"
 # Jenkins Configuration
 jenkins:
   pUser: "change-me"

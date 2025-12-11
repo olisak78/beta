@@ -14,17 +14,19 @@ import (
 
 // UserService handles business logic for members
 type UserService struct {
-	repo      repository.UserRepositoryInterface
-	linkRepo  repository.LinkRepositoryInterface
-	validator *validator.Validate
+	repo       repository.UserRepositoryInterface
+	linkRepo   repository.LinkRepositoryInterface
+	pluginRepo repository.PluginRepositoryInterface
+	validator  *validator.Validate
 }
 
 // NewUserService creates a new member service
-func NewUserService(repo repository.UserRepositoryInterface, linkRepo repository.LinkRepositoryInterface, validator *validator.Validate) *UserService {
+func NewUserService(repo repository.UserRepositoryInterface, linkRepo repository.LinkRepositoryInterface, pluginRepo repository.PluginRepositoryInterface, validator *validator.Validate) *UserService {
 	return &UserService{
-		repo:      repo,
-		linkRepo:  linkRepo,
-		validator: validator,
+		repo:       repo,
+		linkRepo:   linkRepo,
+		pluginRepo: pluginRepo,
+		validator:  validator,
 	}
 }
 
@@ -66,18 +68,19 @@ type UserResponse struct {
 	TeamRole   string     `json:"team_role"`   // models.TeamRole value
 }
 
-type UserWithLinksResponse struct {
-	ID          string         `json:"id"`
-	UUID        string         `json:"uuid"`
-	TeamID      *uuid.UUID     `json:"team_id,omitempty"`
-	FirstName   string         `json:"first_name"`
-	LastName    string         `json:"last_name"`
-	Email       string         `json:"email"`
-	Mobile      string         `json:"mobile"`
-	TeamDomain  string         `json:"team_domain"`
-	TeamRole    string         `json:"team_role"`
-	PortalAdmin bool           `json:"portal_admin,omitempty"`
-	Links       []LinkResponse `json:"link"`
+type UserWithLinksAndPluginsResponse struct {
+	ID          string           `json:"id"`
+	UUID        string           `json:"uuid"`
+	TeamID      *uuid.UUID       `json:"team_id,omitempty"`
+	FirstName   string           `json:"first_name"`
+	LastName    string           `json:"last_name"`
+	Email       string           `json:"email"`
+	Mobile      string           `json:"mobile"`
+	TeamDomain  string           `json:"team_domain"`
+	TeamRole    string           `json:"team_role"`
+	PortalAdmin bool             `json:"portal_admin,omitempty"`
+	Links       []LinkResponse   `json:"link"`
+	Plugins     []PluginResponse `json:"plugins"` // subscribed plugins
 }
 
 // UsersListResponse is the swagger schema for GET /users
@@ -290,6 +293,142 @@ func (s *UserService) RemoveFavoriteLinkByUserID(userID string, linkID uuid.UUID
 	return s.convertToResponse(user), nil
 }
 
+// AddSubscribedPluginByUserID adds plugin_id to user's metadata.subscribed identified by user_id
+func (s *UserService) AddSubscribedPluginByUserID(userID string, pluginID uuid.UUID) (*UserResponse, error) {
+	if userID == "" {
+		return nil, apperrors.NewValidationError("user_id", "user_id is required")
+	}
+	if pluginID == uuid.Nil {
+		return nil, apperrors.NewValidationError("plugin_id", "plugin_id is required")
+	}
+
+	// Load user by string user_id
+	user, err := s.repo.GetByUserID(userID)
+	if err != nil || user == nil {
+		return nil, apperrors.ErrUserNotFound
+	}
+
+	// Parse or initialize metadata as a JSON object
+	var meta map[string]interface{}
+	if len(user.Metadata) == 0 {
+		meta = map[string]interface{}{}
+	} else {
+		if err := json.Unmarshal(user.Metadata, &meta); err != nil || meta == nil {
+			// If metadata is invalid/not an object, reset to empty object
+			meta = map[string]interface{}{}
+		}
+	}
+
+	// Ensure subscribed array exists
+	var subscribed []string
+	if v, ok := meta["subscribed"]; ok && v != nil {
+		switch arr := v.(type) {
+		case []interface{}:
+			for _, it := range arr {
+				if str, ok := it.(string); ok && str != "" {
+					subscribed = append(subscribed, str)
+				}
+			}
+		case []string:
+			subscribed = append(subscribed, arr...)
+		}
+	}
+
+	// Deduplicate: add pluginID if not already present
+	pluginStr := pluginID.String()
+	exists := false
+	for _, id := range subscribed {
+		if id == pluginStr {
+			exists = true
+			break
+		}
+	}
+	if !exists {
+		subscribed = append(subscribed, pluginStr)
+	}
+
+	// Save back to metadata
+	meta["subscribed"] = subscribed
+	bytes, err := json.Marshal(meta)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	user.Metadata = json.RawMessage(bytes)
+
+	// Persist update
+	if err := s.repo.Update(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return s.convertToResponseWithPlugins(user), nil
+}
+
+// RemoveSubscribedPluginByUserID removes plugin_id from user's metadata.subscribed identified by user_id
+func (s *UserService) RemoveSubscribedPluginByUserID(userID string, pluginID uuid.UUID) (*UserResponse, error) {
+	if userID == "" {
+		return nil, apperrors.NewValidationError("user_id", "user_id is required")
+	}
+	if pluginID == uuid.Nil {
+		return nil, apperrors.NewValidationError("plugin_id", "plugin_id is required")
+	}
+
+	// Load user by string user_id
+	user, err := s.repo.GetByUserID(userID)
+	if err != nil || user == nil {
+		return nil, apperrors.ErrUserNotFound
+	}
+
+	// Parse or initialize metadata as a JSON object
+	var meta map[string]interface{}
+	if len(user.Metadata) == 0 {
+		meta = map[string]interface{}{}
+	} else {
+		if err := json.Unmarshal(user.Metadata, &meta); err != nil || meta == nil {
+			// If metadata is invalid/not an object, reset to empty object
+			meta = map[string]interface{}{}
+		}
+	}
+
+	// Extract subscribed array if exists
+	var subscribed []string
+	if v, ok := meta["subscribed"]; ok && v != nil {
+		switch arr := v.(type) {
+		case []interface{}:
+			for _, it := range arr {
+				if str, ok := it.(string); ok && str != "" {
+					subscribed = append(subscribed, str)
+				}
+			}
+		case []string:
+			subscribed = append(subscribed, arr...)
+		}
+	}
+
+	// Filter out the pluginID (idempotent if not present)
+	pluginStr := pluginID.String()
+	filtered := make([]string, 0, len(subscribed))
+	for _, id := range subscribed {
+		if id != pluginStr {
+			filtered = append(filtered, id)
+		}
+	}
+
+	// Save back to metadata
+	meta["subscribed"] = filtered
+	bytes, err := json.Marshal(meta)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+	user.Metadata = json.RawMessage(bytes)
+
+	// Persist update
+	if err := s.repo.Update(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return s.convertToResponse(user), nil
+}
+
 // GetMemberByID retrieves a member by ID (UUID)
 func (s *UserService) GetUserByID(id uuid.UUID) (*UserResponse, error) {
 	user, err := s.repo.GetByID(id)
@@ -330,7 +469,7 @@ func (s *UserService) GetUserByName(name string) (*UserResponse, error) {
 }
 
 // GetUserByNameWithLinks retrieves a user by BaseModel.Name and returns links-enriched response
-func (s *UserService) GetUserByNameWithLinks(name string) (*UserWithLinksResponse, error) {
+func (s *UserService) GetUserByNameWithLinks(name string) (*UserWithLinksAndPluginsResponse, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, apperrors.NewValidationError("name", "name is required")
@@ -345,8 +484,92 @@ func (s *UserService) GetUserByNameWithLinks(name string) (*UserWithLinksRespons
 	return s.GetUserByUserIDWithLinks(user.UserID)
 }
 
-// GetAllUsers returns all users with pagination
-func (s *UserService) GetUserByUserIDWithLinks(userID string) (*UserWithLinksResponse, error) {
+// GetUserByUserIDWithPlugins retrieves subscribed plugins for a user by their UserID
+func (s *UserService) GetUserByUserIDWithPlugins(userID string) ([]PluginResponse, error) {
+	if userID == "" {
+		return nil, apperrors.NewValidationError("user_id", "user_id is required")
+	}
+
+	user, err := s.repo.GetByUserID(userID)
+	if err != nil || user == nil {
+		return nil, apperrors.ErrUserNotFound
+	}
+
+	return s.GetSubscribedPluginsFromUser(user), nil
+}
+
+// GetSubscribedPluginsFromUser extracts and fetches subscribed plugins from user metadata
+func (s *UserService) GetSubscribedPluginsFromUser(user *models.User) []PluginResponse {
+	var subscribedPlugins []PluginResponse
+	if len(user.Metadata) > 0 {
+		var meta map[string]interface{}
+		if err := json.Unmarshal(user.Metadata, &meta); err == nil && meta != nil {
+			if v, ok := meta["subscribed"]; ok && v != nil {
+				var pluginIDs []uuid.UUID
+				switch arr := v.(type) {
+				case []interface{}:
+					for _, it := range arr {
+						if s, ok := it.(string); ok && s != "" {
+							if id, err := uuid.Parse(strings.TrimSpace(s)); err == nil {
+								pluginIDs = append(pluginIDs, id)
+							}
+						}
+					}
+				case []string:
+					for _, s2 := range arr {
+						if id, err := uuid.Parse(strings.TrimSpace(s2)); err == nil {
+							pluginIDs = append(pluginIDs, id)
+						}
+					}
+				}
+
+				// Fetch plugin details for each subscribed plugin
+				for _, pluginID := range pluginIDs {
+					if plugin, err := s.pluginRepo.GetByID(pluginID); err == nil {
+						subscribedPlugins = append(subscribedPlugins, PluginResponse{
+							ID:                 plugin.ID,
+							Name:               plugin.Name,
+							Title:              plugin.Title,
+							Description:        plugin.Description,
+							Icon:               plugin.Icon,
+							ReactComponentPath: plugin.ReactComponentPath,
+							BackendServerURL:   plugin.BackendServerURL,
+							Owner:              plugin.Owner,
+						})
+					}
+				}
+			}
+		}
+	}
+	return subscribedPlugins
+}
+
+// GetUserByNameWithLinksAndPlugins retrieves a user by BaseModel.Name and returns both links and plugins
+func (s *UserService) GetUserByNameWithLinksAndPlugins(name string) (*UserWithLinksAndPluginsResponse, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, apperrors.NewValidationError("name", "name is required")
+	}
+
+	user, err := s.repo.GetByName(name)
+	if err != nil || user == nil {
+		return nil, apperrors.ErrUserNotFound
+	}
+
+	// Get the user with links first
+	userWithLinks, err := s.GetUserByUserIDWithLinks(user.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the subscribed plugins using the extracted method
+	userWithLinks.Plugins = s.GetSubscribedPluginsFromUser(user)
+
+	return userWithLinks, nil
+}
+
+// GetUserByUserIDWithLinks returns a user with links by their UserID
+func (s *UserService) GetUserByUserIDWithLinks(userID string) (*UserWithLinksAndPluginsResponse, error) {
 	if userID == "" {
 		return nil, apperrors.NewValidationError("user_id", "user_id is required")
 	}
@@ -426,7 +649,7 @@ func (s *UserService) GetUserByUserIDWithLinks(userID string) (*UserWithLinksRes
 		links = append(links, lr)
 	}
 
-	resp := &UserWithLinksResponse{
+	resp := &UserWithLinksAndPluginsResponse{
 		ID:          user.UserID,
 		UUID:        user.ID.String(),
 		TeamID:      user.TeamID,
@@ -438,6 +661,7 @@ func (s *UserService) GetUserByUserIDWithLinks(userID string) (*UserWithLinksRes
 		TeamRole:    string(user.TeamRole),
 		PortalAdmin: portalAdmin,
 		Links:       links,
+		Plugins:     []PluginResponse{}, // Empty array, plugins should be fetched separately if needed
 	}
 	return resp, nil
 }
@@ -598,6 +822,21 @@ func (s *UserService) GetActiveUsers(organizationID uuid.UUID, limit, offset int
 
 // convertToResponse converts a member model to response
 func (s *UserService) convertToResponse(user *models.User) *UserResponse {
+	return &UserResponse{
+		ID:         user.UserID,
+		UUID:       user.ID.String(),
+		TeamID:     user.TeamID,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		Email:      user.Email,
+		Mobile:     user.Mobile,
+		TeamDomain: string(user.TeamDomain),
+		TeamRole:   string(user.TeamRole),
+	}
+}
+
+// convertToResponseWithPlugins converts a member model to response with subscribed plugins fetched
+func (s *UserService) convertToResponseWithPlugins(user *models.User) *UserResponse {
 	return &UserResponse{
 		ID:         user.UserID,
 		UUID:       user.ID.String(),

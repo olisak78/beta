@@ -3,7 +3,7 @@ plugins:
     title: Sample Developer Plugin
     description: A sample plugin demonstrating the plugin system functionality
     icon: Puzzle
-    react_component_path: /plugins/sample-plugin/SamplePlugin.jsx
+    react_component_path: https://github.tools.sap/cfs-platform-engineering/developer-portal-v2/blob/main/developer-portal/plugins/components-dashboard/src/components/EntityComponentsDashboardContent/ComponentCard/ComponentCard.tsx
     backend_server_url: http://localhost:3001
     owner: Developer Portal Team
     metadata:
@@ -11,3 +11,16 @@ plugins:
       category: "development"
       tags: ["sample", "demo", "development"]
       documentation_url: "https://docs.example.com/plugins/sample"
+
+  - name: code-quality-plugin
+    title: Code Quality Dashboard
+    description: Monitor code quality metrics, test coverage, and technical debt across projects
+    icon: BarChart3
+    react_component_path: /plugins/code-quality/CodeQualityPlugin.jsx
+    backend_server_url: http://localhost:3002
+    owner: Platform Engineering Team
+    metadata:
+      version: "1.2.0"
+      category: "quality"
+      tags: ["code-quality", "metrics", "testing", "sonarqube"]
+      documentation_url: "https://docs.example.com/plugins/code-quality"

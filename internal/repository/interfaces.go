@@ -116,6 +116,8 @@ type LinkRepositoryInterface interface {
 	GetByIDs(ids []uuid.UUID) ([]models.Link, error)
 	Create(link *models.Link) error
 	Delete(id uuid.UUID) error
+	GetByID(id uuid.UUID) (*models.Link, error)
+	Update(link *models.Link) error
 }
 
 // DocumentationRepositoryInterface defines the interface for documentation repository operations
@@ -126,4 +128,14 @@ type DocumentationRepositoryInterface interface {
 	Update(doc *models.Documentation) error
 	Delete(id uuid.UUID) error
 	GetAll(limit, offset int) ([]models.Documentation, int64, error)
+}
+
+// PluginRepositoryInterface defines the interface for plugin repository operations
+type PluginRepositoryInterface interface {
+	Create(plugin *models.Plugin) error
+	GetByID(id uuid.UUID) (*models.Plugin, error)
+	GetByName(name string) (*models.Plugin, error)
+	GetAll(limit, offset int) ([]models.Plugin, int64, error)
+	Update(plugin *models.Plugin) error
+	Delete(id uuid.UUID) error
 }

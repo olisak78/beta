@@ -1,0 +1,573 @@
+docker-compose -f docker/docker-compose.test.yml up -d postgres-test
+time="2025-12-11T11:14:19+02:00" level=warning msg="/Users/C5406081/developer-portal-backend/docker/docker-compose.test.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+time="2025-12-11T11:14:19+02:00" level=warning msg="Found orphan containers ([developer-portal-postgres]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container developer-portal-test-db  Running
+Waiting for test database to be ready...
+Test environment setup complete
+Running all tests...
+TEST_DATABASE_URL="postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable" \
+	go test -v ./...
+go: downloading github.com/DATA-DOG/go-sqlmock v1.5.2
+# developer-portal-backend/internal/service
+internal/service/github_test.go:50:2: expected declaration, found mockCache
+FAIL	developer-portal-backend/internal/service [setup failed]
+# developer-portal-backend/internal/service
+internal/service/github.go:187:70: undefined: claims
+internal/service/github.go:192:37: s.authService.GetGitHubAccessTokenFromClaims undefined (type GitHubAuthService has no field or method GetGitHubAccessTokenFromClaims)
+internal/service/github.go:192:68: undefined: claims
+internal/service/github.go:198:60: undefined: claims
+internal/service/github.go:376:70: undefined: claims
+internal/service/github.go:381:37: s.authService.GetGitHubAccessTokenFromClaims undefined (type GitHubAuthService has no field or method GetGitHubAccessTokenFromClaims)
+internal/service/github.go:381:68: undefined: claims
+internal/service/github.go:387:60: undefined: claims
+internal/service/github.go:528:64: undefined: claims
+internal/service/github.go:597:37: s.authService.GetGitHubAccessTokenFromClaims undefined (type GitHubAuthService has no field or method GetGitHubAccessTokenFromClaims)
+internal/service/github.go:597:37: too many errors
+FAIL	developer-portal-backend/cmd/server [build failed]
+?   	developer-portal-backend/docs	[no test files]
+FAIL	developer-portal-backend/internal/api/handlers [build failed]
+?   	developer-portal-backend/internal/api/middleware	[no test files]
+FAIL	developer-portal-backend/internal/api/routes [build failed]
+=== RUN   TestGetGitHubAccessToken_ExpirationHandling
+--- PASS: TestGetGitHubAccessToken_ExpirationHandling (0.00s)
+=== RUN   TestAuthConfig
+=== RUN   TestAuthConfig/valid_config_structure
+=== RUN   TestAuthConfig/missing_jwt_secret
+=== RUN   TestAuthConfig/missing_redirect_url
+=== RUN   TestAuthConfig/missing_client_credentials
+--- PASS: TestAuthConfig (0.00s)
+    --- PASS: TestAuthConfig/valid_config_structure (0.00s)
+    --- PASS: TestAuthConfig/missing_jwt_secret (0.00s)
+    --- PASS: TestAuthConfig/missing_redirect_url (0.00s)
+    --- PASS: TestAuthConfig/missing_client_credentials (0.00s)
+=== RUN   TestGitHubClientConfig
+--- PASS: TestGitHubClientConfig (0.00s)
+=== RUN   TestJWTOperations
+--- PASS: TestJWTOperations (0.00s)
+=== RUN   TestAuthHandlers
+=== RUN   TestAuthHandlers/Start_endpoint
+=== RUN   TestAuthHandlers/Logout_endpoint
+--- PASS: TestAuthHandlers (0.00s)
+    --- PASS: TestAuthHandlers/Start_endpoint (0.00s)
+    --- PASS: TestAuthHandlers/Logout_endpoint (0.00s)
+=== RUN   TestRefreshToken
+--- PASS: TestRefreshToken (0.00s)
+=== RUN   TestConfigValidation
+=== RUN   TestConfigValidation/empty_providers_map
+=== RUN   TestConfigValidation/template_strings_are_valid
+=== RUN   TestConfigValidation/mixed_valid_and_template_providers
+--- PASS: TestConfigValidation (0.00s)
+    --- PASS: TestConfigValidation/empty_providers_map (0.00s)
+    --- PASS: TestConfigValidation/template_strings_are_valid (0.00s)
+    --- PASS: TestConfigValidation/mixed_valid_and_template_providers (0.00s)
+=== RUN   TestGetProvider
+=== RUN   TestGetProvider/existing_provider
+=== RUN   TestGetProvider/non-existing_provider
+--- PASS: TestGetProvider (0.00s)
+    --- PASS: TestGetProvider/existing_provider (0.00s)
+    --- PASS: TestGetProvider/non-existing_provider (0.00s)
+=== RUN   TestLoadAuthConfigFromFile
+    auth_test.go:341: Config file loading tested via integration tests
+--- SKIP: TestLoadAuthConfigFromFile (0.00s)
+=== RUN   TestEnvironmentVariableOverrides
+    auth_test.go:346: Environment variable expansion tested via integration tests
+--- SKIP: TestEnvironmentVariableOverrides (0.00s)
+=== RUN   TestJWTExpiration
+--- PASS: TestJWTExpiration (0.00s)
+=== RUN   TestJWTExpiration_ExpiredTokenInvalid
+--- PASS: TestJWTExpiration_ExpiredTokenInvalid (0.00s)
+=== RUN   TestJWTExpiration_58MinutesValid
+--- PASS: TestJWTExpiration_58MinutesValid (0.00s)
+=== RUN   TestEncryptDecryptRoundTrip
+--- PASS: TestEncryptDecryptRoundTrip (0.00s)
+=== RUN   TestDecryptPlaintextPassThrough
+--- PASS: TestDecryptPlaintextPassThrough (0.00s)
+=== RUN   TestSetTokenSecretInvalidLength
+--- PASS: TestSetTokenSecretInvalidLength (0.00s)
+=== RUN   TestRequireAuth_NotExpiredToken
+--- PASS: TestRequireAuth_NotExpiredToken (0.00s)
+=== RUN   TestRequireAuth_ExpiredToken
+--- PASS: TestRequireAuth_ExpiredToken (0.00s)
+PASS
+ok  	developer-portal-backend/internal/auth	0.424s
+=== RUN   TestNewCacheWrapper
+--- PASS: TestNewCacheWrapper (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_CacheHit
+--- PASS: TestCacheWrapper_GetOrSetTyped_CacheHit (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_CacheMiss
+--- PASS: TestCacheWrapper_GetOrSetTyped_CacheMiss (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_FetcherError
+--- PASS: TestCacheWrapper_GetOrSetTyped_FetcherError (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_CorruptedCache
+time="2025-12-11T11:14:36+02:00" level=warning msg="Cached data is corrupted, treating as cache miss" cache_key="test:key" error="invalid character 'o' in literal null (expecting 'u')"
+--- PASS: TestCacheWrapper_GetOrSetTyped_CorruptedCache (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_WithSlice
+--- PASS: TestCacheWrapper_GetOrSetTyped_WithSlice (0.00s)
+=== RUN   TestCacheWrapper_GetOrSetTyped_WithPrimitives
+=== RUN   TestCacheWrapper_GetOrSetTyped_WithPrimitives/string
+=== RUN   TestCacheWrapper_GetOrSetTyped_WithPrimitives/int
+=== RUN   TestCacheWrapper_GetOrSetTyped_WithPrimitives/bool
+--- PASS: TestCacheWrapper_GetOrSetTyped_WithPrimitives (0.00s)
+    --- PASS: TestCacheWrapper_GetOrSetTyped_WithPrimitives/string (0.00s)
+    --- PASS: TestCacheWrapper_GetOrSetTyped_WithPrimitives/int (0.00s)
+    --- PASS: TestCacheWrapper_GetOrSetTyped_WithPrimitives/bool (0.00s)
+=== RUN   TestCacheWrapper_GetJSON
+--- PASS: TestCacheWrapper_GetJSON (0.00s)
+=== RUN   TestCacheWrapper_GetJSON_NotFound
+--- PASS: TestCacheWrapper_GetJSON_NotFound (0.00s)
+=== RUN   TestCacheWrapper_SetJSON
+--- PASS: TestCacheWrapper_SetJSON (0.00s)
+=== RUN   TestCacheWrapper_Delete
+--- PASS: TestCacheWrapper_Delete (0.00s)
+=== RUN   TestCacheWrapper_Exists
+--- PASS: TestCacheWrapper_Exists (0.00s)
+=== RUN   TestCacheWrapper_ConcurrentAccess
+--- PASS: TestCacheWrapper_ConcurrentAccess (0.00s)
+=== RUN   TestCacheKeyBuilder_Basic
+--- PASS: TestCacheKeyBuilder_Basic (0.00s)
+=== RUN   TestCacheKeyBuilder_NoNamespace
+--- PASS: TestCacheKeyBuilder_NoNamespace (0.00s)
+=== RUN   TestCacheKeyBuilder_EmptyParts
+--- PASS: TestCacheKeyBuilder_EmptyParts (0.00s)
+=== RUN   TestCacheKeyBuilder_SinglePart
+--- PASS: TestCacheKeyBuilder_SinglePart (0.00s)
+=== RUN   TestCacheKeyBuilder_MultipleParts
+--- PASS: TestCacheKeyBuilder_MultipleParts (0.00s)
+=== RUN   TestCacheKeyBuilder_WithParams
+--- PASS: TestCacheKeyBuilder_WithParams (0.00s)
+=== RUN   TestCacheKeyBuilder_WithParams_OrderIndependent
+--- PASS: TestCacheKeyBuilder_WithParams_OrderIndependent (0.00s)
+=== RUN   TestCacheKeyBuilder_EmptyParams
+--- PASS: TestCacheKeyBuilder_EmptyParams (0.00s)
+=== RUN   TestCacheKeyBuilder_NilParams
+--- PASS: TestCacheKeyBuilder_NilParams (0.00s)
+=== RUN   TestCacheKeyBuilder_Hash
+--- PASS: TestCacheKeyBuilder_Hash (0.00s)
+=== RUN   TestCacheKeyBuilder_Hash_Consistency
+--- PASS: TestCacheKeyBuilder_Hash_Consistency (0.00s)
+=== RUN   TestCacheKeyBuilder_Hash_Uniqueness
+--- PASS: TestCacheKeyBuilder_Hash_Uniqueness (0.00s)
+=== RUN   TestCacheKeyBuilder_Chaining
+--- PASS: TestCacheKeyBuilder_Chaining (0.00s)
+=== RUN   TestSonarCacheKey
+--- PASS: TestSonarCacheKey (0.00s)
+=== RUN   TestSonarCacheKey_SingleMetric
+--- PASS: TestSonarCacheKey_SingleMetric (0.00s)
+=== RUN   TestSonarCacheKey_EmptyMetrics
+--- PASS: TestSonarCacheKey_EmptyMetrics (0.00s)
+=== RUN   TestJiraCacheKey
+--- PASS: TestJiraCacheKey (0.00s)
+=== RUN   TestJiraCacheKey_NoParams
+--- PASS: TestJiraCacheKey_NoParams (0.00s)
+=== RUN   TestJiraCacheKey_EmptyParams
+--- PASS: TestJiraCacheKey_EmptyParams (0.00s)
+=== RUN   TestGitHubCacheKey
+--- PASS: TestGitHubCacheKey (0.00s)
+=== RUN   TestGitHubCacheKey_NoParams
+--- PASS: TestGitHubCacheKey_NoParams (0.00s)
+=== RUN   TestGitHubCacheKey_ComplexParams
+--- PASS: TestGitHubCacheKey_ComplexParams (0.00s)
+=== RUN   TestNewInMemoryCache
+--- PASS: TestNewInMemoryCache (0.00s)
+=== RUN   TestInMemoryCache_SetAndGet
+--- PASS: TestInMemoryCache_SetAndGet (0.00s)
+=== RUN   TestInMemoryCache_GetNonExistent
+--- PASS: TestInMemoryCache_GetNonExistent (0.00s)
+=== RUN   TestInMemoryCache_Delete
+--- PASS: TestInMemoryCache_Delete (0.00s)
+=== RUN   TestInMemoryCache_Exists
+--- PASS: TestInMemoryCache_Exists (0.00s)
+=== RUN   TestInMemoryCache_Clear
+--- PASS: TestInMemoryCache_Clear (0.00s)
+=== RUN   TestInMemoryCache_Expiration
+--- PASS: TestInMemoryCache_Expiration (0.10s)
+=== RUN   TestInMemoryCache_GetWithRefresh
+--- PASS: TestInMemoryCache_GetWithRefresh (0.15s)
+=== RUN   TestInMemoryCache_ItemCount
+--- PASS: TestInMemoryCache_ItemCount (0.00s)
+=== RUN   TestInMemoryCache_ConcurrentAccess
+--- PASS: TestInMemoryCache_ConcurrentAccess (0.00s)
+=== RUN   TestInMemoryCache_InvalidValueType
+--- PASS: TestInMemoryCache_InvalidValueType (0.00s)
+PASS
+ok  	developer-portal-backend/internal/cache	1.090s
+?   	developer-portal-backend/internal/client	[no test files]
+?   	developer-portal-backend/internal/config	[no test files]
+=== RUN   TestMergeJSON_PreservesExistingAttributesAndDeepMerges
+--- PASS: TestMergeJSON_PreservesExistingAttributesAndDeepMerges (0.00s)
+=== RUN   TestMergeJSON_InvalidInputs
+=== RUN   TestMergeJSON_InvalidInputs/invalid_a_json
+=== RUN   TestMergeJSON_InvalidInputs/invalid_b_json
+=== RUN   TestMergeJSON_InvalidInputs/non-object_a_(array)
+=== RUN   TestMergeJSON_InvalidInputs/non-object_b_(array)
+--- PASS: TestMergeJSON_InvalidInputs (0.00s)
+    --- PASS: TestMergeJSON_InvalidInputs/invalid_a_json (0.00s)
+    --- PASS: TestMergeJSON_InvalidInputs/invalid_b_json (0.00s)
+    --- PASS: TestMergeJSON_InvalidInputs/non-object_a_(array) (0.00s)
+    --- PASS: TestMergeJSON_InvalidInputs/non-object_b_(array) (0.00s)
+=== RUN   TestJSONEqual_Cases
+=== RUN   TestJSONEqual_Cases/equal_ignoring_key_order
+=== RUN   TestJSONEqual_Cases/unequal_values
+=== RUN   TestJSONEqual_Cases/both_empty
+=== RUN   TestJSONEqual_Cases/empty_a_vs_non-empty_b
+=== RUN   TestJSONEqual_Cases/invalid_a_json
+=== RUN   TestJSONEqual_Cases/invalid_b_json
+--- PASS: TestJSONEqual_Cases (0.00s)
+    --- PASS: TestJSONEqual_Cases/equal_ignoring_key_order (0.00s)
+    --- PASS: TestJSONEqual_Cases/unequal_values (0.00s)
+    --- PASS: TestJSONEqual_Cases/both_empty (0.00s)
+    --- PASS: TestJSONEqual_Cases/empty_a_vs_non-empty_b (0.00s)
+    --- PASS: TestJSONEqual_Cases/invalid_a_json (0.00s)
+    --- PASS: TestJSONEqual_Cases/invalid_b_json (0.00s)
+=== RUN   TestSlugifyTitle
+--- PASS: TestSlugifyTitle (0.00s)
+=== RUN   TestNormalizeTagsCSV
+=== RUN   TestNormalizeTagsCSV/nil
+=== RUN   TestNormalizeTagsCSV/string_with_spaces_and_blanks
+=== RUN   TestNormalizeTagsCSV/slice_of_interfaces_with_non-strings
+=== RUN   TestNormalizeTagsCSV/unknown_type
+=== RUN   TestNormalizeTagsCSV/single_tag_string
+--- PASS: TestNormalizeTagsCSV (0.00s)
+    --- PASS: TestNormalizeTagsCSV/nil (0.00s)
+    --- PASS: TestNormalizeTagsCSV/string_with_spaces_and_blanks (0.00s)
+    --- PASS: TestNormalizeTagsCSV/slice_of_interfaces_with_non-strings (0.00s)
+    --- PASS: TestNormalizeTagsCSV/unknown_type (0.00s)
+    --- PASS: TestNormalizeTagsCSV/single_tag_string (0.00s)
+=== RUN   TestLoadFromYAMLFile_Cases
+=== RUN   TestLoadFromYAMLFile_Cases/file_not_found_returns_empty_slice
+=== RUN   TestLoadFromYAMLFile_Cases/empty_file_returns_empty_slice
+=== RUN   TestLoadFromYAMLFile_Cases/decoder_error_is_propagated
+=== RUN   TestLoadFromYAMLFile_Cases/successful_decode
+--- PASS: TestLoadFromYAMLFile_Cases (0.01s)
+    --- PASS: TestLoadFromYAMLFile_Cases/file_not_found_returns_empty_slice (0.00s)
+    --- PASS: TestLoadFromYAMLFile_Cases/empty_file_returns_empty_slice (0.00s)
+    --- PASS: TestLoadFromYAMLFile_Cases/decoder_error_is_propagated (0.00s)
+    --- PASS: TestLoadFromYAMLFile_Cases/successful_decode (0.00s)
+PASS
+ok  	developer-portal-backend/internal/database	(cached)
+?   	developer-portal-backend/internal/database/models	[no test files]
+=== RUN   TestNotFoundError
+=== RUN   TestNotFoundError/Error_message
+=== RUN   TestNotFoundError/errors.Is_comparison_with_same_entity
+=== RUN   TestNotFoundError/errors.Is_comparison_with_different_entity
+=== RUN   TestNotFoundError/errors.Is_with_predefined_errors
+=== RUN   TestNotFoundError/IsNotFound_helper
+--- PASS: TestNotFoundError (0.00s)
+    --- PASS: TestNotFoundError/Error_message (0.00s)
+    --- PASS: TestNotFoundError/errors.Is_comparison_with_same_entity (0.00s)
+    --- PASS: TestNotFoundError/errors.Is_comparison_with_different_entity (0.00s)
+    --- PASS: TestNotFoundError/errors.Is_with_predefined_errors (0.00s)
+    --- PASS: TestNotFoundError/IsNotFound_helper (0.00s)
+=== RUN   TestAlreadyExistsError
+=== RUN   TestAlreadyExistsError/Error_message_with_context
+=== RUN   TestAlreadyExistsError/Error_message_without_context
+=== RUN   TestAlreadyExistsError/errors.Is_comparison
+=== RUN   TestAlreadyExistsError/IsAlreadyExists_helper
+--- PASS: TestAlreadyExistsError (0.00s)
+    --- PASS: TestAlreadyExistsError/Error_message_with_context (0.00s)
+    --- PASS: TestAlreadyExistsError/Error_message_without_context (0.00s)
+    --- PASS: TestAlreadyExistsError/errors.Is_comparison (0.00s)
+    --- PASS: TestAlreadyExistsError/IsAlreadyExists_helper (0.00s)
+=== RUN   TestValidationError
+=== RUN   TestValidationError/Error_message_with_field
+=== RUN   TestValidationError/Error_message_without_field
+=== RUN   TestValidationError/IsValidation_helper
+--- PASS: TestValidationError (0.00s)
+    --- PASS: TestValidationError/Error_message_with_field (0.00s)
+    --- PASS: TestValidationError/Error_message_without_field (0.00s)
+    --- PASS: TestValidationError/IsValidation_helper (0.00s)
+=== RUN   TestHelperFunctions
+=== RUN   TestHelperFunctions/NewNotFoundError
+=== RUN   TestHelperFunctions/NewAlreadyExistsError
+=== RUN   TestHelperFunctions/NewValidationError
+--- PASS: TestHelperFunctions (0.00s)
+    --- PASS: TestHelperFunctions/NewNotFoundError (0.00s)
+    --- PASS: TestHelperFunctions/NewAlreadyExistsError (0.00s)
+    --- PASS: TestHelperFunctions/NewValidationError (0.00s)
+=== RUN   TestBusinessLogicErrors
+=== RUN   TestBusinessLogicErrors/Association_errors
+=== RUN   TestBusinessLogicErrors/Business_logic_errors
+--- PASS: TestBusinessLogicErrors (0.00s)
+    --- PASS: TestBusinessLogicErrors/Association_errors (0.00s)
+    --- PASS: TestBusinessLogicErrors/Business_logic_errors (0.00s)
+PASS
+ok  	developer-portal-backend/internal/errors	0.626s
+?   	developer-portal-backend/internal/logger	[no test files]
+FAIL	developer-portal-backend/internal/mocks [build failed]
+=== RUN   TestCategoryRepositoryTestSuite
+2025/12/11 11:14:37 Initializing database...
+2025/12/11 11:14:37 Organizations handling completed. 1 created, 0 updated, 0 unchanged, 1 total in YAML
+2025/12/11 11:14:37 Groups handling completed. 8 created, 0 updated, 0 unchanged, 8 total in YAML
+2025/12/11 11:14:37 Teams handling completed. 17 created, 0 updated, 0 unchanged, 17 total in YAML
+2025/12/11 11:14:37 Users handling completed. 875 created, 0 unchanged, 875 total in YAML
+2025/12/11 11:14:37 Projects handling completed. 6 created, 0 updated, 0 unchanged, 6 total in YAML
+2025/12/11 11:14:37 Landscapes handling completed. 119 created, 0 updated, 0 unchanged, 119 total in YAML
+2025/12/11 11:14:38 Components handling completed. 113 created, 0 updated, 0 unchanged, 113 total in YAML
+2025/12/11 11:14:38 Categories handling completed. 10 created, 0 updated, 0 unchanged, 10 total in YAML
+2025/12/11 11:14:38 Links handling completed. 72 created, 0 updated, 0 unchanged, 72 total in YAML
+2025/12/11 11:14:38 Plugins handling completed. 2 created, 0 updated, 0 unchanged, 2 total in YAML
+2025/12/11 11:14:38 Initializing database done.
+2025/12/11 11:14:38 ✅ Shared Postgres ready on 55003
+2025/12/11 11:14:38 Public tables: [categories components documentations groups landscapes links organizations plugins projects teams tokens users]
+=== RUN   TestCategoryRepositoryTestSuite/TestGetAll
+=== RUN   TestCategoryRepositoryTestSuite/TestGetAllWithPagination
+=== RUN   TestCategoryRepositoryTestSuite/TestGetByID
+=== RUN   TestCategoryRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:38 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/category.go:44 [35;1mrecord not found
+[0m[33m[0.347ms] [34;1m[rows:0][0m SELECT * FROM "categories" WHERE id = 'ab4e40bc-3d9c-4d66-a66b-3cf66d156708' ORDER BY "categories"."id" LIMIT 1
+--- PASS: TestCategoryRepositoryTestSuite (2.00s)
+    --- PASS: TestCategoryRepositoryTestSuite/TestGetAll (0.06s)
+    --- PASS: TestCategoryRepositoryTestSuite/TestGetAllWithPagination (0.06s)
+    --- PASS: TestCategoryRepositoryTestSuite/TestGetByID (0.06s)
+    --- PASS: TestCategoryRepositoryTestSuite/TestGetByIDNotFound (0.05s)
+=== RUN   TestComponentRepositoryTestSuite
+=== RUN   TestComponentRepositoryTestSuite/TestCreate
+=== RUN   TestComponentRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:38 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/component.go:28 [35;1mrecord not found
+[0m[33m[0.446ms] [34;1m[rows:0][0m SELECT * FROM "components" WHERE id = 'f9e8c50b-03e0-4b10-a200-5ac1e995c9b2' ORDER BY "components"."id" LIMIT 1
+=== RUN   TestComponentRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestComponentRepositoryTestSuite/TestGetByID
+=== RUN   TestComponentRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:38 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/component.go:28 [35;1mrecord not found
+[0m[33m[0.339ms] [34;1m[rows:0][0m SELECT * FROM "components" WHERE id = '5ec9c005-f153-462f-a6f9-44252816cb8f' ORDER BY "components"."id" LIMIT 1
+=== RUN   TestComponentRepositoryTestSuite/TestGetByName
+=== RUN   TestComponentRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:38 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/component.go:38 [35;1mrecord not found
+[0m[33m[0.355ms] [34;1m[rows:0][0m SELECT * FROM "components" WHERE project_id = '63704d23-d6a5-479c-b787-d24268d2038c' AND name = 'nonexistent-component' ORDER BY "components"."id" LIMIT 1
+=== RUN   TestComponentRepositoryTestSuite/TestUpdate
+--- PASS: TestComponentRepositoryTestSuite (0.48s)
+    --- PASS: TestComponentRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestComponentRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestComponentRepositoryTestSuite/TestDeleteNotFound (0.05s)
+    --- PASS: TestComponentRepositoryTestSuite/TestGetByID (0.05s)
+    --- PASS: TestComponentRepositoryTestSuite/TestGetByIDNotFound (0.05s)
+    --- PASS: TestComponentRepositoryTestSuite/TestGetByName (0.06s)
+    --- PASS: TestComponentRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- PASS: TestComponentRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestGroupRepositoryTestSuite
+=== RUN   TestGroupRepositoryTestSuite/TestCreate
+=== RUN   TestGroupRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:38 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/group.go:28 [35;1mrecord not found
+[0m[33m[0.510ms] [34;1m[rows:0][0m SELECT * FROM "groups" WHERE id = 'ce6afcb2-fb41-4e8d-94d8-3b1170bf6f1f' ORDER BY "groups"."id" LIMIT 1
+=== RUN   TestGroupRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestGroupRepositoryTestSuite/TestGetByID
+=== RUN   TestGroupRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:39 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/group.go:28 [35;1mrecord not found
+[0m[33m[0.340ms] [34;1m[rows:0][0m SELECT * FROM "groups" WHERE id = '31db11c4-eb24-492d-95db-496a72532b2c' ORDER BY "groups"."id" LIMIT 1
+=== RUN   TestGroupRepositoryTestSuite/TestGetByName
+=== RUN   TestGroupRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:39 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/group.go:38 [35;1mrecord not found
+[0m[33m[0.361ms] [34;1m[rows:0][0m SELECT * FROM "groups" WHERE org_id = '406cf48f-4898-431c-b0bc-31dfc7319a85' AND name = 'nonexistent-group' ORDER BY "groups"."id" LIMIT 1
+=== RUN   TestGroupRepositoryTestSuite/TestGetByOrganizationID
+=== RUN   TestGroupRepositoryTestSuite/TestGetByOrganizationIDWithPagination
+=== RUN   TestGroupRepositoryTestSuite/TestSearch
+=== RUN   TestGroupRepositoryTestSuite/TestUpdate
+--- PASS: TestGroupRepositoryTestSuite (0.66s)
+    --- PASS: TestGroupRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestDeleteNotFound (0.05s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByID (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByIDNotFound (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByName (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByOrganizationID (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestGetByOrganizationIDWithPagination (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestSearch (0.06s)
+    --- PASS: TestGroupRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestLandscapeRepositoryTestSuite
+=== RUN   TestLandscapeRepositoryTestSuite/TestCreate
+=== RUN   TestLandscapeRepositoryTestSuite/TestCreateDuplicateName
+
+2025/12/11 11:14:39 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/landscape.go:22 [35;1mERROR: duplicate key value violates unique constraint "landscapes_name_project_id_unique" (SQLSTATE 23505)
+[0m[33m[0.740ms] [34;1m[rows:0][0m INSERT INTO "landscapes" ("created_at","created_by","updated_at","updated_by","name","title","description","metadata","project_id","domain","environment","id") VALUES ('2025-12-11 11:14:39.649','','2025-12-11 11:14:39.649','','duplicate-landscape','duplicate-landscape Landscape','A test landscape for testing purposes',(NULL),'471d0f26-02da-4ea1-947d-8b2817334dcd','example.com','development','8a2747b3-66a4-46ce-8eff-bebf96f93d89') RETURNING "id"
+=== RUN   TestLandscapeRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:39 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/landscape.go:28 [35;1mrecord not found
+[0m[33m[0.439ms] [34;1m[rows:0][0m SELECT * FROM "landscapes" WHERE id = '529825ae-c9ef-4c56-9223-b9456a0c7da9' ORDER BY "landscapes"."id" LIMIT 1
+=== RUN   TestLandscapeRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByID
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:39 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/landscape.go:28 [35;1mrecord not found
+[0m[33m[0.508ms] [34;1m[rows:0][0m SELECT * FROM "landscapes" WHERE id = 'cb49b149-e96a-4655-952d-33d37c90a874' ORDER BY "landscapes"."id" LIMIT 1
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByName
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:40 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/landscape.go:39 [35;1mrecord not found
+[0m[33m[0.332ms] [34;1m[rows:0][0m SELECT * FROM "landscapes" WHERE name = 'nonexistent-landscape' ORDER BY "landscapes"."id" LIMIT 1
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByOrganizationID
+=== RUN   TestLandscapeRepositoryTestSuite/TestGetByOrganizationIDWithPagination
+=== RUN   TestLandscapeRepositoryTestSuite/TestUpdate
+--- PASS: TestLandscapeRepositoryTestSuite (0.67s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestCreateDuplicateName (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestDeleteNotFound (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByID (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByIDNotFound (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByName (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByOrganizationID (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestGetByOrganizationIDWithPagination (0.06s)
+    --- PASS: TestLandscapeRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestLinkRepositoryTestSuite
+=== RUN   TestLinkRepositoryTestSuite/TestCreate
+=== RUN   TestLinkRepositoryTestSuite/TestDelete
+=== RUN   TestLinkRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestLinkRepositoryTestSuite/TestGetByIDs
+=== RUN   TestLinkRepositoryTestSuite/TestGetByIDs_Empty
+=== RUN   TestLinkRepositoryTestSuite/TestGetByOwner
+--- PASS: TestLinkRepositoryTestSuite (0.38s)
+    --- PASS: TestLinkRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestLinkRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestLinkRepositoryTestSuite/TestDeleteNotFound (0.05s)
+    --- PASS: TestLinkRepositoryTestSuite/TestGetByIDs (0.06s)
+    --- PASS: TestLinkRepositoryTestSuite/TestGetByIDs_Empty (0.05s)
+    --- PASS: TestLinkRepositoryTestSuite/TestGetByOwner (0.06s)
+=== RUN   TestOrganizationRepositoryTestSuite
+=== RUN   TestOrganizationRepositoryTestSuite/TestCreate
+=== RUN   TestOrganizationRepositoryTestSuite/TestCreateDuplicateName
+
+2025/12/11 11:14:40 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/organization.go:22 [35;1mERROR: duplicate key value violates unique constraint "organizations_name_unique" (SQLSTATE 23505)
+[0m[33m[0.798ms] [34;1m[rows:0][0m INSERT INTO "organizations" ("created_at","created_by","updated_at","updated_by","name","title","description","metadata","owner","email","id") VALUES ('2025-12-11 11:14:40.692','','2025-12-11 11:14:40.692','','test-org','test-org Display Name','A test organization for testing purposes',(NULL),'I00001','org@test.com','3cba346c-a042-404c-b285-2e19b7fdac21') RETURNING "id"
+=== RUN   TestOrganizationRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:40 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/organization.go:28 [35;1mrecord not found
+[0m[33m[0.430ms] [34;1m[rows:0][0m SELECT * FROM "organizations" WHERE id = 'd6159932-a35a-4d4b-93b9-e53a71a7cd6c' ORDER BY "organizations"."id" LIMIT 1
+=== RUN   TestOrganizationRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetAll
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetAllWithPagination
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetByID
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/organization.go:28 [35;1mrecord not found
+[0m[33m[0.423ms] [34;1m[rows:0][0m SELECT * FROM "organizations" WHERE id = '01a8c52b-5052-4e02-b34b-10be283389ba' ORDER BY "organizations"."id" LIMIT 1
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetByName
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/organization.go:38 [35;1mrecord not found
+[0m[33m[0.320ms] [34;1m[rows:0][0m SELECT * FROM "organizations" WHERE name = 'non-existent-org' ORDER BY "organizations"."id" LIMIT 1
+=== RUN   TestOrganizationRepositoryTestSuite/TestGetWithAllRelations
+    organization_test.go:273: GetWithAllRelations method tries to preload Components/Projects/Members/Groups which are not relationships on Organization in new schema
+=== RUN   TestOrganizationRepositoryTestSuite/TestUpdate
+--- PASS: TestOrganizationRepositoryTestSuite (0.73s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestCreateDuplicateName (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestDeleteNotFound (0.05s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetAll (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetAllWithPagination (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetByID (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetByIDNotFound (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetByName (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- SKIP: TestOrganizationRepositoryTestSuite/TestGetWithAllRelations (0.06s)
+    --- PASS: TestOrganizationRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestProjectRepositoryTestSuite
+=== RUN   TestProjectRepositoryTestSuite/TestCreate
+=== RUN   TestProjectRepositoryTestSuite/TestCreateDuplicateName
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/project.go:22 [35;1mERROR: duplicate key value violates unique constraint "projects_name_unique" (SQLSTATE 23505)
+[0m[33m[0.831ms] [34;1m[rows:0][0m INSERT INTO "projects" ("created_at","created_by","updated_at","updated_by","name","title","description","metadata","id") VALUES ('2025-12-11 11:14:41.424','','2025-12-11 11:14:41.424','','duplicate-project','duplicate-project Project','A test project for testing purposes',(NULL),'6bee19d9-182c-4134-a510-9fcff5df9449') RETURNING "id"
+=== RUN   TestProjectRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/project.go:28 [35;1mrecord not found
+[0m[33m[0.491ms] [34;1m[rows:0][0m SELECT * FROM "projects" WHERE id = '6f3c684f-6fe2-42cb-88ad-30ce0a347dda' ORDER BY "projects"."id" LIMIT 1
+=== RUN   TestProjectRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestProjectRepositoryTestSuite/TestGetByID
+=== RUN   TestProjectRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/project.go:28 [35;1mrecord not found
+[0m[33m[0.462ms] [34;1m[rows:0][0m SELECT * FROM "projects" WHERE id = 'e2c9aad0-cc0e-4a3e-b8c7-fd4285360b00' ORDER BY "projects"."id" LIMIT 1
+=== RUN   TestProjectRepositoryTestSuite/TestGetByName
+=== RUN   TestProjectRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/project.go:38 [35;1mrecord not found
+[0m[33m[0.479ms] [34;1m[rows:0][0m SELECT * FROM "projects" WHERE name = 'nonexistent-project' ORDER BY "projects"."id" LIMIT 1
+=== RUN   TestProjectRepositoryTestSuite/TestUpdate
+--- PASS: TestProjectRepositoryTestSuite (0.56s)
+    --- PASS: TestProjectRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestCreateDuplicateName (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestDeleteNotFound (0.05s)
+    --- PASS: TestProjectRepositoryTestSuite/TestGetByID (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestGetByIDNotFound (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestGetByName (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- PASS: TestProjectRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestTeamRepositoryTestSuite
+=== RUN   TestTeamRepositoryTestSuite/TestCreate
+=== RUN   TestTeamRepositoryTestSuite/TestCreateDuplicateName
+
+2025/12/11 11:14:41 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/team.go:22 [35;1mERROR: duplicate key value violates unique constraint "teams_name_group_id_unique" (SQLSTATE 23505)
+[0m[33m[0.627ms] [34;1m[rows:0][0m INSERT INTO "teams" ("created_at","created_by","updated_at","updated_by","name","title","description","metadata","group_id","owner","email","picture_url","id") VALUES ('2025-12-11 11:14:41.983','','2025-12-11 11:14:41.983','','duplicate-team','duplicate-team Team','A test team for testing purposes',(NULL),'57f69f78-d78e-4f6b-8155-beee1e616671','I00001','team@test.com','https://example.com/picture.png','5aeec95f-0a16-46d5-93cd-2cd5ff1fdec3') RETURNING "id"
+=== RUN   TestTeamRepositoryTestSuite/TestCreateSameNameDifferentGroup
+=== RUN   TestTeamRepositoryTestSuite/TestDelete
+
+2025/12/11 11:14:42 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/team.go:28 [35;1mrecord not found
+[0m[33m[0.419ms] [34;1m[rows:0][0m SELECT * FROM "teams" WHERE id = '01cc65ad-5cb0-417e-8733-3bf1ee536ff7' ORDER BY "teams"."id" LIMIT 1
+=== RUN   TestTeamRepositoryTestSuite/TestDeleteNotFound
+=== RUN   TestTeamRepositoryTestSuite/TestGetByID
+=== RUN   TestTeamRepositoryTestSuite/TestGetByIDNotFound
+
+2025/12/11 11:14:42 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/team.go:28 [35;1mrecord not found
+[0m[33m[0.535ms] [34;1m[rows:0][0m SELECT * FROM "teams" WHERE id = 'dbef1fe1-0b3f-4840-841a-56765f11b336' ORDER BY "teams"."id" LIMIT 1
+=== RUN   TestTeamRepositoryTestSuite/TestGetByName
+=== RUN   TestTeamRepositoryTestSuite/TestGetByNameNotFound
+
+2025/12/11 11:14:42 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/team.go:38 [35;1mrecord not found
+[0m[33m[0.533ms] [34;1m[rows:0][0m SELECT * FROM "teams" WHERE group_id = '7b5889fb-4fa9-40bd-b253-9492fb987013' AND name = 'nonexistent-team' ORDER BY "teams"."id" LIMIT 1
+=== RUN   TestTeamRepositoryTestSuite/TestGetByOrganizationID
+=== RUN   TestTeamRepositoryTestSuite/TestGetByOrganizationIDWithPagination
+=== RUN   TestTeamRepositoryTestSuite/TestGetWithMembers
+    team_test.go:381: GetWithMembers method tries to preload Users relationship which is not defined on Team model in new schema
+=== RUN   TestTeamRepositoryTestSuite/TestUpdate
+--- PASS: TestTeamRepositoryTestSuite (0.84s)
+    --- PASS: TestTeamRepositoryTestSuite/TestCreate (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestCreateDuplicateName (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestCreateSameNameDifferentGroup (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestDelete (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestDeleteNotFound (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByID (0.07s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByIDNotFound (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByName (0.07s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByNameNotFound (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByOrganizationID (0.07s)
+    --- PASS: TestTeamRepositoryTestSuite/TestGetByOrganizationIDWithPagination (0.07s)
+    --- SKIP: TestTeamRepositoryTestSuite/TestGetWithMembers (0.06s)
+    --- PASS: TestTeamRepositoryTestSuite/TestUpdate (0.06s)
+=== RUN   TestTokenRepositoryTestSuite
+=== RUN   TestTokenRepositoryTestSuite/TestCleanupExpiredTokens
+=== RUN   TestTokenRepositoryTestSuite/TestDeleteToken
+=== RUN   TestTokenRepositoryTestSuite/TestGetValidToken_DecryptError
+=== RUN   TestTokenRepositoryTestSuite/TestGetValidToken_Expired
+
+2025/12/11 11:14:42 [31;1m/Users/C5406081/developer-portal-backend/internal/repository/token.go:47 [35;1mrecord not found
+[0m[33m[0.308ms] [34;1m[rows:0][0m SELECT * FROM "tokens" WHERE user_uuid = '0dbcd328-1cc9-4a08-a7f9-fb12f9f32e7a' AND provider = 'slack' AND expires_at > '2025-12-11 11:14:42.975' ORDER BY "tokens"."user_uuid" LIMIT 1
+=== RUN   TestTokenRepositoryTestSuite/TestGetValidToken_Success
+=== RUN   TestTokenRepositoryTestSuite/TestUpsertToken_CreateAndUpdate
+--- PASS: TestTokenRepositoryTestSuite (0.42s)
+    --- PASS: TestTokenRepositoryTestSuite/TestCleanupExpiredTokens (0.07s)
+    --- PASS: TestTokenRepositoryTestSuite/TestDeleteToken (0.07s)
+    --- PASS: TestTokenRepositoryTestSuite/TestGetValidToken_DecryptError (0.07s)
+    --- PASS: TestTokenRepositoryTestSuite/TestGetValidToken_Expired (0.06s)
+    --- PASS: TestTokenRepositoryTestSuite/TestGetValidToken_Success (0.06s)
+    --- PASS: TestTokenRepositoryTestSuite/TestUpsertToken_CreateAndUpdate (0.07s)
+PASS
+ok  	developer-portal-backend/internal/repository	6.959s
+2025/12/03 17:32:03 🧪 Starting test suite with Docker cleanup enabled...
+testing: warning: no tests to run
+PASS
+2025/12/03 17:32:03 ✅ Tests completed, cleaning up Docker containers...
+2025/12/03 17:32:03 Starting Docker container cleanup...
+ok  	developer-portal-backend/internal/testutils	(cached) [no tests to run]
+?   	developer-portal-backend/mocks/repository	[no test files]
+FAIL
+make: *** [test-all] Error 1

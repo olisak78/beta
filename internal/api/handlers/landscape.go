@@ -22,8 +22,7 @@ func NewLandscapeHandler(landscapeService service.LandscapeServiceInterface) *La
 	}
 }
 
-
- // ListLandscapesByQuery handles GET /landscapes?project-name=<project_name>
+// ListLandscapesByQuery handles GET /landscapes?project-name=<project_name>
 // @Summary List landscapes by project name
 // @Description Return all landscapes that belong to the specified project (unpaginated, minimal fields)
 // @Tags landscapes
@@ -39,7 +38,7 @@ func NewLandscapeHandler(landscapeService service.LandscapeServiceInterface) *La
 func (h *LandscapeHandler) ListLandscapesByQuery(c *gin.Context) {
 	projectName := c.Query("project-name")
 	if projectName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "project-name is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.NewMissingQueryParam("project-name").Error()})
 		return
 	}
 

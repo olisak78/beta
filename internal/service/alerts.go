@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"developer-portal-backend/internal/auth"
+	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
 	"encoding/base64"
 	"encoding/json"
@@ -42,10 +43,10 @@ type AlertsResponse struct {
 }
 
 // GetProjectAlerts fetches alerts from the project's GitHub alerts repository
-func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr string, claims *auth.AuthClaims) (*AlertsResponse, error) {
+func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr, userUUID, provider string) (*AlertsResponse, error) {
 
 	// Get GitHub access token from claims
-	accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+	accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get GitHub access token: %w", err)
 	}
@@ -53,7 +54,7 @@ func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr strin
 	// Get project by name (projectIDStr is actually the project name like "cis20")
 	project, err := s.projectRepo.GetByName(projectIDStr)
 	if err != nil {
-		return nil, errors.New("project not found")
+		return nil, apperrors.ErrProjectNotFound
 	}
 
 	// Parse metadata to get alerts-repo URL
@@ -68,7 +69,7 @@ func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr strin
 	}
 
 	if alertsRepo == "" {
-		return nil, errors.New("alerts repository not configured for this project")
+		return nil, apperrors.ErrAlertsRepositoryNotConfigured
 	}
 
 	// Parse GitHub URL
@@ -90,9 +91,9 @@ func (s *AlertsService) GetProjectAlerts(ctx context.Context, projectIDStr strin
 }
 
 // CreateAlertPR creates a pull request with alert changes
-func (s *AlertsService) CreateAlertPR(ctx context.Context, projectIDStr string, claims *auth.AuthClaims, fileName, content, message, description string) (string, error) {
+func (s *AlertsService) CreateAlertPR(ctx context.Context, projectIDStr, userUUID, provider string, fileName, content, message, description string) (string, error) {
 	// Get GitHub access token from claims
-	accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+	accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
 	if err != nil {
 		return "", fmt.Errorf("failed to get GitHub access token: %w", err)
 	}
@@ -100,7 +101,7 @@ func (s *AlertsService) CreateAlertPR(ctx context.Context, projectIDStr string, 
 	// Get project by name (projectIDStr is actually the project name like "cis20")
 	project, err := s.projectRepo.GetByName(projectIDStr)
 	if err != nil {
-		return "", errors.New("project not found")
+		return "", apperrors.ErrProjectNotFound
 	}
 
 	// Parse metadata to get alerts-repo URL
@@ -111,7 +112,7 @@ func (s *AlertsService) CreateAlertPR(ctx context.Context, projectIDStr string, 
 
 	alertsRepo, ok := metadata["alerts"].(string)
 	if !ok || alertsRepo == "" {
-		return "", errors.New("alerts repository not configured for this project")
+		return "", apperrors.ErrAlertsRepositoryNotConfigured
 	}
 
 	// Parse GitHub URL

@@ -85,13 +85,7 @@ func Initialize(dsn string, opts *Options) (*gorm.DB, error) {
 			&models.Category{},
 			&models.Link{},
 			&models.Plugin{},
-			//&models.TeamComponentOwnership{},
-			//&models.TeamLeadership{},
-			//&models.ComponentDeployment{},
-			//&models.DeploymentTimeline{},
-			//&models.DutySchedule{},
-			//&models.OutageCall{},
-			//&models.OutageCallAssignee{},
+			&models.Token{},
 		}
 		if err := db.AutoMigrate(all...); err != nil {
 			return nil, fmt.Errorf("auto-migrate: %w", err)

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"developer-portal-backend/internal/auth"
+	"developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -47,7 +48,7 @@ func (h *DocumentationHandler) CreateDocumentation(c *gin.Context) {
 	if username, ok := auth.GetUsername(c); ok && username != "" {
 		req.CreatedBy = username
 	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing username in token"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": errors.ErrMissingUsernameInToken.Error()})
 		return
 	}
 
@@ -77,13 +78,13 @@ func (h *DocumentationHandler) GetDocumentationByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid documentation ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrInvalidDocumentationID.Error()})
 		return
 	}
 
 	doc, err := h.docService.GetDocumentationByID(id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "documentation not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": errors.ErrDocumentationNotFound.Error()})
 		return
 	}
 
@@ -107,7 +108,7 @@ func (h *DocumentationHandler) GetDocumentationsByTeamID(c *gin.Context) {
 	teamIDStr := c.Param("id")
 	teamID, err := uuid.Parse(teamIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrInvalidTeamID.Error()})
 		return
 	}
 
@@ -140,7 +141,7 @@ func (h *DocumentationHandler) UpdateDocumentation(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid documentation ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrInvalidDocumentationID.Error()})
 		return
 	}
 
@@ -154,7 +155,7 @@ func (h *DocumentationHandler) UpdateDocumentation(c *gin.Context) {
 	if username, ok := auth.GetUsername(c); ok && username != "" {
 		req.UpdatedBy = username
 	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing username in token"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": errors.ErrMissingUsernameInToken.Error()})
 		return
 	}
 
@@ -184,12 +185,12 @@ func (h *DocumentationHandler) DeleteDocumentation(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid documentation ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrInvalidDocumentationID.Error()})
 		return
 	}
 
 	if err := h.docService.DeleteDocumentation(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete documentation", "details": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrFailedToDeleteDocumentation.Error(), "details": err.Error()})
 		return
 	}
 

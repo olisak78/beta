@@ -2,12 +2,9 @@ package auth
 
 import (
 	"encoding/json"
-	"errors"
 	"html"
 	"net/http"
 	"strings"
-
-	apperrors "developer-portal-backend/internal/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,14 +37,13 @@ func NewAuthHandler(service *AuthService) *AuthHandler {
 	return &AuthHandler{service: service}
 }
 
-// Start handles GET /api/auth/{provider}/start?env=development
+// Start handles GET /api/auth/{provider}/start
 // @Summary Start OAuth authentication
 // @Description Initiate OAuth authentication flow with the specified provider
 // @Tags authentication
 // @Accept json
 // @Produce json
 // @Param provider path string true "OAuth provider (githubtools or githubwdf)"
-// @Param env query string false "Environment (development, staging, production)"
 // @Success 302 {string} string "Redirect to OAuth provider authorization URL"
 // @Failure 400 {object} map[string]interface{} "Invalid provider or request parameters"
 // @Failure 500 {object} map[string]interface{} "Failed to generate authorization URL"
@@ -68,7 +64,7 @@ func (h *AuthHandler) Start(c *gin.Context) {
 	}
 
 	// Generate state parameter for OAuth2 security
-	state, err := h.service.GenerateState()
+	state, err := h.service.generateRandomString(32)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state parameter"})
 		return
@@ -85,7 +81,7 @@ func (h *AuthHandler) Start(c *gin.Context) {
 	c.Redirect(http.StatusFound, authURL)
 }
 
-// HandlerFrame handles GET /api/auth/{provider}/handler/frame?env=development
+// HandlerFrame handles GET /api/auth/{provider}/handler/frame
 // Regular-token mode: posts { type: 'authorization_response', response: { accessToken, tokenType, expiresInSeconds, scope, profile{...} } } to the opener and closes.
 // @Summary Handle OAuth callback
 // @Description Handle OAuth callback from provider and return authentication result in HTML frame
@@ -95,7 +91,6 @@ func (h *AuthHandler) Start(c *gin.Context) {
 // @Param provider path string true "OAuth provider (githubtools or githubwdf)"
 // @Param code query string true "OAuth authorization code from provider"
 // @Param state query string true "OAuth state parameter for security"
-// @Param env query string false "Environment (development, staging, production)"
 // @Param error query string false "OAuth error parameter from provider"
 // @Param error_description query string false "OAuth error description from provider"
 // @Success 200 {string} string "HTML page that posts authentication result to opener window"
@@ -150,12 +145,7 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 	}
 
 	// Set session cookies for later use by refresh endpoint
-	c.SetCookie("auth_token", serviceResp.AccessToken, 3600, "/", "", false, true)           // httpOnly for security
-	c.SetCookie("refresh_token", serviceResp.RefreshToken, 30*24*3600, "/", "", false, true) // 30 days, httpOnly
-
-	// Store user profile in cookie (JSON encoded)
-	profileJSON, _ := json.Marshal(serviceResp.Profile)
-	c.SetCookie("user_profile", string(profileJSON), 3600, "/", "", false, false) // not httpOnly so JS can read
+	c.SetCookie("auth_token", serviceResp.AccessToken, h.service.config.JWTExpiresInSeconds, "/", "", true, true) // httpOnly for security
 
 	// Embed the raw service response and normalize to the regular-token payload in the browser.
 	raw := formatResponseAsJSON(serviceResp)
@@ -198,252 +188,63 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 	c.String(http.StatusOK, successHTML)
 }
 
-// Refresh handles GET /api/auth/{provider}/refresh?env=development&refresh_token=...
+// Refresh handles GET /api/auth/refresh
 // Regular-token mode JSON response. If your service returns a non-standard shape,
 // we normalize it into { accessToken, tokenType, expiresInSeconds, scope, profile{...} }.
 // @Summary Refresh authentication token
-// @Description Refresh or validate authentication token using refresh token, Authorization header, or session cookies
+// @Description Refresh or validate authentication token using Authorization header or session cookies
 // @Tags authentication
 // @Accept json
 // @Produce json
-// @Param provider path string true "OAuth provider (githubtools or githubwdf)"
-// @Param env query string false "Environment (development, staging, production)"
-// @Param refresh_token query string false "Refresh token to use for getting new access token"
 // @Param Authorization header string false "Bearer token for validation" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
 // @Success 200 {object} AuthRefreshResponse "Successfully refreshed token"
 // @Failure 400 {object} map[string]interface{} "Invalid provider"
 // @Failure 401 {object} map[string]interface{} "Authentication required or token invalid"
 // @Failure 500 {object} map[string]interface{} "Token refresh failed"
-// @Router /api/auth/{provider}/refresh [get]
+// @Router /api/auth/refresh [get]
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	provider := c.Param("provider")
-	_ = c.DefaultQuery("env", "development") // env parameter acknowledged but not used in this context
-	refreshToken := c.Query("refresh_token")
+	authTokenCookie, err1 := c.Cookie("auth_token")
 
-	// Validate provider
-	if provider == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider is required"})
-		return
-	}
-	if provider != "githubtools" && provider != "githubwdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported provider"})
-		return
-	}
-
-	// If no refresh_token, check multiple sources for session information
-	if strings.TrimSpace(refreshToken) == "" {
-		// 1. Check Authorization header first
-		authHeader := c.GetHeader("Authorization")
-		if authHeader != "" {
-			// Extract JWT token from Bearer header
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString != authHeader {
-				// Try to get current session info from JWT
-				claims, err := h.service.ValidateJWT(tokenString)
-				if err == nil {
-					// Generate a new JWT token for the current session
-					userProfile := &UserProfile{
-						ID:       claims.UserID,
-						Username: claims.Username,
-						Email:    claims.Email,
-						MemberID: h.service.GetMemberIDByEmail(claims.Email),
-					}
-
-					newJWT, err := h.service.GenerateJWT(userProfile, claims.Provider)
-					if err == nil {
-						profileResponse := gin.H{
-							"login":     claims.Username,
-							"email":     claims.Email,
-							"name":      claims.Username,
-							"avatarUrl": "",
-						}
-						if userProfile.MemberID != nil {
-							profileResponse["memberId"] = *userProfile.MemberID
-						}
-						c.JSON(http.StatusOK, gin.H{
-							"accessToken":      newJWT,
-							"tokenType":        "bearer",
-							"expiresInSeconds": 3600,
-							"scope":            "",
-							"profile":          profileResponse,
-							"valid":            true,
-						})
-						return
-					}
-				}
+	if err1 == nil && authTokenCookie != "" {
+		// Validate the JWT token from cookie
+		claims, err := h.service.ValidateJWT(authTokenCookie)
+		if err == nil {
+			// Generate a new JWT token for the current session
+			userProfile := &UserProfile{
+				Username: claims.Username,
+				Email:    claims.Email,
+				UUID:     claims.UUID,
 			}
-		}
 
-		// 2. Check session cookies
-		authTokenCookie, err1 := c.Cookie("auth_token")
-		refreshTokenCookie, err2 := c.Cookie("refresh_token")
-
-		if err1 == nil && authTokenCookie != "" {
-			// Validate the JWT token from cookie
-			claims, err := h.service.ValidateJWT(authTokenCookie)
+			newJWT, err := h.service.GenerateJWT(userProfile)
 			if err == nil {
-				// Generate a new JWT token for the current session
-				userProfile := &UserProfile{
-					ID:       claims.UserID,
-					Username: claims.Username,
-					Email:    claims.Email,
-					MemberID: h.service.GetMemberIDByEmail(claims.Email),
-				}
-
-				newJWT, err := h.service.GenerateJWT(userProfile, claims.Provider)
-				if err == nil {
-					profileResponse := gin.H{
-						"login":     claims.Username,
-						"email":     claims.Email,
-						"name":      claims.Username,
-						"avatarUrl": "",
-					}
-					if userProfile.MemberID != nil {
-						profileResponse["memberId"] = *userProfile.MemberID
-					}
-					c.JSON(http.StatusOK, gin.H{
-						"accessToken":      newJWT,
-						"tokenType":        "bearer",
-						"expiresInSeconds": 3600,
-						"scope":            "",
-						"profile":          profileResponse,
-						"valid":            true,
-					})
-					return
-				}
-			}
-		} else if err2 == nil && refreshTokenCookie != "" {
-			// Try to use the refresh token from cookie
-			refreshed, err := h.service.RefreshToken(refreshTokenCookie)
-			if err == nil {
-				// Return the refreshed token data
-				profileResponse := gin.H{
-					"login":     refreshed.Profile.Username,
-					"email":     refreshed.Profile.Email,
-					"name":      refreshed.Profile.Name,
-					"avatarUrl": refreshed.Profile.AvatarURL,
-				}
-				if refreshed.Profile.MemberID != nil {
-					profileResponse["memberId"] = *refreshed.Profile.MemberID
-				}
 				c.JSON(http.StatusOK, gin.H{
-					"accessToken":      refreshed.AccessToken,
-					"tokenType":        refreshed.TokenType,
-					"expiresInSeconds": refreshed.ExpiresIn,
-					"scope":            "",
-					"profile":          profileResponse,
-					"valid":            true,
+					"accessToken": newJWT,
 				})
 				return
 			}
 		}
-
-		// No valid session found, return 401 Unauthorized
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   "Authentication required",
-			"details": "No valid session found. Please authenticate first.",
-		})
-		return
 	}
 
-	// Use your existing service to refresh
-	refreshed, err := h.service.RefreshToken(refreshToken)
-	if err != nil {
-		// Return 401 for invalid/expired tokens, 403 for authorization failures
-		if errors.Is(err, apperrors.ErrInvalidRefreshToken) || errors.Is(err, apperrors.ErrRefreshTokenExpired) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token refresh failed", "details": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token refresh failed", "details": err.Error()})
-		}
-		return
-	}
-
-	// Normalize the service response into regular-token shape
-	// We do this by round-tripping through a generic map.
-	var m map[string]interface{}
-	b, _ := json.Marshal(refreshed)
-	_ = json.Unmarshal(b, &m)
-
-	accessToken := firstString(m, "accessToken", "access_token", "token")
-	tokenType := firstString(m, "tokenType", "token_type")
-	if tokenType == "" {
-		tokenType = "bearer"
-	}
-	expires := firstInt64(m, "expiresInSeconds", "expires_in")
-	scope := firstString(m, "scope")
-	if scope == "" {
-		if scopes, ok := m["scopes"].([]interface{}); ok {
-			scope = joinInterfaces(scopes, " ")
-		}
-	}
-	// profile/user block
-	profAny := firstAny(m, "profile", "user")
-	var profile map[string]interface{}
-	if p, ok := profAny.(map[string]interface{}); ok {
-		profile = p
-	} else {
-		profile = map[string]interface{}{}
-	}
-	login := firstString(profile, "login", "username")
-	email := firstString(profile, "email")
-	name := firstString(profile, "name", "displayName")
-	avatar := firstString(profile, "avatarUrl", "avatar_url", "picture")
-	memberID := firstString(profile, "memberId", "member_id")
-
-	profileResponse := gin.H{
-		"login":     login,
-		"email":     email,
-		"name":      name,
-		"avatarUrl": avatar,
-	}
-	if memberID != "" {
-		profileResponse["memberId"] = memberID
-	}
-
-	out := gin.H{
-		"accessToken":      accessToken,
-		"tokenType":        tokenType,
-		"expiresInSeconds": expires,
-		"scope":            scope,
-		"profile":          profileResponse,
-	}
-
-	c.Header("Content-Type", "application/json")
-	c.JSON(http.StatusOK, out)
+	// No valid session found, return 401 Unauthorized
+	c.JSON(http.StatusUnauthorized, gin.H{
+		"error":   "Authentication required",
+		"details": "No valid session found. Please authenticate first.",
+	})
+	return
 }
 
-// Logout handles POST /api/auth/{provider}/logout?env=development
+// Logout handles POST /api/auth/logout
 // @Summary Logout user
 // @Description Logout user and invalidate authentication session
 // @Tags authentication
 // @Accept json
 // @Produce json
-// @Param provider path string true "OAuth provider (githubtools or githubwdf)"
-// @Param env query string false "Environment (development, staging, production)"
 // @Success 200 {object} AuthLogoutResponse "Successfully logged out"
 // @Failure 400 {object} map[string]interface{} "Invalid provider"
 // @Failure 500 {object} map[string]interface{} "Logout failed"
-// @Router /api/auth/{provider}/logout [post]
+// @Router /api/auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	provider := c.Param("provider")
-	_ = c.DefaultQuery("env", "") // env parameter acknowledged but not used in current implementation
-
-	// Validate provider
-	if provider == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider is required"})
-		return
-	}
-	if provider != "githubtools" && provider != "githubwdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported provider"})
-		return
-	}
-
-	// Clear all session cookies by setting MaxAge=-1
-	// This sends Set-Cookie headers that delete the cookies
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
-	c.SetCookie("user_profile", "", -1, "/", "", false, false)
-
 	if err := h.service.Logout(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Logout failed", "details": err.Error()})
 		return
@@ -461,74 +262,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		true, // HttpOnly
 	)
 
-	// Clear refresh_token
-	c.SetCookie(
-		"refresh_token",
-		"",
-		-1,
-		"/",
-		"",
-		false,
-		true, // HttpOnly
-	)
-
-	// Clear backstage-refresh-token (if exists)
-	c.SetCookie(
-		"backstage-refresh-token",
-		"",
-		-1,
-		"/",
-		"",
-		false,
-		true, // HttpOnly
-	)
-
-	// Clear user_profile (not httpOnly, so JS can read)
-	c.SetCookie(
-		"user_profile",
-		"",
-		-1,
-		"/",
-		"",
-		false,
-		false,
-	)
-
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
-}
-
-// ValidateToken is a helper endpoint to validate JWT tokens (not part of Backstage spec but useful for debugging)
-// @Summary Validate JWT token
-// @Description Validate JWT token and return token claims
-// @Tags authentication
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer token to validate" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-// @Success 200 {object} AuthValidateResponse "Token is valid with claims"
-// @Failure 401 {object} map[string]interface{} "Authorization header required or token invalid"
-// @Router /api/auth/validate [post]
-func (h *AuthHandler) ValidateToken(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
-		return
-	}
-
-	// Extract token from Bearer header
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-		return
-	}
-
-	// Validate token
-	claims, err := h.service.ValidateJWT(tokenString)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"valid": true, "claims": claims})
 }
 
 // ---------- tiny helpers for Refresh normalization ----------

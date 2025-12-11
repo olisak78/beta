@@ -17,12 +17,12 @@ type GitHubClient struct {
 
 // UserProfile represents a GitHub user profile
 type UserProfile struct {
-	ID        int64   `json:"id"`
-	Username  string  `json:"username"`
-	Email     string  `json:"email"`
-	Name      string  `json:"name"`
-	AvatarURL string  `json:"avatarUrl"`
-	MemberID  *string `json:"memberId,omitempty"` // ID of member with matching email
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+	UUID      string `json:"uuid"` // User UUID from database table
 }
 
 // NewGitHubClient creates a new GitHub API client

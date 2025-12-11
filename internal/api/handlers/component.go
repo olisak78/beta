@@ -17,18 +17,18 @@ import (
 
 // ComponentHandler handles HTTP requests for component operations
 type ComponentHandler struct {
-	componentService *service.ComponentService
+	componentService service.ComponentServiceInterface
 	landscapeService service.LandscapeServiceInterface
 	teamService      service.TeamServiceInterface
 }
 
 // NewComponentHandler creates a new component handler (backwards-compatible signature)
-func NewComponentHandler(componentService *service.ComponentService, teamService service.TeamServiceInterface) *ComponentHandler {
+func NewComponentHandler(componentService service.ComponentServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
 	return NewComponentHandlerWithLandscape(componentService, nil, teamService)
 }
 
 // NewComponentHandlerWithLandscape creates a new component handler with landscape service
-func NewComponentHandlerWithLandscape(componentService *service.ComponentService, landscapeService service.LandscapeServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
+func NewComponentHandlerWithLandscape(componentService service.ComponentServiceInterface, landscapeService service.LandscapeServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
 	return &ComponentHandler{
 		componentService: componentService,
 		landscapeService: landscapeService,
@@ -47,12 +47,12 @@ func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
 	if componentIDStr != "" && landscapeIDStr != "" {
 		compID, err := uuid.Parse(componentIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid component-id"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidComponentID.Error()})
 			return
 		}
 		landID, err := uuid.Parse(landscapeIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid landscape-id"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidLandscapeID.Error()})
 			return
 		}
 
@@ -68,7 +68,7 @@ func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
 
 		// Ensure landscape service is configured
 		if h.landscapeService == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "landscape service not configured"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrLandscapeNotConfigured.Error()})
 			return
 		}
 		landscape, err := h.landscapeService.GetLandscapeByID(landID)
@@ -124,7 +124,7 @@ func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
 	}
 
 	// Missing parameters: both component-id and landscape-id are required
-	c.JSON(http.StatusBadRequest, gin.H{"error": "component-id and landscape-id parameters are required"})
+	c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrMissingLandscapeParams.Error()})
 }
 
 // ListComponents handles GET /components
@@ -148,7 +148,7 @@ func (h *ComponentHandler) ListComponents(c *gin.Context) {
 	if teamIDStr != "" {
 		teamID, err := uuid.Parse(teamIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team ID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidTeamID.Error()})
 			return
 		}
 		components, _, err := h.teamService.GetTeamComponentsByID(teamID, 1, 1000000)
@@ -272,6 +272,6 @@ func (h *ComponentHandler) ListComponents(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusBadRequest, gin.H{"error": "team-id or project-name parameter is required"})
+	c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrMissingTeamOrProjectName.Error()})
 	return
 }

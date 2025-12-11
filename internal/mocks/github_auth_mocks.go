@@ -40,19 +40,19 @@ func (m *MockGitHubAuthService) EXPECT() *MockGitHubAuthServiceMockRecorder {
 	return m.recorder
 }
 
-// GetGitHubAccessTokenFromClaims mocks base method.
-func (m *MockGitHubAuthService) GetGitHubAccessTokenFromClaims(claims *auth.AuthClaims) (string, error) {
+// GetGitHubAccessToken mocks base method.
+func (m *MockGitHubAuthService) GetGitHubAccessToken(userUUID, provider string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGitHubAccessTokenFromClaims", claims)
+	ret := m.ctrl.Call(m, "GetGitHubAccessToken", userUUID, provider)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetGitHubAccessTokenFromClaims indicates an expected call of GetGitHubAccessTokenFromClaims.
-func (mr *MockGitHubAuthServiceMockRecorder) GetGitHubAccessTokenFromClaims(claims any) *gomock.Call {
+// GetGitHubAccessToken indicates an expected call of GetGitHubAccessToken.
+func (mr *MockGitHubAuthServiceMockRecorder) GetGitHubAccessToken(userUUID, provider any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubAccessTokenFromClaims", reflect.TypeOf((*MockGitHubAuthService)(nil).GetGitHubAccessTokenFromClaims), claims)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubAccessToken", reflect.TypeOf((*MockGitHubAuthService)(nil).GetGitHubAccessToken), userUUID, provider)
 }
 
 // GetGitHubClient mocks base method.

@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -369,6 +370,247 @@ func (suite *TeamHandlerTestSuite) TestGetAllTeams_ByName_InternalError() {
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), "db failure")
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_Success() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+	requestMetadata := map[string]interface{}{
+		"color": "#FF5733",
+		"tags":  []string{"backend", "api"},
+	}
+	metadataJSON, _ := json.Marshal(requestMetadata)
+
+	updatedTeam := &service.TeamResponse{
+		ID:          teamID,
+		Name:        "alpha",
+		Title:       "Alpha Team",
+		Description: "Updated team",
+		Metadata:    metadataJSON,
+	}
+
+	suite.mockTeam.EXPECT().UpdateTeamMetadata(teamID, gomock.Any()).Return(updatedTeam, nil)
+
+	reqBody := map[string]interface{}{
+		"metadata": requestMetadata,
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var got map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &got)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), teamID.String(), got["id"])
+	assert.Equal(suite.T(), "alpha", got["name"])
+	assert.Equal(suite.T(), "Alpha Team", got["title"])
+
+	metadata, ok := got["metadata"].(map[string]interface{})
+	assert.True(suite.T(), ok)
+	assert.Equal(suite.T(), "#FF5733", metadata["color"])
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_InvalidTeamID() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	reqBody := map[string]interface{}{
+		"metadata": map[string]interface{}{"color": "#FF5733"},
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/not-a-uuid/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "invalid team ID")
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_InvalidJSON() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader([]byte(`{"invalid json`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_MissingMetadataField() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+
+	reqBody := map[string]interface{}{
+		"other_field": "value",
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_TeamNotFound() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+	requestMetadata := map[string]interface{}{
+		"color": "#FF5733",
+	}
+
+	suite.mockTeam.EXPECT().UpdateTeamMetadata(teamID, gomock.Any()).Return(nil, apperrors.ErrTeamNotFound)
+
+	reqBody := map[string]interface{}{
+		"metadata": requestMetadata,
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), apperrors.ErrTeamNotFound.Error())
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_InternalError() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+	requestMetadata := map[string]interface{}{
+		"color": "#FF5733",
+	}
+
+	suite.mockTeam.EXPECT().UpdateTeamMetadata(teamID, gomock.Any()).Return(nil, errors.New("database error"))
+
+	reqBody := map[string]interface{}{
+		"metadata": requestMetadata,
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
+	assert.Contains(suite.T(), w.Body.String(), "database error")
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_ComplexMetadata() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+	requestMetadata := map[string]interface{}{
+		"jira": map[string]interface{}{
+			"team":    "JiraAlpha",
+			"project": "PROJ-123",
+		},
+		"color": "#FF5733",
+		"tags":  []string{"backend", "api", "microservice"},
+		"settings": map[string]interface{}{
+			"notifications": true,
+			"visibility":    "public",
+		},
+	}
+	metadataJSON, _ := json.Marshal(requestMetadata)
+
+	updatedTeam := &service.TeamResponse{
+		ID:          teamID,
+		Name:        "alpha",
+		Title:       "Alpha Team",
+		Description: "Team with complex metadata",
+		Metadata:    metadataJSON,
+	}
+
+	suite.mockTeam.EXPECT().UpdateTeamMetadata(teamID, gomock.Any()).Return(updatedTeam, nil)
+
+	reqBody := map[string]interface{}{
+		"metadata": requestMetadata,
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var got map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &got)
+	assert.NoError(suite.T(), err)
+
+	metadata, ok := got["metadata"].(map[string]interface{})
+	assert.True(suite.T(), ok)
+	assert.Equal(suite.T(), "#FF5733", metadata["color"])
+
+	jiraData, ok := metadata["jira"].(map[string]interface{})
+	assert.True(suite.T(), ok)
+	assert.Equal(suite.T(), "JiraAlpha", jiraData["team"])
+	assert.Equal(suite.T(), "PROJ-123", jiraData["project"])
+
+	tags, ok := metadata["tags"].([]interface{})
+	assert.True(suite.T(), ok)
+	assert.Len(suite.T(), tags, 3)
+}
+
+func (suite *TeamHandlerTestSuite) TestUpdateTeamMetadata_EmptyMetadata() {
+	router := gin.New()
+	router.PATCH("/teams/:id/metadata", suite.handler.UpdateTeamMetadata)
+
+	teamID := uuid.New()
+	requestMetadata := map[string]interface{}{}
+	metadataJSON, _ := json.Marshal(requestMetadata)
+
+	updatedTeam := &service.TeamResponse{
+		ID:          teamID,
+		Name:        "alpha",
+		Title:       "Alpha Team",
+		Description: "Team with empty metadata",
+		Metadata:    metadataJSON,
+	}
+
+	suite.mockTeam.EXPECT().UpdateTeamMetadata(teamID, gomock.Any()).Return(updatedTeam, nil)
+
+	reqBody := map[string]interface{}{
+		"metadata": requestMetadata,
+	}
+	bodyBytes, _ := json.Marshal(reqBody)
+
+	req := httptest.NewRequest(http.MethodPatch, "/teams/"+teamID.String()+"/metadata", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var got map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &got)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), teamID.String(), got["id"])
 }
 
 func TestTeamHandlerTestSuite(t *testing.T) {

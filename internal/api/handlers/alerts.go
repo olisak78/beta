@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"developer-portal-backend/internal/auth"
+	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/service"
 	"net/http"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type AlertsHandler struct {
-	alertsService *service.AlertsService
+	alertsService service.AlertsServiceInterface
 }
 
-func NewAlertsHandler(alertsService *service.AlertsService) *AlertsHandler {
+func NewAlertsHandler(alertsService service.AlertsServiceInterface) *AlertsHandler {
 	return &AlertsHandler{
 		alertsService: alertsService,
 	}
@@ -34,30 +35,33 @@ func (h *AlertsHandler) GetAlerts(c *gin.Context) {
 	// Get authenticated user claims
 	claimsInterface, exists := c.Get("auth_claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrAuthenticationRequired.Message})
 		return
 	}
 
 	claims, ok := claimsInterface.(*auth.AuthClaims)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthenticationInvalidClaims.Message})
 		return
 	}
 
 	projectID := c.Param("projectId")
 	if projectID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.NewMissingQueryParam("projectId").Error()})
 		return
 	}
 
-	alerts, err := h.alertsService.GetProjectAlerts(c.Request.Context(), projectID, claims)
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
+
+	alerts, err := h.alertsService.GetProjectAlerts(c.Request.Context(), projectID, claims.UUID, provider)
 	if err != nil {
-		if err.Error() == "project not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		if err.Error() == apperrors.ErrProjectNotFound.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrProjectNotFound.Error()})
 			return
 		}
-		if err.Error() == "alerts repository not configured for this project" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Alerts repository not configured for this project"})
+		if err.Error() == apperrors.ErrAlertsRepositoryNotConfigured.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrAlertsRepositoryNotConfigured.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -84,21 +88,24 @@ func (h *AlertsHandler) CreateAlertPR(c *gin.Context) {
 	// Get authenticated user claims
 	claimsInterface, exists := c.Get("auth_claims")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrAuthenticationRequired})
 		return
 	}
 
 	claims, ok := claimsInterface.(*auth.AuthClaims)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthenticationInvalidClaims})
 		return
 	}
 
 	projectID := c.Param("projectId")
 	if projectID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.NewMissingQueryParam("projectId").Error()})
 		return
 	}
+
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	var payload struct {
 		FileName    string `json:"fileName"`
@@ -108,14 +115,14 @@ func (h *AlertsHandler) CreateAlertPR(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	prURL, err := h.alertsService.CreateAlertPR(c.Request.Context(), projectID, claims, payload.FileName, payload.Content, payload.Message, payload.Description)
+	prURL, err := h.alertsService.CreateAlertPR(c.Request.Context(), projectID, claims.UUID, provider, payload.FileName, payload.Content, payload.Message, payload.Description)
 	if err != nil {
-		if err.Error() == "project not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		if err.Error() == apperrors.ErrProjectNotFound.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": apperrors.ErrProjectNotFound.Error()})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

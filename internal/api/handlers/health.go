@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"developer-portal-backend/internal/errors"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -149,7 +150,7 @@ func (h *HealthHandler) Live(c *gin.Context) {
 func (h *HealthHandler) ProxyComponentHealth(c *gin.Context) {
 	targetURL := c.Query("url")
 	if targetURL == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "url parameter is required"})
+		c.JSON(http.StatusBadRequest, ErrorResponse{errors.NewMissingQueryParam("url").Error()})
 		return
 	}
 
@@ -181,7 +182,7 @@ func (h *HealthHandler) ProxyComponentHealth(c *gin.Context) {
 		if err := json.NewDecoder(decoder).Decode(&healthResult); err != nil {
 			// If JSON parsing fails, return error response with 502 to frontend
 			c.JSON(http.StatusBadGateway, map[string]interface{}{
-				"error":            "Invalid JSON response from component",
+				"error":            errors.ErrInvalidJSONResponse,
 				"statusCode":       resp.StatusCode,
 				"responseTime":     responseTime,
 				"componentSuccess": false,

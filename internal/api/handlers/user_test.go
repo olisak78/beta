@@ -2,19 +2,20 @@ package handlers_test
 
 import (
 	"bytes"
+	"developer-portal-backend/internal/service"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-playground/validator/v10"
+
 	"developer-portal-backend/internal/api/handlers"
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/mocks"
-	"developer-portal-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -25,46 +26,48 @@ type teamRepoAdapter struct {
 	inner *mocks.MockTeamRepositoryInterface
 }
 
-func (a *teamRepoAdapter) Create(team *models.Team) error {
-	return a.inner.Create(team)
-}
-func (a *teamRepoAdapter) GetByID(id uuid.UUID) (*models.Team, error) {
-	return a.inner.GetByID(id)
-}
-func (a *teamRepoAdapter) GetByName(groupID uuid.UUID, name string) (*models.Team, error) {
-	return a.inner.GetByName(groupID, name)
-}
-func (a *teamRepoAdapter) GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.Team, int64, error) {
-	return a.inner.GetByOrganizationID(orgID, limit, offset)
-}
-func (a *teamRepoAdapter) GetByGroupID(groupID uuid.UUID, limit, offset int) ([]models.Team, int64, error) {
-	// not used in these tests
-	return []models.Team{}, 0, nil
-}
-func (a *teamRepoAdapter) GetAll() ([]models.Team, error) {
-	return a.inner.GetAll()
-}
-func (a *teamRepoAdapter) GetByNameGlobal(name string) (*models.Team, error) {
-	return a.inner.GetByNameGlobal(name)
-}
-func (a *teamRepoAdapter) GetWithMembers(id uuid.UUID) (*models.Team, error) {
-	return a.inner.GetWithMembers(id)
-}
-func (a *teamRepoAdapter) Update(team *models.Team) error {
-	return a.inner.Update(team)
-}
-func (a *teamRepoAdapter) Delete(id uuid.UUID) error {
-	return a.inner.Delete(id)
-}
+//func (a *teamRepoAdapter) Create(team *models.Team) error {
+//	return a.inner.Create(team)
+//}
+//func (a *teamRepoAdapter) GetByID(id uuid.UUID) (*models.Team, error) {
+//	return a.inner.GetByID(id)
+//}
+//func (a *teamRepoAdapter) GetByName(groupID uuid.UUID, name string) (*models.Team, error) {
+//	return a.inner.GetByName(groupID, name)
+//}
+//func (a *teamRepoAdapter) GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.Team, int64, error) {
+//	return a.inner.GetByOrganizationID(orgID, limit, offset)
+//}
+//func (a *teamRepoAdapter) GetByGroupID(groupID uuid.UUID, limit, offset int) ([]models.Team, int64, error) {
+//	// not used in these tests
+//	return []models.Team{}, 0, nil
+//}
+//func (a *teamRepoAdapter) GetAll() ([]models.Team, error) {
+//	return a.inner.GetAll()
+//}
+//func (a *teamRepoAdapter) GetByNameGlobal(name string) (*models.Team, error) {
+//	return a.inner.GetByNameGlobal(name)
+//}
+//func (a *teamRepoAdapter) GetWithMembers(id uuid.UUID) (*models.Team, error) {
+//	return a.inner.GetWithMembers(id)
+//}
+//func (a *teamRepoAdapter) Update(team *models.Team) error {
+//	return a.inner.Update(team)
+//}
+//func (a *teamRepoAdapter) Delete(id uuid.UUID) error {
+//	return a.inner.Delete(id)
+//}
 
 type UserHandlerTestSuite struct {
 	suite.Suite
-	ctrl         *gomock.Controller
-	mockUserRepo *mocks.MockUserRepositoryInterface
-	mockLinkRepo *mocks.MockLinkRepositoryInterface
-	mockTeamRepo *mocks.MockTeamRepositoryInterface
-	userService  *service.UserService
-	handler      *handlers.UserHandler
+	ctrl            *gomock.Controller
+	mockUserRepo    *mocks.MockUserRepositoryInterface
+	mockLinkRepo    *mocks.MockLinkRepositoryInterface
+	mockPluginRepo  *mocks.MockPluginRepositoryInterface
+	mockTeamRepo    *mocks.MockTeamRepositoryInterface
+	mockTeamService *mocks.MockTeamServiceInterface
+	userService     *service.UserService
+	handler         *handlers.UserHandler
 }
 
 func (suite *UserHandlerTestSuite) SetupTest() {
@@ -72,11 +75,13 @@ func (suite *UserHandlerTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.mockUserRepo = mocks.NewMockUserRepositoryInterface(suite.ctrl)
 	suite.mockLinkRepo = mocks.NewMockLinkRepositoryInterface(suite.ctrl)
+	suite.mockPluginRepo = mocks.NewMockPluginRepositoryInterface(suite.ctrl)
 	suite.mockTeamRepo = mocks.NewMockTeamRepositoryInterface(suite.ctrl)
+	suite.mockTeamService = mocks.NewMockTeamServiceInterface(suite.ctrl)
 
 	v := validator.New()
-	suite.userService = service.NewUserService(suite.mockUserRepo, suite.mockLinkRepo, v)
-suite.handler = handlers.NewUserHandler(suite.userService, &teamRepoAdapter{inner: suite.mockTeamRepo})
+	suite.userService = service.NewUserService(suite.mockUserRepo, suite.mockLinkRepo, suite.mockPluginRepo, v)
+	suite.handler = handlers.NewUserHandler(suite.userService, suite.mockTeamService)
 }
 
 func (suite *UserHandlerTestSuite) TearDownTest() {
@@ -99,7 +104,7 @@ func (suite *UserHandlerTestSuite) newRouter(withUsername bool, username string)
 	r.PUT("/users", suite.handler.UpdateUserTeam)
 	r.GET("/users/:user_id", suite.handler.GetMemberByUserID)
 	r.POST("/users/:user_id/favorites/:link_id", suite.handler.AddFavoriteLink)
-r.DELETE("/users/:user_id/favorites/:link_id", suite.handler.RemoveFavoriteLink)
+	r.DELETE("/users/:user_id/favorites/:link_id", suite.handler.RemoveFavoriteLink)
 	return r
 }
 
@@ -109,11 +114,13 @@ func (suite *UserHandlerTestSuite) TestCreateUser_Success() {
 	router := suite.newRouter(true, "creator.user")
 	teamID := uuid.New()
 
-	// team must exist
-	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(&models.Team{}, nil)
-	// user must not exist by email
+	// team must exist (handler validates this)
+	suite.mockTeamService.EXPECT().GetByID(teamID).Return(&service.TeamResponse{}, nil)
+
+	// user service will check if email exists (should not exist)
 	suite.mockUserRepo.EXPECT().GetByEmail("john.doe@example.com").Return(nil, errors.New("not found"))
-	// create will be called
+
+	// user service will create the user
 	suite.mockUserRepo.EXPECT().Create(gomock.Any()).Return(nil)
 
 	body := map[string]interface{}{
@@ -122,7 +129,7 @@ func (suite *UserHandlerTestSuite) TestCreateUser_Success() {
 		"last_name":   "Doe",
 		"email":       "john.doe@example.com",
 		"mobile":      "123456",
-	"team_domain": "developer",
+		"team_domain": "developer",
 		"team_role":   "member",
 		"team_id":     teamID,
 	}
@@ -146,7 +153,7 @@ func (suite *UserHandlerTestSuite) TestCreateUser_InvalidTeamID() {
 	teamID := uuid.New()
 
 	// team not found -> invalid team_id
-	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, errors.New("not found"))
+	suite.mockTeamService.EXPECT().GetByID(teamID).Return(nil, errors.New("not found"))
 
 	body := map[string]interface{}{
 		"id":         "i12345",
@@ -171,7 +178,7 @@ func (suite *UserHandlerTestSuite) TestCreateUser_InvalidTeamDomain() {
 	teamID := uuid.New()
 
 	// team exists, but invalid domain value should fail
-	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(&models.Team{}, nil)
+	suite.mockTeamService.EXPECT().GetByID(teamID).Return(&service.TeamResponse{}, nil)
 
 	body := map[string]interface{}{
 		"id":          "i12345",
@@ -197,7 +204,7 @@ func (suite *UserHandlerTestSuite) TestCreateUser_MissingUsername_Unauthorized()
 	teamID := uuid.New()
 
 	// team exists
-	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(&models.Team{}, nil)
+	suite.mockTeamService.EXPECT().GetByID(teamID).Return(&service.TeamResponse{}, nil)
 
 	body := map[string]interface{}{
 		"id":         "i12345",
@@ -225,11 +232,11 @@ func (suite *UserHandlerTestSuite) TestGetMemberByUserID_Success() {
 	userID := "i123456"
 
 	suite.mockUserRepo.EXPECT().GetByUserID(userID).Return(&models.User{
-		BaseModel: models.BaseModel{ID: userUUID},
-		UserID:    userID,
-		FirstName: "Alice",
-		LastName:  "Smith",
-		Email:     "alice@example.com",
+		BaseModel:  models.BaseModel{ID: userUUID},
+		UserID:     userID,
+		FirstName:  "Alice",
+		LastName:   "Smith",
+		Email:      "alice@example.com",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 	}, nil)
@@ -269,21 +276,21 @@ func (suite *UserHandlerTestSuite) TestListUsers_ByUserName_Success() {
 	uID := uuid.New()
 	userID := "iuser-1"
 	suite.mockUserRepo.EXPECT().GetByName("john.doe").Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    userID,
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "john@example.com",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     userID,
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 	}, nil)
 	// Then GetByUserID in GetUserByUserIDWithLinks
 	suite.mockUserRepo.EXPECT().GetByUserID(userID).Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    userID,
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "john@example.com",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     userID,
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 	}, nil)
@@ -346,21 +353,21 @@ func (suite *UserHandlerTestSuite) TestGetCurrentUser_Success() {
 
 	// GetByName for current user
 	suite.mockUserRepo.EXPECT().GetByName("john.doe").Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    userID,
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "john@example.com",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     userID,
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 	}, nil)
 	// Then GetByUserID in WithLinks
 	suite.mockUserRepo.EXPECT().GetByUserID(userID).Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    userID,
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "john@example.com",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     userID,
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 	}, nil)
@@ -396,7 +403,7 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_Success() {
 	teamUUID := uuid.New()
 
 	// team exists
-	suite.mockTeamRepo.EXPECT().GetByID(teamUUID).Return(&models.Team{}, nil)
+	suite.mockTeamService.EXPECT().GetByID(teamUUID).Return(&service.TeamResponse{}, nil)
 	// user exists and update ok
 	suite.mockUserRepo.EXPECT().GetByID(userUUID).Return(&models.User{
 		BaseModel: models.BaseModel{ID: userUUID},
@@ -405,7 +412,7 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_Success() {
 	suite.mockUserRepo.EXPECT().Update(gomock.Any()).Return(nil)
 
 	body := map[string]string{
-		"user_uuid":    userUUID.String(),
+		"user_uuid":     userUUID.String(),
 		"new_team_uuid": teamUUID.String(),
 	}
 	data, _ := json.Marshal(body)
@@ -421,7 +428,7 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_Success() {
 func (suite *UserHandlerTestSuite) TestUpdateUserTeam_InvalidUserUUID() {
 	router := suite.newRouter(true, "admin.user")
 	body := map[string]string{
-		"user_uuid":    "not-a-uuid",
+		"user_uuid":     "not-a-uuid",
 		"new_team_uuid": uuid.New().String(),
 	}
 	data, _ := json.Marshal(body)
@@ -438,13 +445,13 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_InvalidUserUUID() {
 func (suite *UserHandlerTestSuite) TestUpdateUserTeam_InvalidTeamUUID_NotExists() {
 	router := suite.newRouter(true, "admin.user")
 	body := map[string]string{
-		"user_uuid":    uuid.New().String(),
+		"user_uuid":     uuid.New().String(),
 		"new_team_uuid": uuid.New().String(),
 	}
 	data, _ := json.Marshal(body)
 
 	// team not found
-	suite.mockTeamRepo.EXPECT().GetByID(gomock.Any()).Return(nil, errors.New("not found"))
+	suite.mockTeamService.EXPECT().GetByID(gomock.Any()).Return(nil, errors.New("not found"))
 
 	req := httptest.NewRequest(http.MethodPut, "/users", bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
@@ -461,10 +468,10 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_Unauthorized() {
 	teamUUID := uuid.New()
 
 	// team exists, then unauthorized due to missing username
-	suite.mockTeamRepo.EXPECT().GetByID(teamUUID).Return(&models.Team{}, nil)
+	suite.mockTeamService.EXPECT().GetByID(teamUUID).Return(&service.TeamResponse{}, nil)
 
 	body := map[string]string{
-		"user_uuid":    userUUID.String(),
+		"user_uuid":     userUUID.String(),
 		"new_team_uuid": teamUUID.String(),
 	}
 	data, _ := json.Marshal(body)
@@ -483,11 +490,11 @@ func (suite *UserHandlerTestSuite) TestUpdateUserTeam_UserNotFound() {
 	userUUID := uuid.New()
 	teamUUID := uuid.New()
 
-	suite.mockTeamRepo.EXPECT().GetByID(teamUUID).Return(&models.Team{}, nil)
+	suite.mockTeamService.EXPECT().GetByID(teamUUID).Return(&service.TeamResponse{}, nil)
 	suite.mockUserRepo.EXPECT().GetByID(userUUID).Return(nil, errors.New("missing"))
 
 	body := map[string]string{
-		"user_uuid":    userUUID.String(),
+		"user_uuid":     userUUID.String(),
 		"new_team_uuid": teamUUID.String(),
 	}
 	data, _ := json.Marshal(body)
@@ -510,11 +517,11 @@ func (suite *UserHandlerTestSuite) TestAddFavoriteLink_Success() {
 
 	// Load by user_id then update
 	suite.mockUserRepo.EXPECT().GetByUserID("iuser-1").Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    "iuser-1",
-		FirstName: "A",
-		LastName:  "B",
-		Email:     "a@b",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     "iuser-1",
+		FirstName:  "A",
+		LastName:   "B",
+		Email:      "a@b",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 		Metadata:   json.RawMessage(nil),
@@ -559,11 +566,11 @@ func (suite *UserHandlerTestSuite) TestRemoveFavoriteLink_Success() {
 
 	// Load by user_id then update
 	suite.mockUserRepo.EXPECT().GetByUserID("iuser-2").Return(&models.User{
-		BaseModel: models.BaseModel{ID: uID},
-		UserID:    "iuser-2",
-		FirstName: "A",
-		LastName:  "B",
-		Email:     "a@b",
+		BaseModel:  models.BaseModel{ID: uID},
+		UserID:     "iuser-2",
+		FirstName:  "A",
+		LastName:   "B",
+		Email:      "a@b",
 		TeamDomain: models.TeamDomainDeveloper,
 		TeamRole:   models.TeamRoleMember,
 		Metadata:   json.RawMessage(`{"favorites":["` + linkID.String() + `"]}`),

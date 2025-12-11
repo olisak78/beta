@@ -237,6 +237,11 @@ func NewAICoreService(userRepo repository.UserRepositoryInterface, teamRepo repo
 	}
 }
 
+// SetHTTPClient sets a custom HTTP client (useful for testing with shorter timeouts)
+func (s *AICoreService) SetHTTPClient(client *http.Client) {
+	s.httpClient = client
+}
+
 // getTeamLimit returns the configurable team limit from environment variable or default
 func (s *AICoreService) getTeamLimit() int {
 	limitStr := os.Getenv("AI_CORE_TEAM_LIMIT")

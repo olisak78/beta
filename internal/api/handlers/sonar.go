@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"developer-portal-backend/internal/errors"
 	"net/http"
 
 	"developer-portal-backend/internal/service"
@@ -32,7 +33,7 @@ func NewSonarHandler(s service.SonarServiceInterface) *SonarHandler {
 func (h *SonarHandler) GetMeasures(c *gin.Context) {
 	component := c.Query("component")
 	if component == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing query parameter: component"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.NewMissingQueryParam("component").Error()})
 		return
 	}
 

@@ -3,7 +3,6 @@ package handlers
 import (
 	"developer-portal-backend/internal/auth"
 	"developer-portal-backend/internal/database/models"
-	"developer-portal-backend/internal/repository"
 	"developer-portal-backend/internal/service"
 	"errors"
 	"net/http"
@@ -17,15 +16,15 @@ import (
 
 // UserHandler handles HTTP requests for users (members endpoints removed)
 type UserHandler struct {
-	memberService *service.UserService
-	teamRepo      repository.TeamRepositoryInterface
+	memberService service.UserServiceInterface
+	teamService   service.TeamServiceInterface
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(memberService *service.UserService, teamRepo repository.TeamRepositoryInterface) *UserHandler {
+func NewUserHandler(memberService service.UserServiceInterface, teamService service.TeamServiceInterface) *UserHandler {
 	return &UserHandler{
 		memberService: memberService,
-		teamRepo:      teamRepo,
+		teamService:   teamService,
 	}
 }
 
@@ -35,9 +34,9 @@ type CreateUserBody struct {
 	FirstName  string    `json:"first_name" binding:"required,max=100"`
 	LastName   string    `json:"last_name" binding:"required,max=100"`
 	Email      string    `json:"email" binding:"required,email,max=255"`
-	Mobile     string    `json:"mobile"`        // optional
-	TeamDomain *string   `json:"team_domain"`   // optional, defaults to 'developer' if omitted
-	TeamRole   *string   `json:"team_role"`     // optional, defaults to 'member' if omitted
+	Mobile     string    `json:"mobile"`      // optional
+	TeamDomain *string   `json:"team_domain"` // optional, defaults to 'developer' if omitted
+	TeamRole   *string   `json:"team_role"`   // optional, defaults to 'member' if omitted
 	TeamID     uuid.UUID `json:"team_id" binding:"required"`
 }
 
@@ -62,7 +61,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	// Validate team_id exists
-	if _, err := h.teamRepo.GetByID(body.TeamID); err != nil {
+	if _, err := h.teamService.GetByID(body.TeamID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid team_id"})
 		return
 	}
@@ -130,7 +129,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param user_id path string true "UserID (I/C/D)"
-// @Success 200 {object} service.UserWithLinksResponse "Successfully retrieved user"
+// @Success 200 {object} service.UserWithLinksAndPluginsResponse "Successfully retrieved user"
 // @Failure 400 {object} map[string]interface{} "Invalid user_id"
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Security BearerAuth
@@ -156,11 +155,11 @@ func (h *UserHandler) GetMemberByUserID(c *gin.Context) {
 // @Description Get all users with pagination
 // @Tags users
 // @Accept json
- // @Produce json
- // @Param limit query int false "Number of items to return" default(20)
- // @Param offset query int false "Number of items to skip" default(0)
- // @Param q query string false "Search query by name or title (case-insensitive)"
- // @Success 200 {object} service.UsersListResponse "Successfully retrieved users list"
+// @Produce json
+// @Param limit query int false "Number of items to return" default(20)
+// @Param offset query int false "Number of items to skip" default(0)
+// @Param q query string false "Search query by name or title (case-insensitive)"
+// @Success 200 {object} service.UsersListResponse "Successfully retrieved users list"
 // @Failure 400 {object} map[string]interface{} "Invalid parameters"
 // @Security BearerAuth
 // @Router /users [get]
@@ -215,7 +214,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 // @Description Returns the user matching the bearer token 'username' claim, mapped to users.name
 // @Tags users
 // @Produce json
-// @Success 200 {object} service.UserWithLinksResponse "Successfully retrieved current user"
+// @Success 200 {object} service.UserWithLinksAndPluginsResponse "Successfully retrieved current user"
 // @Failure 401 {object} map[string]interface{} "Missing username in token"
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Security BearerAuth
@@ -226,7 +225,7 @@ func (h *UserHandler) GetCurrentUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing username in token"})
 		return
 	}
-	user, err := h.memberService.GetUserByNameWithLinks(username)
+	user, err := h.memberService.GetUserByNameWithLinksAndPlugins(username)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -272,7 +271,7 @@ func (h *UserHandler) UpdateUserTeam(c *gin.Context) {
 	}
 
 	// Validate team exists
-	if _, err := h.teamRepo.GetByID(teamID); err != nil {
+	if _, err := h.teamService.GetByID(teamID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid new_team_uuid"})
 		return
 	}
@@ -373,6 +372,90 @@ func (h *UserHandler) RemoveFavoriteLink(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove favorite", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// AddSubscribedPlugin handles POST /users/:user_id/subscribed/:plugin_id and POST /users/:user_id/plugins/:plugin_id
+// @Summary Add a subscribed plugin to a user
+// @Description Adds the given plugin_id to the user's metadata.subscribed array. Initializes metadata and subscribed if missing, and avoids duplicates.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID (I/C/D user id, e.g. cis.devops)"
+// @Param plugin_id path string true "Plugin ID (UUID)"
+// @Success 200 {object} service.UserResponse "Successfully added subscribed plugin"
+// @Failure 400 {object} map[string]interface{} "Invalid user_id or plugin_id"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Security BearerAuth
+// @Router /users/{user_id}/subscribed/{plugin_id} [post]
+// @Router /users/{user_id}/plugins/{plugin_id} [post]
+func (h *UserHandler) AddSubscribedPlugin(c *gin.Context) {
+	userID := c.Param("user_id")
+	pluginIDStr := c.Param("plugin_id")
+
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+	pluginID, err := uuid.Parse(pluginIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plugin_id"})
+		return
+	}
+
+	user, err := h.memberService.AddSubscribedPluginByUserID(userID, pluginID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add subscribed plugin", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// RemoveSubscribedPlugin handles DELETE /users/:user_id/subscribed/:plugin_id and DELETE /users/:user_id/plugins/:plugin_id
+// @Summary Remove a subscribed plugin from a user
+// @Description Removes the given plugin_id from the user's metadata.subscribed array. Initializes metadata if missing. Idempotent if plugin not present.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID (I/C/D user id, e.g. cis.devops)"
+// @Param plugin_id path string true "Plugin ID (UUID)"
+// @Success 200 {object} service.UserResponse "Successfully removed subscribed plugin"
+// @Failure 400 {object} map[string]interface{} "Invalid user_id or plugin_id"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Security BearerAuth
+// @Router /users/{user_id}/subscribed/{plugin_id} [delete]
+// @Router /users/{user_id}/plugins/{plugin_id} [delete]
+func (h *UserHandler) RemoveSubscribedPlugin(c *gin.Context) {
+	userID := c.Param("user_id")
+	pluginIDStr := c.Param("plugin_id")
+
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
+		return
+	}
+	pluginID, err := uuid.Parse(pluginIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plugin_id"})
+		return
+	}
+
+	user, err := h.memberService.RemoveSubscribedPluginByUserID(userID, pluginID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to remove subscribed plugin", "details": err.Error()})
 		return
 	}
 

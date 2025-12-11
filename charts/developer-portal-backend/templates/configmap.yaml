@@ -9,20 +9,22 @@ data:
   DEPLOY_ENVIRONMENT: {{ .Values.config.deployEnvironment | quote }}
   PORT: {{ .Values.config.port | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}
-  
+
   # Database Configuration (non-sensitive)
   DB_HOST: {{ include "developer-portal-backend.databaseHost" . | quote }}
   DB_PORT: {{ include "developer-portal-backend.databasePort" . | quote }}
   DB_NAME: {{ include "developer-portal-backend.databaseName" . | quote }}
   DB_USER: {{ include "developer-portal-backend.databaseUser" . | quote }}
   DB_SSL_MODE: {{ .Values.database.sslMode | quote }}
-  
+
   # CORS Configuration
   ALLOWED_ORIGINS: {{ join "," .Values.config.allowedOrigins | quote }}
-  
+
   # Auth Configuration
   AUTH_REDIRECT_URL: {{ .Values.auth.redirectUrl | quote }}
-  
+  JWT_EXPIRES_IN_SECONDS: {{ .Values.jwt.expiresInSeconds | quote }}
+  ACCESS_TOKEN_EXPIRATION_IN_DAYS: {{ .Values.auth.expirationDays | quote }}
+
   # LDAP Configuration (non-sensitive)
   LDAP_HOST: {{ .Values.ldap.host | quote }}
   LDAP_PORT: {{ .Values.ldap.port | quote }}
@@ -30,19 +32,17 @@ data:
   LDAP_BASE_DN: {{ .Values.ldap.baseDN | quote }}
   LDAP_INSECURE_SKIP_VERIFY: {{ .Values.ldap.insecureSkipVerify | quote }}
   LDAP_TIMEOUT_SEC: {{ .Values.ldap.timeoutSec | quote }}
-  
+
   # Jira Configuration (non-sensitive)
   JIRA_DOMAIN: {{ .Values.jira.domain | quote }}
   JIRA_USER: {{ .Values.jira.user | quote }}
-  
+
   # Sonar Configuration (non-sensitive)
   SONAR_HOST: {{ .Values.sonar.host | quote }}
-  
+
   # Jenkins Configuration (non-sensitive)
   JENKINS_INSECURE_SKIP_VERIFY: {{ .Values.jenkins.insecureSkipVerify | quote }}
-  
+
   # GitHub OAuth Configuration (non-sensitive)
   GITHUB_TOOLS_ENTERPRISE_BASE_URL: {{ .Values.github.tools.enterpriseBaseUrl | quote }}
   GITHUB_WDF_ENTERPRISE_BASE_URL: {{ .Values.github.wdf.enterpriseBaseUrl | quote }}
-
-

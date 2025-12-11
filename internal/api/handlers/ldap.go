@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
 	"developer-portal-backend/internal/service"
 
@@ -11,12 +12,12 @@ import (
 
 // LDAPHandler handles LDAP-related HTTP requests
 type LDAPHandler struct {
-	service  *service.LDAPService
+	service  service.LDAPServiceInterface
 	userRepo repository.UserRepositoryInterface
 }
 
 // NewLDAPHandler creates a new LDAP handler
-func NewLDAPHandler(s *service.LDAPService, r repository.UserRepositoryInterface) *LDAPHandler {
+func NewLDAPHandler(s service.LDAPServiceInterface, r repository.UserRepositoryInterface) *LDAPHandler {
 	return &LDAPHandler{service: s, userRepo: r}
 }
 
@@ -34,7 +35,7 @@ func NewLDAPHandler(s *service.LDAPService, r repository.UserRepositoryInterface
 func (h *LDAPHandler) UserSearch(c *gin.Context) {
 	name := c.Query("name")
 	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing query parameter: name"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.NewMissingQueryParam("name").Error()})
 		return
 	}
 

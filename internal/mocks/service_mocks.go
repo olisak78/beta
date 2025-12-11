@@ -11,7 +11,6 @@ package mocks
 
 import (
 	context "context"
-	auth "developer-portal-backend/internal/auth"
 	models "developer-portal-backend/internal/database/models"
 	service "developer-portal-backend/internal/service"
 	json "encoding/json"
@@ -47,6 +46,21 @@ func (m *MockUserServiceInterface) EXPECT() *MockUserServiceInterfaceMockRecorde
 	return m.recorder
 }
 
+// AddFavoriteLinkByUserID mocks base method.
+func (m *MockUserServiceInterface) AddFavoriteLinkByUserID(userID string, linkID uuid.UUID) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddFavoriteLinkByUserID", userID, linkID)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddFavoriteLinkByUserID indicates an expected call of AddFavoriteLinkByUserID.
+func (mr *MockUserServiceInterfaceMockRecorder) AddFavoriteLinkByUserID(userID, linkID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFavoriteLinkByUserID", reflect.TypeOf((*MockUserServiceInterface)(nil).AddFavoriteLinkByUserID), userID, linkID)
+}
+
 // AddQuickLink mocks base method.
 func (m *MockUserServiceInterface) AddQuickLink(id uuid.UUID, req *service.AddQuickLinkRequest) (*service.UserResponse, error) {
 	m.ctrl.T.Helper()
@@ -60,6 +74,21 @@ func (m *MockUserServiceInterface) AddQuickLink(id uuid.UUID, req *service.AddQu
 func (mr *MockUserServiceInterfaceMockRecorder) AddQuickLink(id, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddQuickLink", reflect.TypeOf((*MockUserServiceInterface)(nil).AddQuickLink), id, req)
+}
+
+// AddSubscribedPluginByUserID mocks base method.
+func (m *MockUserServiceInterface) AddSubscribedPluginByUserID(userID string, pluginID uuid.UUID) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddSubscribedPluginByUserID", userID, pluginID)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddSubscribedPluginByUserID indicates an expected call of AddSubscribedPluginByUserID.
+func (mr *MockUserServiceInterfaceMockRecorder) AddSubscribedPluginByUserID(userID, pluginID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSubscribedPluginByUserID", reflect.TypeOf((*MockUserServiceInterface)(nil).AddSubscribedPluginByUserID), userID, pluginID)
 }
 
 // CreateUser mocks base method.
@@ -107,6 +136,22 @@ func (mr *MockUserServiceInterfaceMockRecorder) GetActiveUsers(organizationID, l
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveUsers", reflect.TypeOf((*MockUserServiceInterface)(nil).GetActiveUsers), organizationID, limit, offset)
 }
 
+// GetAllUsers mocks base method.
+func (m *MockUserServiceInterface) GetAllUsers(limit, offset int) ([]service.UserResponse, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllUsers", limit, offset)
+	ret0, _ := ret[0].([]service.UserResponse)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetAllUsers indicates an expected call of GetAllUsers.
+func (mr *MockUserServiceInterfaceMockRecorder) GetAllUsers(limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllUsers", reflect.TypeOf((*MockUserServiceInterface)(nil).GetAllUsers), limit, offset)
+}
+
 // GetQuickLinks mocks base method.
 func (m *MockUserServiceInterface) GetQuickLinks(id uuid.UUID) (*service.QuickLinksResponse, error) {
 	m.ctrl.T.Helper()
@@ -137,6 +182,81 @@ func (mr *MockUserServiceInterfaceMockRecorder) GetUserByID(id any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByID), id)
 }
 
+// GetUserByName mocks base method.
+func (m *MockUserServiceInterface) GetUserByName(name string) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByName", name)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByName indicates an expected call of GetUserByName.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByName(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByName", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByName), name)
+}
+
+// GetUserByNameWithLinks mocks base method.
+func (m *MockUserServiceInterface) GetUserByNameWithLinks(name string) (*service.UserWithLinksAndPluginsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByNameWithLinks", name)
+	ret0, _ := ret[0].(*service.UserWithLinksAndPluginsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByNameWithLinks indicates an expected call of GetUserByNameWithLinks.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByNameWithLinks(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByNameWithLinks", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByNameWithLinks), name)
+}
+
+// GetUserByNameWithLinksAndPlugins mocks base method.
+func (m *MockUserServiceInterface) GetUserByNameWithLinksAndPlugins(name string) (*service.UserWithLinksAndPluginsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByNameWithLinksAndPlugins", name)
+	ret0, _ := ret[0].(*service.UserWithLinksAndPluginsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByNameWithLinksAndPlugins indicates an expected call of GetUserByNameWithLinksAndPlugins.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByNameWithLinksAndPlugins(name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByNameWithLinksAndPlugins", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByNameWithLinksAndPlugins), name)
+}
+
+// GetUserByUserID mocks base method.
+func (m *MockUserServiceInterface) GetUserByUserID(userID string) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByUserID", userID)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByUserID indicates an expected call of GetUserByUserID.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByUserID(userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByUserID", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByUserID), userID)
+}
+
+// GetUserByUserIDWithLinks mocks base method.
+func (m *MockUserServiceInterface) GetUserByUserIDWithLinks(userID string) (*service.UserWithLinksAndPluginsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByUserIDWithLinks", userID)
+	ret0, _ := ret[0].(*service.UserWithLinksAndPluginsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByUserIDWithLinks indicates an expected call of GetUserByUserIDWithLinks.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByUserIDWithLinks(userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByUserIDWithLinks", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByUserIDWithLinks), userID)
+}
+
 // GetUsersByOrganization mocks base method.
 func (m *MockUserServiceInterface) GetUsersByOrganization(organizationID uuid.UUID, limit, offset int) ([]service.UserResponse, int64, error) {
 	m.ctrl.T.Helper()
@@ -153,6 +273,21 @@ func (mr *MockUserServiceInterfaceMockRecorder) GetUsersByOrganization(organizat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUsersByOrganization", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUsersByOrganization), organizationID, limit, offset)
 }
 
+// RemoveFavoriteLinkByUserID mocks base method.
+func (m *MockUserServiceInterface) RemoveFavoriteLinkByUserID(userID string, linkID uuid.UUID) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveFavoriteLinkByUserID", userID, linkID)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoveFavoriteLinkByUserID indicates an expected call of RemoveFavoriteLinkByUserID.
+func (mr *MockUserServiceInterfaceMockRecorder) RemoveFavoriteLinkByUserID(userID, linkID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFavoriteLinkByUserID", reflect.TypeOf((*MockUserServiceInterface)(nil).RemoveFavoriteLinkByUserID), userID, linkID)
+}
+
 // RemoveQuickLink mocks base method.
 func (m *MockUserServiceInterface) RemoveQuickLink(id uuid.UUID, linkURL string) (*service.UserResponse, error) {
 	m.ctrl.T.Helper()
@@ -166,6 +301,21 @@ func (m *MockUserServiceInterface) RemoveQuickLink(id uuid.UUID, linkURL string)
 func (mr *MockUserServiceInterfaceMockRecorder) RemoveQuickLink(id, linkURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveQuickLink", reflect.TypeOf((*MockUserServiceInterface)(nil).RemoveQuickLink), id, linkURL)
+}
+
+// RemoveSubscribedPluginByUserID mocks base method.
+func (m *MockUserServiceInterface) RemoveSubscribedPluginByUserID(userID string, pluginID uuid.UUID) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveSubscribedPluginByUserID", userID, pluginID)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoveSubscribedPluginByUserID indicates an expected call of RemoveSubscribedPluginByUserID.
+func (mr *MockUserServiceInterfaceMockRecorder) RemoveSubscribedPluginByUserID(userID, pluginID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveSubscribedPluginByUserID", reflect.TypeOf((*MockUserServiceInterface)(nil).RemoveSubscribedPluginByUserID), userID, pluginID)
 }
 
 // SearchUsers mocks base method.
@@ -184,6 +334,22 @@ func (mr *MockUserServiceInterfaceMockRecorder) SearchUsers(organizationID, quer
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchUsers", reflect.TypeOf((*MockUserServiceInterface)(nil).SearchUsers), organizationID, query, limit, offset)
 }
 
+// SearchUsersGlobal mocks base method.
+func (m *MockUserServiceInterface) SearchUsersGlobal(query string, limit, offset int) ([]service.UserResponse, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchUsersGlobal", query, limit, offset)
+	ret0, _ := ret[0].([]service.UserResponse)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// SearchUsersGlobal indicates an expected call of SearchUsersGlobal.
+func (mr *MockUserServiceInterfaceMockRecorder) SearchUsersGlobal(query, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchUsersGlobal", reflect.TypeOf((*MockUserServiceInterface)(nil).SearchUsersGlobal), query, limit, offset)
+}
+
 // UpdateUser mocks base method.
 func (m *MockUserServiceInterface) UpdateUser(id uuid.UUID, req *service.UpdateUserRequest) (*service.UserResponse, error) {
 	m.ctrl.T.Helper()
@@ -197,6 +363,21 @@ func (m *MockUserServiceInterface) UpdateUser(id uuid.UUID, req *service.UpdateU
 func (mr *MockUserServiceInterfaceMockRecorder) UpdateUser(id, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockUserServiceInterface)(nil).UpdateUser), id, req)
+}
+
+// UpdateUserTeam mocks base method.
+func (m *MockUserServiceInterface) UpdateUserTeam(userID, teamID uuid.UUID, updatedBy string) (*service.UserResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUserTeam", userID, teamID, updatedBy)
+	ret0, _ := ret[0].(*service.UserResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateUserTeam indicates an expected call of UpdateUserTeam.
+func (mr *MockUserServiceInterfaceMockRecorder) UpdateUserTeam(userID, teamID, updatedBy any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserTeam", reflect.TypeOf((*MockUserServiceInterface)(nil).UpdateUserTeam), userID, teamID, updatedBy)
 }
 
 // MockTeamServiceInterface is a mock of TeamServiceInterface interface.
@@ -221,35 +402,6 @@ func NewMockTeamServiceInterface(ctrl *gomock.Controller) *MockTeamServiceInterf
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTeamServiceInterface) EXPECT() *MockTeamServiceInterfaceMockRecorder {
 	return m.recorder
-}
-
-// Create mocks base method.
-func (m *MockTeamServiceInterface) Create(req *service.CreateTeamRequest) (*service.TeamResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", req)
-	ret0, _ := ret[0].(*service.TeamResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockTeamServiceInterfaceMockRecorder) Create(req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTeamServiceInterface)(nil).Create), req)
-}
-
-// Delete mocks base method.
-func (m *MockTeamServiceInterface) Delete(id uuid.UUID) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockTeamServiceInterfaceMockRecorder) Delete(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTeamServiceInterface)(nil).Delete), id)
 }
 
 // GetAllTeams mocks base method.
@@ -282,36 +434,6 @@ func (mr *MockTeamServiceInterfaceMockRecorder) GetByID(id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetByID), id)
 }
 
-// GetByName mocks base method.
-func (m *MockTeamServiceInterface) GetByName(groupID uuid.UUID, name string) (*service.TeamResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", groupID, name)
-	ret0, _ := ret[0].(*service.TeamResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetByName indicates an expected call of GetByName.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetByName(groupID, name any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetByName), groupID, name)
-}
-
-// GetByOrganization mocks base method.
-func (m *MockTeamServiceInterface) GetByOrganization(organizationID uuid.UUID, page, pageSize int) (*service.TeamListResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByOrganization", organizationID, page, pageSize)
-	ret0, _ := ret[0].(*service.TeamListResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetByOrganization indicates an expected call of GetByOrganization.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetByOrganization(organizationID, page, pageSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByOrganization", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetByOrganization), organizationID, page, pageSize)
-}
-
 // GetBySimpleName mocks base method.
 func (m *MockTeamServiceInterface) GetBySimpleName(teamName string) (*service.TeamWithMembersResponse, error) {
 	m.ctrl.T.Helper()
@@ -342,21 +464,6 @@ func (mr *MockTeamServiceInterfaceMockRecorder) GetBySimpleNameWithViewer(teamNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySimpleNameWithViewer", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetBySimpleNameWithViewer), teamName, viewerName)
 }
 
-// GetMembersOnly mocks base method.
-func (m *MockTeamServiceInterface) GetMembersOnly(id uuid.UUID) ([]service.UserResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMembersOnly", id)
-	ret0, _ := ret[0].([]service.UserResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetMembersOnly indicates an expected call of GetMembersOnly.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetMembersOnly(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMembersOnly", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetMembersOnly), id)
-}
-
 // GetTeamComponentsByID mocks base method.
 func (m *MockTeamServiceInterface) GetTeamComponentsByID(id uuid.UUID, page, pageSize int) ([]models.Component, int64, error) {
 	m.ctrl.T.Helper()
@@ -373,128 +480,6 @@ func (mr *MockTeamServiceInterfaceMockRecorder) GetTeamComponentsByID(id, page, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTeamComponentsByID", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetTeamComponentsByID), id, page, pageSize)
 }
 
-// GetTeamComponentsByName mocks base method.
-func (m *MockTeamServiceInterface) GetTeamComponentsByName(organizationID uuid.UUID, teamName string, page, pageSize int) ([]models.Component, int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTeamComponentsByName", organizationID, teamName, page, pageSize)
-	ret0, _ := ret[0].([]models.Component)
-	ret1, _ := ret[1].(int64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// GetTeamComponentsByName indicates an expected call of GetTeamComponentsByName.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetTeamComponentsByName(organizationID, teamName, page, pageSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTeamComponentsByName", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetTeamComponentsByName), organizationID, teamName, page, pageSize)
-}
-
-// GetTeamMembersByName mocks base method.
-func (m *MockTeamServiceInterface) GetTeamMembersByName(organizationID uuid.UUID, teamName string, page, pageSize int) ([]models.User, int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTeamMembersByName", organizationID, teamName, page, pageSize)
-	ret0, _ := ret[0].([]models.User)
-	ret1, _ := ret[1].(int64)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// GetTeamMembersByName indicates an expected call of GetTeamMembersByName.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetTeamMembersByName(organizationID, teamName, page, pageSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTeamMembersByName", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetTeamMembersByName), organizationID, teamName, page, pageSize)
-}
-
-// GetWithComponentOwnerships mocks base method.
-func (m *MockTeamServiceInterface) GetWithComponentOwnerships(id uuid.UUID) (*models.Team, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWithComponentOwnerships", id)
-	ret0, _ := ret[0].(*models.Team)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWithComponentOwnerships indicates an expected call of GetWithComponentOwnerships.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetWithComponentOwnerships(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithComponentOwnerships", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetWithComponentOwnerships), id)
-}
-
-// GetWithDutySchedules mocks base method.
-func (m *MockTeamServiceInterface) GetWithDutySchedules(id uuid.UUID) (*models.Team, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWithDutySchedules", id)
-	ret0, _ := ret[0].(*models.Team)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWithDutySchedules indicates an expected call of GetWithDutySchedules.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetWithDutySchedules(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithDutySchedules", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetWithDutySchedules), id)
-}
-
-// GetWithMembers mocks base method.
-func (m *MockTeamServiceInterface) GetWithMembers(id uuid.UUID) (*models.Team, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWithMembers", id)
-	ret0, _ := ret[0].(*models.Team)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWithMembers indicates an expected call of GetWithMembers.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetWithMembers(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithMembers", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetWithMembers), id)
-}
-
-// GetWithProjects mocks base method.
-func (m *MockTeamServiceInterface) GetWithProjects(id uuid.UUID) (*models.Team, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWithProjects", id)
-	ret0, _ := ret[0].(*models.Team)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWithProjects indicates an expected call of GetWithProjects.
-func (mr *MockTeamServiceInterfaceMockRecorder) GetWithProjects(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithProjects", reflect.TypeOf((*MockTeamServiceInterface)(nil).GetWithProjects), id)
-}
-
-// Search mocks base method.
-func (m *MockTeamServiceInterface) Search(organizationID uuid.UUID, query string, page, pageSize int) (*service.TeamListResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Search", organizationID, query, page, pageSize)
-	ret0, _ := ret[0].(*service.TeamListResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Search indicates an expected call of Search.
-func (mr *MockTeamServiceInterfaceMockRecorder) Search(organizationID, query, page, pageSize any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockTeamServiceInterface)(nil).Search), organizationID, query, page, pageSize)
-}
-
-// Update mocks base method.
-func (m *MockTeamServiceInterface) Update(id uuid.UUID, req *service.UpdateTeamRequest) (*service.TeamResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", id, req)
-	ret0, _ := ret[0].(*service.TeamResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockTeamServiceInterfaceMockRecorder) Update(id, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTeamServiceInterface)(nil).Update), id, req)
-}
-
 // UpdateTeamMetadata mocks base method.
 func (m *MockTeamServiceInterface) UpdateTeamMetadata(id uuid.UUID, metadata json.RawMessage) (*service.TeamResponse, error) {
 	m.ctrl.T.Helper()
@@ -508,82 +493,6 @@ func (m *MockTeamServiceInterface) UpdateTeamMetadata(id uuid.UUID, metadata jso
 func (mr *MockTeamServiceInterfaceMockRecorder) UpdateTeamMetadata(id, metadata any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTeamMetadata", reflect.TypeOf((*MockTeamServiceInterface)(nil).UpdateTeamMetadata), id, metadata)
-}
-
-// MockProjectServiceInterface is a mock of ProjectServiceInterface interface.
-type MockProjectServiceInterface struct {
-	ctrl     *gomock.Controller
-	recorder *MockProjectServiceInterfaceMockRecorder
-	isgomock struct{}
-}
-
-// MockProjectServiceInterfaceMockRecorder is the mock recorder for MockProjectServiceInterface.
-type MockProjectServiceInterfaceMockRecorder struct {
-	mock *MockProjectServiceInterface
-}
-
-// NewMockProjectServiceInterface creates a new mock instance.
-func NewMockProjectServiceInterface(ctrl *gomock.Controller) *MockProjectServiceInterface {
-	mock := &MockProjectServiceInterface{ctrl: ctrl}
-	mock.recorder = &MockProjectServiceInterfaceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockProjectServiceInterface) EXPECT() *MockProjectServiceInterfaceMockRecorder {
-	return m.recorder
-}
-
-// DeleteProject mocks base method.
-func (m *MockProjectServiceInterface) DeleteProject(id uuid.UUID) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteProject", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteProject indicates an expected call of DeleteProject.
-func (mr *MockProjectServiceInterfaceMockRecorder) DeleteProject(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockProjectServiceInterface)(nil).DeleteProject), id)
-}
-
-// MockComponentServiceInterface is a mock of ComponentServiceInterface interface.
-type MockComponentServiceInterface struct {
-	ctrl     *gomock.Controller
-	recorder *MockComponentServiceInterfaceMockRecorder
-	isgomock struct{}
-}
-
-// MockComponentServiceInterfaceMockRecorder is the mock recorder for MockComponentServiceInterface.
-type MockComponentServiceInterfaceMockRecorder struct {
-	mock *MockComponentServiceInterface
-}
-
-// NewMockComponentServiceInterface creates a new mock instance.
-func NewMockComponentServiceInterface(ctrl *gomock.Controller) *MockComponentServiceInterface {
-	mock := &MockComponentServiceInterface{ctrl: ctrl}
-	mock.recorder = &MockComponentServiceInterfaceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockComponentServiceInterface) EXPECT() *MockComponentServiceInterfaceMockRecorder {
-	return m.recorder
-}
-
-// DeleteComponent mocks base method.
-func (m *MockComponentServiceInterface) DeleteComponent(id uuid.UUID) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteComponent", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteComponent indicates an expected call of DeleteComponent.
-func (mr *MockComponentServiceInterfaceMockRecorder) DeleteComponent(id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteComponent", reflect.TypeOf((*MockComponentServiceInterface)(nil).DeleteComponent), id)
 }
 
 // MockLandscapeServiceInterface is a mock of LandscapeServiceInterface interface.
@@ -754,40 +663,55 @@ func (m *MockGitHubServiceInterface) EXPECT() *MockGitHubServiceInterfaceMockRec
 	return m.recorder
 }
 
-// GetAveragePRMergeTime mocks base method.
-func (m *MockGitHubServiceInterface) GetAveragePRMergeTime(ctx context.Context, claims *auth.AuthClaims, period string) (*service.AveragePRMergeTimeResponse, error) {
+// ClosePullRequest mocks base method.
+func (m *MockGitHubServiceInterface) ClosePullRequest(ctx context.Context, arg1, provider, owner, repo string, prNumber int, deleteBranch bool) (*service.PullRequest, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAveragePRMergeTime", ctx, claims, period)
+	ret := m.ctrl.Call(m, "ClosePullRequest", ctx, arg1, provider, owner, repo, prNumber, deleteBranch)
+	ret0, _ := ret[0].(*service.PullRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClosePullRequest indicates an expected call of ClosePullRequest.
+func (mr *MockGitHubServiceInterfaceMockRecorder) ClosePullRequest(ctx, arg1, provider, owner, repo, prNumber, deleteBranch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClosePullRequest", reflect.TypeOf((*MockGitHubServiceInterface)(nil).ClosePullRequest), ctx, arg1, provider, owner, repo, prNumber, deleteBranch)
+}
+
+// GetAveragePRMergeTime mocks base method.
+func (m *MockGitHubServiceInterface) GetAveragePRMergeTime(ctx context.Context, arg1, provider, period string) (*service.AveragePRMergeTimeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAveragePRMergeTime", ctx, arg1, provider, period)
 	ret0, _ := ret[0].(*service.AveragePRMergeTimeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAveragePRMergeTime indicates an expected call of GetAveragePRMergeTime.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetAveragePRMergeTime(ctx, claims, period any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetAveragePRMergeTime(ctx, arg1, provider, period any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAveragePRMergeTime", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetAveragePRMergeTime), ctx, claims, period)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAveragePRMergeTime", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetAveragePRMergeTime), ctx, arg1, provider, period)
 }
 
 // GetContributionsHeatmap mocks base method.
-func (m *MockGitHubServiceInterface) GetContributionsHeatmap(ctx context.Context, claims *auth.AuthClaims, period string) (*service.ContributionsHeatmapResponse, error) {
+func (m *MockGitHubServiceInterface) GetContributionsHeatmap(ctx context.Context, arg1, provider, period string) (*service.ContributionsHeatmapResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetContributionsHeatmap", ctx, claims, period)
+	ret := m.ctrl.Call(m, "GetContributionsHeatmap", ctx, arg1, provider, period)
 	ret0, _ := ret[0].(*service.ContributionsHeatmapResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetContributionsHeatmap indicates an expected call of GetContributionsHeatmap.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetContributionsHeatmap(ctx, claims, period any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetContributionsHeatmap(ctx, arg1, provider, period any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContributionsHeatmap", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetContributionsHeatmap), ctx, claims, period)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContributionsHeatmap", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetContributionsHeatmap), ctx, arg1, provider, period)
 }
 
 // GetGitHubAsset mocks base method.
-func (m *MockGitHubServiceInterface) GetGitHubAsset(ctx context.Context, claims *auth.AuthClaims, assetURL string) ([]byte, string, error) {
+func (m *MockGitHubServiceInterface) GetGitHubAsset(ctx context.Context, arg1, provider, assetURL string) ([]byte, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGitHubAsset", ctx, claims, assetURL)
+	ret := m.ctrl.Call(m, "GetGitHubAsset", ctx, arg1, provider, assetURL)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -795,69 +719,84 @@ func (m *MockGitHubServiceInterface) GetGitHubAsset(ctx context.Context, claims 
 }
 
 // GetGitHubAsset indicates an expected call of GetGitHubAsset.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetGitHubAsset(ctx, claims, assetURL any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetGitHubAsset(ctx, arg1, provider, assetURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubAsset", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetGitHubAsset), ctx, claims, assetURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubAsset", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetGitHubAsset), ctx, arg1, provider, assetURL)
 }
 
 // GetRepositoryContent mocks base method.
-func (m *MockGitHubServiceInterface) GetRepositoryContent(ctx context.Context, claims *auth.AuthClaims, owner, repo, path, ref string) (any, error) {
+func (m *MockGitHubServiceInterface) GetRepositoryContent(ctx context.Context, arg1, provider, owner, repo, path, ref string) (any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRepositoryContent", ctx, claims, owner, repo, path, ref)
+	ret := m.ctrl.Call(m, "GetRepositoryContent", ctx, arg1, provider, owner, repo, path, ref)
 	ret0, _ := ret[0].(any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRepositoryContent indicates an expected call of GetRepositoryContent.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetRepositoryContent(ctx, claims, owner, repo, path, ref any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetRepositoryContent(ctx, arg1, provider, owner, repo, path, ref any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepositoryContent", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetRepositoryContent), ctx, claims, owner, repo, path, ref)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepositoryContent", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetRepositoryContent), ctx, arg1, provider, owner, repo, path, ref)
 }
 
 // GetUserOpenPullRequests mocks base method.
-func (m *MockGitHubServiceInterface) GetUserOpenPullRequests(ctx context.Context, claims *auth.AuthClaims, state, sort, direction string, perPage, page int) (*service.PullRequestsResponse, error) {
+func (m *MockGitHubServiceInterface) GetUserOpenPullRequests(ctx context.Context, arg1, provider, state, sort, direction string, perPage, page int) (*service.PullRequestsResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserOpenPullRequests", ctx, claims, state, sort, direction, perPage, page)
+	ret := m.ctrl.Call(m, "GetUserOpenPullRequests", ctx, arg1, provider, state, sort, direction, perPage, page)
 	ret0, _ := ret[0].(*service.PullRequestsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetUserOpenPullRequests indicates an expected call of GetUserOpenPullRequests.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetUserOpenPullRequests(ctx, claims, state, sort, direction, perPage, page any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetUserOpenPullRequests(ctx, arg1, provider, state, sort, direction, perPage, page any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserOpenPullRequests", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetUserOpenPullRequests), ctx, claims, state, sort, direction, perPage, page)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserOpenPullRequests", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetUserOpenPullRequests), ctx, arg1, provider, state, sort, direction, perPage, page)
+}
+
+// GetUserPRReviewComments mocks base method.
+func (m *MockGitHubServiceInterface) GetUserPRReviewComments(ctx context.Context, arg1, provider, period string) (*service.PRReviewCommentsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserPRReviewComments", ctx, arg1, provider, period)
+	ret0, _ := ret[0].(*service.PRReviewCommentsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserPRReviewComments indicates an expected call of GetUserPRReviewComments.
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetUserPRReviewComments(ctx, arg1, provider, period any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserPRReviewComments", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetUserPRReviewComments), ctx, arg1, provider, period)
 }
 
 // GetUserTotalContributions mocks base method.
-func (m *MockGitHubServiceInterface) GetUserTotalContributions(ctx context.Context, claims *auth.AuthClaims, period string) (*service.TotalContributionsResponse, error) {
+func (m *MockGitHubServiceInterface) GetUserTotalContributions(ctx context.Context, arg1, provider, period string) (*service.TotalContributionsResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserTotalContributions", ctx, claims, period)
+	ret := m.ctrl.Call(m, "GetUserTotalContributions", ctx, arg1, provider, period)
 	ret0, _ := ret[0].(*service.TotalContributionsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetUserTotalContributions indicates an expected call of GetUserTotalContributions.
-func (mr *MockGitHubServiceInterfaceMockRecorder) GetUserTotalContributions(ctx, claims, period any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) GetUserTotalContributions(ctx, arg1, provider, period any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserTotalContributions", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetUserTotalContributions), ctx, claims, period)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserTotalContributions", reflect.TypeOf((*MockGitHubServiceInterface)(nil).GetUserTotalContributions), ctx, arg1, provider, period)
 }
 
 // UpdateRepositoryFile mocks base method.
-func (m *MockGitHubServiceInterface) UpdateRepositoryFile(ctx context.Context, claims *auth.AuthClaims, owner, repo, path, message, content, sha, branch string) (any, error) {
+func (m *MockGitHubServiceInterface) UpdateRepositoryFile(ctx context.Context, arg1, provider, owner, repo, path, message, content, sha, branch string) (any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRepositoryFile", ctx, claims, owner, repo, path, message, content, sha, branch)
+	ret := m.ctrl.Call(m, "UpdateRepositoryFile", ctx, arg1, provider, owner, repo, path, message, content, sha, branch)
 	ret0, _ := ret[0].(any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateRepositoryFile indicates an expected call of UpdateRepositoryFile.
-func (mr *MockGitHubServiceInterfaceMockRecorder) UpdateRepositoryFile(ctx, claims, owner, repo, path, message, content, sha, branch any) *gomock.Call {
+func (mr *MockGitHubServiceInterfaceMockRecorder) UpdateRepositoryFile(ctx, arg1, provider, owner, repo, path, message, content, sha, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRepositoryFile", reflect.TypeOf((*MockGitHubServiceInterface)(nil).UpdateRepositoryFile), ctx, claims, owner, repo, path, message, content, sha, branch)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRepositoryFile", reflect.TypeOf((*MockGitHubServiceInterface)(nil).UpdateRepositoryFile), ctx, arg1, provider, owner, repo, path, message, content, sha, branch)
 }
 
 // MockJenkinsServiceInterface is a mock of JenkinsServiceInterface interface.
@@ -1076,6 +1015,20 @@ func (mr *MockAICoreServiceInterfaceMockRecorder) ChatInference(c, req any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChatInference", reflect.TypeOf((*MockAICoreServiceInterface)(nil).ChatInference), c, req)
 }
 
+// ChatInferenceStream mocks base method.
+func (m *MockAICoreServiceInterface) ChatInferenceStream(c *gin.Context, req *service.AICoreInferenceRequest, writer gin.ResponseWriter) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChatInferenceStream", c, req, writer)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ChatInferenceStream indicates an expected call of ChatInferenceStream.
+func (mr *MockAICoreServiceInterfaceMockRecorder) ChatInferenceStream(c, req, writer any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChatInferenceStream", reflect.TypeOf((*MockAICoreServiceInterface)(nil).ChatInferenceStream), c, req, writer)
+}
+
 // CreateConfiguration mocks base method.
 func (m *MockAICoreServiceInterface) CreateConfiguration(c *gin.Context, req *service.AICoreConfigurationRequest) (*service.AICoreConfigurationResponse, error) {
 	m.ctrl.T.Helper()
@@ -1226,6 +1179,75 @@ func (mr *MockAICoreServiceInterfaceMockRecorder) UploadAttachment(c, file, head
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAttachment", reflect.TypeOf((*MockAICoreServiceInterface)(nil).UploadAttachment), c, file, header)
 }
 
+// MockComponentServiceInterface is a mock of ComponentServiceInterface interface.
+type MockComponentServiceInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockComponentServiceInterfaceMockRecorder
+	isgomock struct{}
+}
+
+// MockComponentServiceInterfaceMockRecorder is the mock recorder for MockComponentServiceInterface.
+type MockComponentServiceInterfaceMockRecorder struct {
+	mock *MockComponentServiceInterface
+}
+
+// NewMockComponentServiceInterface creates a new mock instance.
+func NewMockComponentServiceInterface(ctrl *gomock.Controller) *MockComponentServiceInterface {
+	mock := &MockComponentServiceInterface{ctrl: ctrl}
+	mock.recorder = &MockComponentServiceInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockComponentServiceInterface) EXPECT() *MockComponentServiceInterfaceMockRecorder {
+	return m.recorder
+}
+
+// GetByID mocks base method.
+func (m *MockComponentServiceInterface) GetByID(id uuid.UUID) (*models.Component, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", id)
+	ret0, _ := ret[0].(*models.Component)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockComponentServiceInterfaceMockRecorder) GetByID(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockComponentServiceInterface)(nil).GetByID), id)
+}
+
+// GetByProjectNameAllView mocks base method.
+func (m *MockComponentServiceInterface) GetByProjectNameAllView(projectName string) ([]service.ComponentProjectView, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByProjectNameAllView", projectName)
+	ret0, _ := ret[0].([]service.ComponentProjectView)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByProjectNameAllView indicates an expected call of GetByProjectNameAllView.
+func (mr *MockComponentServiceInterfaceMockRecorder) GetByProjectNameAllView(projectName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByProjectNameAllView", reflect.TypeOf((*MockComponentServiceInterface)(nil).GetByProjectNameAllView), projectName)
+}
+
+// GetProjectTitleByID mocks base method.
+func (m *MockComponentServiceInterface) GetProjectTitleByID(id uuid.UUID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectTitleByID", id)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectTitleByID indicates an expected call of GetProjectTitleByID.
+func (mr *MockComponentServiceInterfaceMockRecorder) GetProjectTitleByID(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectTitleByID", reflect.TypeOf((*MockComponentServiceInterface)(nil).GetProjectTitleByID), id)
+}
+
 // MockCategoryServiceInterface is a mock of CategoryServiceInterface interface.
 type MockCategoryServiceInterface struct {
 	ctrl     *gomock.Controller
@@ -1263,6 +1285,45 @@ func (m *MockCategoryServiceInterface) GetAll(page, pageSize int) (*service.Cate
 func (mr *MockCategoryServiceInterfaceMockRecorder) GetAll(page, pageSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockCategoryServiceInterface)(nil).GetAll), page, pageSize)
+}
+
+// MockProjectServiceInterface is a mock of ProjectServiceInterface interface.
+type MockProjectServiceInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockProjectServiceInterfaceMockRecorder
+	isgomock struct{}
+}
+
+// MockProjectServiceInterfaceMockRecorder is the mock recorder for MockProjectServiceInterface.
+type MockProjectServiceInterfaceMockRecorder struct {
+	mock *MockProjectServiceInterface
+}
+
+// NewMockProjectServiceInterface creates a new mock instance.
+func NewMockProjectServiceInterface(ctrl *gomock.Controller) *MockProjectServiceInterface {
+	mock := &MockProjectServiceInterface{ctrl: ctrl}
+	mock.recorder = &MockProjectServiceInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockProjectServiceInterface) EXPECT() *MockProjectServiceInterfaceMockRecorder {
+	return m.recorder
+}
+
+// GetAllProjects mocks base method.
+func (m *MockProjectServiceInterface) GetAllProjects() ([]models.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllProjects")
+	ret0, _ := ret[0].([]models.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllProjects indicates an expected call of GetAllProjects.
+func (mr *MockProjectServiceInterfaceMockRecorder) GetAllProjects() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProjects", reflect.TypeOf((*MockProjectServiceInterface)(nil).GetAllProjects))
 }
 
 // MockLinkServiceInterface is a mock of LinkServiceInterface interface.
@@ -1346,6 +1407,21 @@ func (m *MockLinkServiceInterface) GetByOwnerUserIDWithViewer(ownerUserID, viewe
 func (mr *MockLinkServiceInterfaceMockRecorder) GetByOwnerUserIDWithViewer(ownerUserID, viewerName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByOwnerUserIDWithViewer", reflect.TypeOf((*MockLinkServiceInterface)(nil).GetByOwnerUserIDWithViewer), ownerUserID, viewerName)
+}
+
+// UpdateLink mocks base method.
+func (m *MockLinkServiceInterface) UpdateLink(id uuid.UUID, req *service.UpdateLinkRequest) (*service.LinkResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLink", id, req)
+	ret0, _ := ret[0].(*service.LinkResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateLink indicates an expected call of UpdateLink.
+func (mr *MockLinkServiceInterfaceMockRecorder) UpdateLink(id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLink", reflect.TypeOf((*MockLinkServiceInterface)(nil).UpdateLink), id, req)
 }
 
 // MockDocumentationServiceInterface is a mock of DocumentationServiceInterface interface.
@@ -1446,17 +1522,223 @@ func (mr *MockDocumentationServiceInterfaceMockRecorder) UpdateDocumentation(id,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDocumentation", reflect.TypeOf((*MockDocumentationServiceInterface)(nil).UpdateDocumentation), id, req)
 }
 
-// GetAllProjects mocks base method.
-func (m *MockProjectServiceInterface) GetAllProjects() ([]models.Project, error) {
+// MockPluginServiceInterface is a mock of PluginServiceInterface interface.
+type MockPluginServiceInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockPluginServiceInterfaceMockRecorder
+	isgomock struct{}
+}
+
+// MockPluginServiceInterfaceMockRecorder is the mock recorder for MockPluginServiceInterface.
+type MockPluginServiceInterfaceMockRecorder struct {
+	mock *MockPluginServiceInterface
+}
+
+// NewMockPluginServiceInterface creates a new mock instance.
+func NewMockPluginServiceInterface(ctrl *gomock.Controller) *MockPluginServiceInterface {
+	mock := &MockPluginServiceInterface{ctrl: ctrl}
+	mock.recorder = &MockPluginServiceInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPluginServiceInterface) EXPECT() *MockPluginServiceInterfaceMockRecorder {
+	return m.recorder
+}
+
+// CreatePlugin mocks base method.
+func (m *MockPluginServiceInterface) CreatePlugin(req *service.CreatePluginRequest) (*service.PluginResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllProjects")
-	ret0, _ := ret[0].([]models.Project)
+	ret := m.ctrl.Call(m, "CreatePlugin", req)
+	ret0, _ := ret[0].(*service.PluginResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetAllProjects indicates an expected call of GetAllProjects.
-func (mr *MockProjectServiceInterfaceMockRecorder) GetAllProjects() *gomock.Call {
+// CreatePlugin indicates an expected call of CreatePlugin.
+func (mr *MockPluginServiceInterfaceMockRecorder) CreatePlugin(req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProjects", reflect.TypeOf((*MockProjectServiceInterface)(nil).GetAllProjects))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePlugin", reflect.TypeOf((*MockPluginServiceInterface)(nil).CreatePlugin), req)
+}
+
+// DeletePlugin mocks base method.
+func (m *MockPluginServiceInterface) DeletePlugin(id uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePlugin", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePlugin indicates an expected call of DeletePlugin.
+func (mr *MockPluginServiceInterfaceMockRecorder) DeletePlugin(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlugin", reflect.TypeOf((*MockPluginServiceInterface)(nil).DeletePlugin), id)
+}
+
+// GetAllPlugins mocks base method.
+func (m *MockPluginServiceInterface) GetAllPlugins(limit, offset int) (*service.PluginListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllPlugins", limit, offset)
+	ret0, _ := ret[0].(*service.PluginListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllPlugins indicates an expected call of GetAllPlugins.
+func (mr *MockPluginServiceInterfaceMockRecorder) GetAllPlugins(limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllPlugins", reflect.TypeOf((*MockPluginServiceInterface)(nil).GetAllPlugins), limit, offset)
+}
+
+// GetAllPluginsWithViewer mocks base method.
+func (m *MockPluginServiceInterface) GetAllPluginsWithViewer(limit, offset int, viewerName string) (*service.PluginListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllPluginsWithViewer", limit, offset, viewerName)
+	ret0, _ := ret[0].(*service.PluginListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllPluginsWithViewer indicates an expected call of GetAllPluginsWithViewer.
+func (mr *MockPluginServiceInterfaceMockRecorder) GetAllPluginsWithViewer(limit, offset, viewerName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllPluginsWithViewer", reflect.TypeOf((*MockPluginServiceInterface)(nil).GetAllPluginsWithViewer), limit, offset, viewerName)
+}
+
+// GetPluginByID mocks base method.
+func (m *MockPluginServiceInterface) GetPluginByID(id uuid.UUID) (*service.PluginResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPluginByID", id)
+	ret0, _ := ret[0].(*service.PluginResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPluginByID indicates an expected call of GetPluginByID.
+func (mr *MockPluginServiceInterfaceMockRecorder) GetPluginByID(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPluginByID", reflect.TypeOf((*MockPluginServiceInterface)(nil).GetPluginByID), id)
+}
+
+// GetPluginUIContent mocks base method.
+func (m *MockPluginServiceInterface) GetPluginUIContent(ctx context.Context, pluginID uuid.UUID, githubService service.GitHubServiceInterface, userUUID, provider string) (*service.PluginUIResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPluginUIContent", ctx, pluginID, githubService, userUUID, provider)
+	ret0, _ := ret[0].(*service.PluginUIResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPluginUIContent indicates an expected call of GetPluginUIContent.
+func (mr *MockPluginServiceInterfaceMockRecorder) GetPluginUIContent(ctx, pluginID, githubService, userUUID, provider any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPluginUIContent", reflect.TypeOf((*MockPluginServiceInterface)(nil).GetPluginUIContent), ctx, pluginID, githubService, userUUID, provider)
+}
+
+// UpdatePlugin mocks base method.
+func (m *MockPluginServiceInterface) UpdatePlugin(id uuid.UUID, req *service.UpdatePluginRequest) (*service.PluginResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePlugin", id, req)
+	ret0, _ := ret[0].(*service.PluginResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePlugin indicates an expected call of UpdatePlugin.
+func (mr *MockPluginServiceInterfaceMockRecorder) UpdatePlugin(id, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePlugin", reflect.TypeOf((*MockPluginServiceInterface)(nil).UpdatePlugin), id, req)
+}
+
+// MockLDAPServiceInterface is a mock of LDAPServiceInterface interface.
+type MockLDAPServiceInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockLDAPServiceInterfaceMockRecorder
+	isgomock struct{}
+}
+
+// MockLDAPServiceInterfaceMockRecorder is the mock recorder for MockLDAPServiceInterface.
+type MockLDAPServiceInterfaceMockRecorder struct {
+	mock *MockLDAPServiceInterface
+}
+
+// NewMockLDAPServiceInterface creates a new mock instance.
+func NewMockLDAPServiceInterface(ctrl *gomock.Controller) *MockLDAPServiceInterface {
+	mock := &MockLDAPServiceInterface{ctrl: ctrl}
+	mock.recorder = &MockLDAPServiceInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLDAPServiceInterface) EXPECT() *MockLDAPServiceInterfaceMockRecorder {
+	return m.recorder
+}
+
+// SearchUsersByCN mocks base method.
+func (m *MockLDAPServiceInterface) SearchUsersByCN(cn string) ([]service.LDAPUser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchUsersByCN", cn)
+	ret0, _ := ret[0].([]service.LDAPUser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchUsersByCN indicates an expected call of SearchUsersByCN.
+func (mr *MockLDAPServiceInterfaceMockRecorder) SearchUsersByCN(cn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchUsersByCN", reflect.TypeOf((*MockLDAPServiceInterface)(nil).SearchUsersByCN), cn)
+}
+
+// MockAlertsServiceInterface is a mock of AlertsServiceInterface interface.
+type MockAlertsServiceInterface struct {
+	ctrl     *gomock.Controller
+	recorder *MockAlertsServiceInterfaceMockRecorder
+	isgomock struct{}
+}
+
+// MockAlertsServiceInterfaceMockRecorder is the mock recorder for MockAlertsServiceInterface.
+type MockAlertsServiceInterfaceMockRecorder struct {
+	mock *MockAlertsServiceInterface
+}
+
+// NewMockAlertsServiceInterface creates a new mock instance.
+func NewMockAlertsServiceInterface(ctrl *gomock.Controller) *MockAlertsServiceInterface {
+	mock := &MockAlertsServiceInterface{ctrl: ctrl}
+	mock.recorder = &MockAlertsServiceInterfaceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockAlertsServiceInterface) EXPECT() *MockAlertsServiceInterfaceMockRecorder {
+	return m.recorder
+}
+
+// CreateAlertPR mocks base method.
+func (m *MockAlertsServiceInterface) CreateAlertPR(ctx context.Context, projectIDStr, userUUID, provider, fileName, content, message, description string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAlertPR", ctx, projectIDStr, userUUID, provider, fileName, content, message, description)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAlertPR indicates an expected call of CreateAlertPR.
+func (mr *MockAlertsServiceInterfaceMockRecorder) CreateAlertPR(ctx, projectIDStr, userUUID, provider, fileName, content, message, description any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAlertPR", reflect.TypeOf((*MockAlertsServiceInterface)(nil).CreateAlertPR), ctx, projectIDStr, userUUID, provider, fileName, content, message, description)
+}
+
+// GetProjectAlerts mocks base method.
+func (m *MockAlertsServiceInterface) GetProjectAlerts(ctx context.Context, projectIDStr, userUUID, provider string) (*service.AlertsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectAlerts", ctx, projectIDStr, userUUID, provider)
+	ret0, _ := ret[0].(*service.AlertsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectAlerts indicates an expected call of GetProjectAlerts.
+func (mr *MockAlertsServiceInterfaceMockRecorder) GetProjectAlerts(ctx, projectIDStr, userUUID, provider any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectAlerts", reflect.TypeOf((*MockAlertsServiceInterface)(nil).GetProjectAlerts), ctx, projectIDStr, userUUID, provider)
 }

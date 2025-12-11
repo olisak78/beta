@@ -23,10 +23,10 @@ func uuidPtr() *uuid.UUID {
 // UserServiceTestSuite defines the test suite for UserService
 type UserServiceTestSuite struct {
 	suite.Suite
-	ctrl          *gomock.Controller
-	mockUserRepo  *mocks.MockUserRepositoryInterface
-	userService *service.UserService
-	validator     *validator.Validate
+	ctrl         *gomock.Controller
+	mockUserRepo *mocks.MockUserRepositoryInterface
+	userService  *service.UserService
+	validator    *validator.Validate
 }
 
 // SetupTest sets up the test suite
@@ -35,9 +35,10 @@ func (suite *UserServiceTestSuite) SetupTest() {
 	suite.mockUserRepo = mocks.NewMockUserRepositoryInterface(suite.ctrl)
 	suite.validator = validator.New()
 	mockLinkRepo := mocks.NewMockLinkRepositoryInterface(suite.ctrl)
+	mockPluginRepo := mocks.NewMockPluginRepositoryInterface(suite.ctrl)
 
 	// Create service with mock repository
-	suite.userService = service.NewUserService(suite.mockUserRepo, mockLinkRepo, suite.validator)
+	suite.userService = service.NewUserService(suite.mockUserRepo, mockLinkRepo, mockPluginRepo, suite.validator)
 }
 
 // TearDownTest cleans up after each test
@@ -51,15 +52,15 @@ func (suite *UserServiceTestSuite) TestCreateUser() {
 	teamRole := "member"
 	teamID := uuid.New()
 	req := &service.CreateUserRequest{
-		TeamID:      &teamID,
-		FirstName:   "John",
-		LastName:    "Doe",
-		Email:       "john@example.com",
-		Mobile:      "+1-555-0123",
-		IUser:       "I123456",
-		Role:        &role,
-		TeamRole:    &teamRole,
-		CreatedBy:   "I123456",
+		TeamID:    &teamID,
+		FirstName: "John",
+		LastName:  "Doe",
+		Email:     "john@example.com",
+		Mobile:    "+1-555-0123",
+		IUser:     "I123456",
+		Role:      &role,
+		TeamRole:  &teamRole,
+		CreatedBy: "I123456",
 	}
 
 	// Mock GetByEmail to return not found (no existing member with same email)
@@ -90,13 +91,13 @@ func (suite *UserServiceTestSuite) TestCreateUser() {
 func (suite *UserServiceTestSuite) TestCreateUserWithDefaultRoleAndTeamRole() {
 	teamID := uuid.New()
 	req := &service.CreateUserRequest{
-		TeamID:      &teamID,
-		FirstName:   "John",
-		LastName:    "Doe",
-		Email:       "john@example.com",
-		Mobile:      "+1-555-0123",
-		IUser:       "I123456",
-		CreatedBy:   "I123456",
+		TeamID:    &teamID,
+		FirstName: "John",
+		LastName:  "Doe",
+		Email:     "john@example.com",
+		Mobile:    "+1-555-0123",
+		IUser:     "I123456",
+		CreatedBy: "I123456",
 		// Role and TeamRole are not provided - should use defaults
 	}
 
@@ -181,14 +182,14 @@ func (suite *UserServiceTestSuite) TestCreateUserDuplicateEmail() {
 func (suite *UserServiceTestSuite) TestGetUserByID() {
 	userID := uuid.New()
 	existingUser := &models.User{
-		TeamID:      &userID,
-		UserID:      "I123456",
-		FirstName:   "John",
-		LastName:    "Doe",
-		Email:       "john@example.com",
-		Mobile: "+1-555-0123",
-		TeamDomain:  models.TeamDomainDeveloper,
-		TeamRole:    models.TeamRoleMember,
+		TeamID:     &userID,
+		UserID:     "I123456",
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
+		Mobile:     "+1-555-0123",
+		TeamDomain: models.TeamDomainDeveloper,
+		TeamRole:   models.TeamRoleMember,
 	}
 
 	suite.mockUserRepo.EXPECT().
@@ -268,14 +269,14 @@ func (suite *UserServiceTestSuite) TestGetMembersByOrganization() {
 func (suite *UserServiceTestSuite) TestUpdateMember() {
 	userID := uuid.New()
 	existingUser := &models.User{
-		TeamID:      &userID,
-		UserID:      "I123456",
-		FirstName:   "John",
-		LastName:    "Doe",
-		Email:       "john@example.com",
-		Mobile: "+1-555-0123",
-		TeamDomain:  models.TeamDomainDeveloper,
-		TeamRole:    models.TeamRoleMember,
+		TeamID:     &userID,
+		UserID:     "I123456",
+		FirstName:  "John",
+		LastName:   "Doe",
+		Email:      "john@example.com",
+		Mobile:     "+1-555-0123",
+		TeamDomain: models.TeamDomainDeveloper,
+		TeamRole:   models.TeamRoleMember,
 	}
 
 	newFirstName := "John"

@@ -47,8 +47,11 @@ type Config struct {
 	SonarToken string `mapstructure:"SONAR_TOKEN"`
 
 	// Jenkins configuration
-	JenkinsBaseURL             string `mapstructure:"JENKINS_BASE_URL"`
+	JenkinsBaseURL            string `mapstructure:"JENKINS_BASE_URL"`
 	JenkinsInsecureSkipVerify bool   `mapstructure:"JENKINS_INSECURE_SKIP_VERIFY"`
+
+	// Monitoring service configuration
+	MonitoringServiceURL string `mapstructure:"MONITORING_SERVICE_URL"`
 }
 
 // Load reads configuration from environment variables and config files
@@ -130,6 +133,9 @@ func setDefaults() {
 	// Jenkins defaults - production uses real JAAS URL pattern
 	viper.SetDefault("JENKINS_BASE_URL", "https://{jaasName}.jaas-gcp.cloud.sap.corp")
 	viper.SetDefault("JENKINS_INSECURE_SKIP_VERIFY", true)
+
+	// Monitoring service defaults
+	viper.SetDefault("MONITORING_SERVICE_URL", "http://localhost:8085")
 }
 
 func buildDatabaseURL(config *Config) string {

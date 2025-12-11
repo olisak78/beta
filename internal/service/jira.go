@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 	apperrors "developer-portal-backend/internal/errors"
 )
@@ -29,13 +30,16 @@ type JiraService struct {
 	tokenMu   sync.Mutex
 
 	// Fixed PAT name including machine identifier
-	patName string
+	patName      string
+	cache        cache.CacheService
+	cacheWrapper *cache.CacheWrapper
+	cacheTTLs    *cache.EndpointCacheConfig
 }
 
 /**
  * NewJiraService creates a new Jira service
  */
-func NewJiraService(cfg *config.Config) *JiraService {
+func NewJiraService(cfg *config.Config, cacheService cache.CacheService) *JiraService {
 	// PAT name is environment-scoped: "DeveloperPortal-<env>"
 	envName := strings.TrimSpace(os.Getenv("DEPLOY_ENVIRONMENT"))
 	if envName == "" {
@@ -43,13 +47,15 @@ func NewJiraService(cfg *config.Config) *JiraService {
 	}
 
 	name := fmt.Sprintf("DeveloperPortal-%s", envName)
-	// Print to console for visibility
-	//log.Printf("Jira PAT name configured: %s", name)
 
+	ttls := cache.DefaultEndpointConfig()
 	return &JiraService{
-		cfg:        cfg,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
-		patName:    name,
+		cfg:          cfg,
+		httpClient:   &http.Client{Timeout: 15 * time.Second},
+		patName:      name,
+		cache:        cacheService,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, ttls.JiraIssues),
+		cacheTTLs:    ttls,
 	}
 }
 
@@ -68,14 +74,14 @@ func (s *JiraService) InitializePATOnStartup() error {
 	// Parse base URL from config (same handling as in searchIssues)
 	base := s.cfg.JiraDomain
 	if base == "" {
-		return fmt.Errorf("jira domain is not configured")
-	}
-	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
-		base = "https://" + base
+		return apperrors.ErrJiraConfigMissing
 	}
 	baseURL, err := url.Parse(strings.TrimRight(base, "/"))
 	if err != nil {
 		return fmt.Errorf("invalid jira domain URL '%s': %w", base, err)
+	}
+	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
+		base = "https://" + base
 	}
 
 	// Cleanup any existing PAT(s) and always create a fresh one
@@ -98,7 +104,7 @@ func (s *JiraService) cleanupExistingPAT(baseURL *url.URL) (bool, bool, error) {
 	listURL := baseURL.String() + "/rest/pat/latest/tokens"
 	req, err := http.NewRequest(http.MethodGet, listURL, nil)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to create PAT list request: %w", err)
+		return false, false, apperrors.NewJiraPATError("PAT list", fmt.Sprintf("failed to create PAT list request: %v", err))
 	}
 	cred := base64.StdEncoding.EncodeToString([]byte(s.cfg.JiraUser + ":" + s.cfg.JiraPassword))
 	req.Header.Set("Authorization", "Basic "+cred)
@@ -106,19 +112,19 @@ func (s *JiraService) cleanupExistingPAT(baseURL *url.URL) (bool, bool, error) {
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return false, false, fmt.Errorf("jira PAT list request failed: %w", err)
+		return false, false, apperrors.NewJiraPATError("PAT list", fmt.Sprintf("request failed: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
-		return false, false, fmt.Errorf("jira PAT list failed: status=%d body=%s", resp.StatusCode, string(body))
+		return false, false, apperrors.NewJiraPATError("PAT list", fmt.Sprintf("failed: status=%d body=%s", resp.StatusCode, string(body)))
 	}
 
 	// Decode array of PATs
 	var tokens []patTokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
-		return false, false, fmt.Errorf("failed to decode PAT list: %w", err)
+		return false, false, apperrors.NewJiraPATError("PAT list", fmt.Sprintf("failed to decode PAT list: %v", err))
 	}
 
 	found := false
@@ -131,20 +137,20 @@ func (s *JiraService) cleanupExistingPAT(baseURL *url.URL) (bool, bool, error) {
 			delURL := fmt.Sprintf("%s/rest/pat/latest/tokens/%d", baseURL.String(), tok.ID)
 			delReq, err := http.NewRequest(http.MethodDelete, delURL, nil)
 			if err != nil {
-				return found, deletedAny, fmt.Errorf("failed to create PAT delete request: %w", err)
+				return found, deletedAny, apperrors.NewJiraPATError("PAT delete", fmt.Sprintf("failed to create PAT delete request: %v", err))
 			}
 			delReq.Header.Set("Authorization", "Basic "+cred)
 			delReq.Header.Set("Accept", "application/json")
 
 			delResp, err := s.httpClient.Do(delReq)
 			if err != nil {
-				return found, deletedAny, fmt.Errorf("jira PAT delete request failed: %w", err)
+				return found, deletedAny, apperrors.NewJiraPATError("PAT delete", fmt.Sprintf("PAT delete request failed: %v", err))
 			}
 			defer delResp.Body.Close()
 
 			if delResp.StatusCode < 200 || delResp.StatusCode >= 300 {
 				body, _ := io.ReadAll(delResp.Body)
-				return found, deletedAny, fmt.Errorf("jira PAT delete failed: status=%d body=%s", delResp.StatusCode, string(body))
+				return found, deletedAny, apperrors.NewJiraPATError("PAT delete", fmt.Sprintf("failed:status=%d body=%s", delResp.StatusCode, string(body)))
 			} else {
 				log.Printf("Jira PAT '%s' was found and deleted", s.patName)
 			}
@@ -176,13 +182,13 @@ func (s *JiraService) createPAT(baseURL *url.URL) error {
 	}
 	bodyBytes, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("failed to encode PAT create body: %w", err)
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("failed to encode PAT create body: %v", err))
 	}
 
 	// Create HTTP request
 	req, err := http.NewRequest(http.MethodPost, patURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
-		return fmt.Errorf("failed to create PAT HTTP request: %w", err)
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("failed to create PAT HTTP request: %v", err))
 	}
 	// Basic auth with configured Jira credentials
 	cred := base64.StdEncoding.EncodeToString([]byte(s.cfg.JiraUser + ":" + s.cfg.JiraPassword))
@@ -193,30 +199,30 @@ func (s *JiraService) createPAT(baseURL *url.URL) error {
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		log.Printf("ERROR: Jira PAT HTTP request failed: %v", err)
-		return fmt.Errorf("jira PAT request failed: %w", err)
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("PAT request failed: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		log.Printf("ERROR: Jira PAT creation failed: status=%d body=%s", resp.StatusCode, string(body))
-		return fmt.Errorf("jira PAT creation failed: status=%d body=%s", resp.StatusCode, string(body))
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("PAT creation failed: status=%d body=%s", resp.StatusCode, string(body)))
 	}
 
 	var patResp patTokenResponse
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&patResp); err != nil {
-		return fmt.Errorf("failed to decode PAT response: %w", err)
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("failed to decode PAT response: %v", err))
 	}
 
 	if patResp.RawToken == "" || patResp.ExpiringAt == "" {
-		return fmt.Errorf("jira PAT response missing token or expiry")
+		return apperrors.NewJiraPATError("PAT create", "PAT response missing token or expiry")
 	}
 
 	// Parse expiry time (RFC3339 with fractional seconds)
 	expiry, err := time.Parse(time.RFC3339Nano, patResp.ExpiringAt)
 	if err != nil {
-		return fmt.Errorf("failed to parse PAT expiringAt: %w", err)
+		return apperrors.NewJiraPATError("PAT create", fmt.Sprintf("failed to parse PAT expiringAt: %v", err))
 	}
 
 	s.patToken = patResp.RawToken
@@ -259,8 +265,8 @@ type JiraIssueFields struct {
 
 // JiraParent represents the parent issue of a subtask
 type JiraParent struct {
-	ID     string        `json:"id"`
-	Key    string        `json:"key"`
+	ID     string           `json:"id"`
+	Key    string           `json:"key"`
 	Fields JiraParentFields `json:"fields"`
 }
 
@@ -274,9 +280,9 @@ type JiraParentFields struct {
 
 // JiraSubtask represents a subtask of an issue
 type JiraSubtask struct {
-	ID     string              `json:"id"`
-	Key    string              `json:"key"`
-	Fields JiraSubtaskFields   `json:"fields"`
+	ID     string            `json:"id"`
+	Key    string            `json:"key"`
+	Fields JiraSubtaskFields `json:"fields"`
 }
 
 // JiraSubtaskFields represents basic fields of a subtask
@@ -352,7 +358,30 @@ func (s *JiraService) GetIssues(filters JiraIssueFilters) (*JiraIssuesResponse, 
 		return nil, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
-	return s.searchIssues(jql, filters, false)
+	params := map[string]string{
+		"project":  filters.Project,
+		"status":   filters.Status,
+		"team":     filters.Team,
+		"user":     filters.User,
+		"assignee": filters.Assignee,
+		"type":     filters.Type,
+		"summary":  filters.Summary,
+		"key":      filters.Key,
+		"page":     fmt.Sprintf("%d", filters.Page),
+		"limit":    fmt.Sprintf("%d", filters.Limit),
+	}
+	cacheKey := cache.JiraCacheKey("issues", filters.User, params)
+
+	var response JiraIssuesResponse
+	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.JiraIssues, &response, func() (interface{}, error) {
+		return s.searchIssues(jql, filters, false)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
 }
 
 // GetIssuesCount returns the count of Jira issues based on the provided filters.
@@ -366,11 +395,31 @@ func (s *JiraService) GetIssuesCount(filters JiraIssueFilters) (int, error) {
 		return 0, fmt.Errorf("failed to build JQL query: %w", err)
 	}
 
-	response, err := s.searchIssues(jql, filters, true)
+	params := map[string]string{
+		"project":  filters.Project,
+		"status":   filters.Status,
+		"team":     filters.Team,
+		"user":     filters.User,
+		"assignee": filters.Assignee,
+		"type":     filters.Type,
+		"count":    "true", // Distinguish count from regular queries
+	}
+	cacheKey := cache.JiraCacheKey("issues-count", filters.User, params)
+
+	var count int
+	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.JiraIssues, &count, func() (interface{}, error) {
+		response, err := s.searchIssues(jql, filters, true)
+		if err != nil {
+			return nil, err
+		}
+		return response.Total, nil
+	})
+
 	if err != nil {
 		return 0, err
 	}
-	return response.Total, nil
+
+	return count, nil
 }
 
 // buildJQL constructs the JQL query based on the provided filters with validation

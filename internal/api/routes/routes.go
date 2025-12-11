@@ -4,6 +4,7 @@ import (
 	"developer-portal-backend/internal/api/handlers"
 	"developer-portal-backend/internal/api/middleware"
 	"developer-portal-backend/internal/auth"
+	"developer-portal-backend/internal/client"
 	"developer-portal-backend/internal/config"
 	"developer-portal-backend/internal/repository"
 	"developer-portal-backend/internal/service"
@@ -14,6 +15,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
+	"developer-portal-backend/internal/cache"
 )
 
 // userRepoAdapter adapts repository.MemberRepository to auth.MemberRepository
@@ -26,7 +28,7 @@ func (a *userRepoAdapter) GetByEmail(email string) (interface{}, error) {
 }
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
+func SetupRoutes(db *gorm.DB, cfg *config.Config, cacheService cache.CacheService) *gin.Engine {
 	// Create router
 	router := gin.New()
 
@@ -50,27 +52,31 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	categoryRepo := repository.NewCategoryRepository(db)
 	linkRepo := repository.NewLinkRepository(db)
 	docRepo := repository.NewDocumentationRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+	pluginRepo := repository.NewPluginRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userRepo, linkRepo, validator)
-	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator)
+	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator, cacheService)
 	projectService := service.NewProjectService(projectRepo, validator)
-	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator)
-	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator)
-	categoryService := service.NewCategoryService(categoryRepo, validator)
-	linkService := service.NewLinkService(linkRepo, userRepo, teamRepo, categoryRepo, validator)
+	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator, cacheService)
+	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator, cacheService)
+	categoryService := service.NewCategoryService(categoryRepo, validator, cacheService)
+	linkService := service.NewLinkService(linkRepo, userRepo, teamRepo, categoryRepo, validator, cacheService)
 	docService := service.NewDocumentationService(docRepo, teamRepo, validator)
 	ldapService := service.NewLDAPService(cfg)
-	jiraService := service.NewJiraService(cfg)
+	jiraService := service.NewJiraService(cfg, cacheService)
 	// Initialize Jira PAT on startup: use fixed-name PAT with machine identifier, delete existing if present, then create a new one
 	if err := jiraService.InitializePATOnStartup(); err != nil {
 		log.Printf("Warning: Jira PAT initialization failed: %v", err)
 	}
 	jenkinsService := service.NewJenkinsService(cfg)
-	sonarService := service.NewSonarService(cfg)
+	sonarService := service.NewSonarService(cfg, cacheService)
 	aicoreService := service.NewAICoreService(userRepo, teamRepo, groupRepo, organizationRepo)
 
-	// Initialize auth configuration and services
+	pluginService := service.NewPluginService(pluginRepo, userRepo, validator)
+
+	// Initialize auth configuration and services after service initialization
 	authConfig, err := auth.LoadAuthConfig("config/auth.yaml")
 	if err != nil {
 		log.Printf("Warning: Failed to load auth config: %v", err)
@@ -82,8 +88,8 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	var authMiddleware *auth.AuthMiddleware
 	var authService *auth.AuthService
 	if authConfig != nil {
-		memberRepoAuth := &userRepoAdapter{repo: userRepo}
-		authService, err = auth.NewAuthService(authConfig, memberRepoAuth)
+		userRepoAuth := &userRepoAdapter{repo: userRepo}
+		authService, err = auth.NewAuthService(authConfig, userRepoAuth, tokenRepo)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize auth service: %v", err)
 		} else {
@@ -92,9 +98,23 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		}
 	}
 
+	ldapService := service.NewLDAPService(cfg)
+	jiraService := service.NewJiraService(cfg)
+	// Initialize Jira PAT on startup: use fixed-name PAT with machine identifier, delete existing if present, then create a new one
+	if err := jiraService.InitializePATOnStartup(); err != nil {
+		log.Printf("Warning: Jira PAT initialization failed: %v", err)
+	}
+	jenkinsService := service.NewJenkinsService(cfg)
+	sonarService := service.NewSonarService(cfg)
+	aicoreService := service.NewAICoreService(userRepo, teamRepo, groupRepo, organizationRepo)
+
+	// Initialize alert history client and service
+	alertHistoryClient := client.NewAlertHistoryClient(cfg.MonitoringServiceURL)
+	alertHistoryService := service.NewAlertHistoryService(alertHistoryClient)
+
 	// Initialize handlers
 	healthHandler := handlers.NewHealthHandler(db)
-	userHandler := handlers.NewUserHandler(userService, teamRepo)
+	userHandler := handlers.NewUserHandler(userService, teamService)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	projectHandler := handlers.NewProjectHandler(projectService)
 	componentHandler := handlers.NewComponentHandlerWithLandscape(componentService, landscapeService, teamService)
@@ -106,11 +126,13 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	jiraHandler := handlers.NewJiraHandler(jiraService)
 	jenkinsHandler := handlers.NewJenkinsHandler(jenkinsService)
 	sonarHandler := handlers.NewSonarHandler(sonarService)
-	githubService := service.NewGitHubService(authService)
+	githubService := service.NewGitHubService(authService, cacheService)
 	githubHandler := handlers.NewGitHubHandler(githubService)
+	pluginHandler := handlers.NewPluginHandlerWithGitHub(pluginService, githubService)
 	aicoreHandler := handlers.NewAICoreHandler(aicoreService, validator)
 	alertsService := service.NewAlertsService(projectRepo, authService)
 	alertsHandler := handlers.NewAlertsHandler(alertsService)
+	alertHistoryHandler := handlers.NewAlertHistoryHandler(alertHistoryService)
 
 	// Health check routes
 	router.GET("/health", healthHandler.Health)
@@ -125,16 +147,14 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		auth := router.Group("/api/auth")
 		{
 			// Provider-specific auth routes
+			auth.GET("/refresh", authHandler.Refresh)
+			auth.POST("/logout", authHandler.Logout)
 			providerGroup := auth.Group("/:provider")
 			{
 				providerGroup.GET("/start", authHandler.Start)
 				providerGroup.GET("/handler/frame", authHandler.HandlerFrame)
-				providerGroup.GET("/refresh", authHandler.Refresh)
-				providerGroup.POST("/logout", authHandler.Logout)
 			}
 
-			// Helper endpoint for token validation (not part of Backstage spec)
-			auth.POST("/validate", authHandler.ValidateToken)
 		}
 	}
 
@@ -159,6 +179,8 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			users.GET("/:user_id", userHandler.GetMemberByUserID)
 			users.POST("/:user_id/favorites/:link_id", userHandler.AddFavoriteLink)
 			users.DELETE("/:user_id/favorites/:link_id", userHandler.RemoveFavoriteLink)
+			users.POST("/:user_id/plugins/:plugin_id", userHandler.AddSubscribedPlugin)
+			users.DELETE("/:user_id/plugins/:plugin_id", userHandler.RemoveSubscribedPlugin)
 		}
 
 		// Current user route: /users/me
@@ -267,6 +289,15 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			alerts.POST("/pr", alertsHandler.CreateAlertPR) // POST /api/v1/projects/:projectId/alerts/pr
 		}
 
+		// Alert History routes - Monitoring service proxy for triggered alerts history
+		alertHistory := v1.Group("/alert-history")
+		{
+			alertHistory.GET("/projects", alertHistoryHandler.GetAvailableProjects)                       // GET /api/v1/alert-history/projects
+			alertHistory.GET("/alerts/:project", alertHistoryHandler.GetAlertsByProject)                  // GET /api/v1/alert-history/alerts/:project?page=1&pageSize=50&severity=critical&status=firing
+			alertHistory.GET("/alerts/:project/:fingerprint", alertHistoryHandler.GetAlertByFingerprint)  // GET /api/v1/alert-history/alerts/:project/:fingerprint
+			alertHistory.PUT("/alerts/:project/:fingerprint/label", alertHistoryHandler.UpdateAlertLabel) // PUT /api/v1/alert-history/alerts/:project/:fingerprint/label
+		}
+
 		// Category routes
 		categories := v1.Group("/categories")
 		{
@@ -279,6 +310,19 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			links.GET("", linkHandler.ListLinks) // GET /api/v1/links?owner=<user_id>
 			links.POST("", linkHandler.CreateLink)
 			links.DELETE("/:id", linkHandler.DeleteLink)
+			links.PUT("/:id", linkHandler.UpdateLink)
+		}
+
+		// Plugin routes
+		plugins := v1.Group("/plugins")
+		{
+			plugins.POST("", pluginHandler.CreatePlugin)                // POST /api/v1/plugins
+			plugins.GET("", pluginHandler.GetAllPlugins)                // GET /api/v1/plugins
+			plugins.GET("/:id", pluginHandler.GetPluginByID)            // GET /api/v1/plugins/{id}
+			plugins.PUT("/:id", pluginHandler.UpdatePlugin)             // PUT /api/v1/plugins/{id}
+			plugins.DELETE("/:id", pluginHandler.DeletePlugin)          // DELETE /api/v1/plugins/{id}
+			plugins.GET("/:id/ui", pluginHandler.GetPluginUI)           // GET /api/v1/plugins/{id}/ui
+			plugins.GET("/:id/proxy", pluginHandler.ProxyPluginBackend) // GET /api/v1/plugins/{id}/proxy?path={targetPath}
 		}
 
 		// Nested resource routes moved to respective groups to avoid conflicts
@@ -311,3 +355,4 @@ func SetupHealthRoutes(db *gorm.DB) *gin.Engine {
 
 	return router
 }
+

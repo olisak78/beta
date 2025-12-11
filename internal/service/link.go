@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/repository"
+	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/logger"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -19,19 +23,25 @@ type LinkService struct {
 	teamRepo     repository.TeamRepositoryInterface
 	categoryRepo repository.CategoryRepositoryInterface
 	validator    *validator.Validate
+	cache        cache.CacheService
+	cacheWrapper *cache.CacheWrapper
+	cacheTTL     time.Duration
 }
 
 // Ensure LinkService implements LinkServiceInterface
 var _ LinkServiceInterface = (*LinkService)(nil)
 
 // NewLinkService creates a new LinkService
-func NewLinkService(linkRepo repository.LinkRepositoryInterface, userRepo repository.UserRepositoryInterface, teamRepo repository.TeamRepositoryInterface, categoryRepo repository.CategoryRepositoryInterface, validator *validator.Validate) *LinkService {
+func NewLinkService(linkRepo repository.LinkRepositoryInterface, userRepo repository.UserRepositoryInterface, teamRepo repository.TeamRepositoryInterface, categoryRepo repository.CategoryRepositoryInterface, validator *validator.Validate, cacheService cache.CacheService) *LinkService {
 	return &LinkService{
 		linkRepo:     linkRepo,
 		userRepo:     userRepo,
 		teamRepo:     teamRepo,
 		categoryRepo: categoryRepo,
 		validator:    validator,
+		cache:        cacheService,
+		cacheWrapper: cache.NewCacheWrapper(cacheService, 5*time.Minute),
+		cacheTTL:     5 * time.Minute,
 	}
 }
 
@@ -56,6 +66,16 @@ type CreateLinkRequest struct {
 	CategoryID  string `json:"category_id" validate:"required,uuid4"`
 	Tags        string `json:"tags" validate:"max=200"` // optional CSV string
 	CreatedBy   string `json:"-"`                       // derived from bearer token 'username'
+}
+
+// UpdateLinkRequest represents the payload for updating a link
+type UpdateLinkRequest struct {
+	Name        string `json:"name" validate:"required,min=1,max=40"`
+	Description string `json:"description" validate:"max=200"`
+	URL         string `json:"url" validate:"required,url,max=2000"`
+	CategoryID  string `json:"category_id" validate:"required,uuid4"`
+	Tags        string `json:"tags" validate:"max=200"` // optional CSV string
+	UpdatedBy   string `json:"-"`                       // derived from bearer token 'username'
 }
 
 // CreateLink validates and creates a new link
@@ -115,6 +135,92 @@ func (s *LinkService) CreateLink(req *CreateLinkRequest) (*LinkResponse, error) 
 		return nil, fmt.Errorf("failed to create link: %w", err)
 	}
 
+	// INVALIDATE owner's link cache
+	s.invalidateLinkCache(req.Owner)
+
+	res := toLinkResponse(link)
+	return &res, nil
+}
+
+// UpdateLink validates and updates an existing link
+func (s *LinkService) UpdateLink(id uuid.UUID, req *UpdateLinkRequest) (*LinkResponse, error) {
+	log := logger.New().WithFields(map[string]interface{}{
+		"operation":  "UpdateLink",
+		"link_id":    id.String(),
+		"updated_by": req.UpdatedBy,
+		"link_name":  req.Name,
+	})
+
+	// Validate request structure
+	if err := s.validator.Struct(req); err != nil {
+		log.WithField("error", err.Error()).Warn("Link validation failed")
+		return nil, apperrors.NewValidationError("", err.Error())
+	}
+
+	if strings.TrimSpace(req.UpdatedBy) == "" {
+		log.Warn("updated_by is missing")
+		return nil, apperrors.NewValidationError("updated_by", "updated_by is required")
+	}
+
+	// Validate updated_by is an existing users.user_id OR a team's name
+	if _, err := s.userRepo.GetByUserID(req.UpdatedBy); err != nil {
+		if _, errTeam := s.teamRepo.GetByNameGlobal(req.UpdatedBy); errTeam != nil {
+			log.WithField("updated_by", req.UpdatedBy).Warn("updated_by user or team not found")
+			return nil, apperrors.ErrUserNotFound
+		}
+	}
+
+	// Get existing link
+	link, err := s.linkRepo.GetByID(id)
+	if err != nil {
+		log.WithField("error", err.Error()).Warn("Link not found in database")
+		return nil, apperrors.ErrLinkNotFound
+	}
+
+	// Log the original state for audit trail
+	log.WithFields(map[string]interface{}{
+		"original_name":        link.Name,
+		"original_url":         link.URL,
+		"original_category_id": link.CategoryID.String(),
+		"original_owner":       link.Owner.String(), // Log owner to verify it's not changed
+	}).Debug("Retrieved link for update")
+
+	categoryUUID, err := uuid.Parse(req.CategoryID)
+	if err != nil {
+		log.WithField("category_id", req.CategoryID).Warn("Invalid category_id UUID")
+		return nil, apperrors.NewValidationError("category_id", "invalid UUID format")
+	}
+
+	// Validate category exists
+	if _, err := s.categoryRepo.GetByID(categoryUUID); err != nil {
+		log.WithField("category_id", req.CategoryID).Warn("Category not found")
+		return nil, apperrors.ErrCategoryNotFound
+	}
+
+	// Update ONLY the allowed fields
+	// SECURITY: Owner is intentionally NOT updated here to prevent ownership changes
+	link.Name = req.Name
+	link.Title = req.Name // Title mirrors name per requirement
+	link.Description = req.Description
+	link.URL = req.URL
+	link.CategoryID = categoryUUID
+	link.Tags = req.Tags
+	link.UpdatedBy = req.UpdatedBy
+	// link.Owner is NOT modified - ownership cannot be changed
+
+	if err := s.linkRepo.Update(link); err != nil {
+		log.WithField("error", err.Error()).Error("Failed to update link in database")
+		return nil, fmt.Errorf("failed to update link: %w", err)
+	}
+
+	log.WithFields(map[string]interface{}{
+		"link_id":     link.ID.String(),
+		"link_name":   link.Name,
+		"url":         link.URL,
+		"category_id": link.CategoryID.String(),
+		"owner":       link.Owner.String(), // Verify owner unchanged
+	}).Info("Link updated successfully in database")
+
 	res := toLinkResponse(link)
 	return &res, nil
 }
@@ -125,23 +231,35 @@ func (s *LinkService) GetByOwnerUserID(ownerUserID string) ([]LinkResponse, erro
 		return nil, fmt.Errorf("owner user_id is required")
 	}
 
-	// Find user by user_id
-	user, err := s.userRepo.GetByUserID(ownerUserID)
-	if err != nil || user == nil {
-		return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
-	}
+	cacheKey := fmt.Sprintf("links:owner:%s", ownerUserID)
 
-	// Fetch links by owner UUID
-	links, err := s.linkRepo.GetByOwner(user.ID)
+	var res []LinkResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &res, func() (interface{}, error) {
+		// Find user by user_id
+		user, err := s.userRepo.GetByUserID(ownerUserID)
+		if err != nil || user == nil {
+			return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
+		}
+
+		// Fetch links by owner UUID
+		links, err := s.linkRepo.GetByOwner(user.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get links by owner: %w", err)
+		}
+
+		// Map to response type, omitting audit and owner fields
+		linkResponses := make([]LinkResponse, 0, len(links))
+		for i := range links {
+			linkResponses = append(linkResponses, toLinkResponse(&links[i]))
+		}
+
+		return linkResponses, nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get links by owner: %w", err)
+		return nil, err
 	}
 
-	// Map to response type, omitting audit and owner fields
-	res := make([]LinkResponse, 0, len(links))
-	for i := range links {
-		res = append(res, toLinkResponse(&links[i]))
-	}
 	return res, nil
 }
 
@@ -155,60 +273,72 @@ func (s *LinkService) GetByOwnerUserIDWithViewer(ownerUserID string, viewerName 
 		return s.GetByOwnerUserID(ownerUserID)
 	}
 
-	// Find owner by user_id
-	owner, err := s.userRepo.GetByUserID(ownerUserID)
-	if err != nil || owner == nil {
-		return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
-	}
+	cacheKey := fmt.Sprintf("links:owner:%s:viewer:%s", ownerUserID, viewerName)
 
-	// Find viewer by name (mapped from bearer token 'username')
-	viewer, err := s.userRepo.GetByName(viewerName)
-	if err != nil || viewer == nil {
-		// Fallback to non-favorite response if viewer not found
-		return s.GetByOwnerUserID(ownerUserID)
-	}
+	var res []LinkResponse
+	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &res, func() (interface{}, error) {
+		// Find owner by user_id
+		owner, err := s.userRepo.GetByUserID(ownerUserID)
+		if err != nil || owner == nil {
+			return nil, fmt.Errorf("owner user with user_id %q not found", ownerUserID)
+		}
 
-	// Parse favorites from viewer.Metadata
-	favSet := make(map[uuid.UUID]struct{})
-	if len(viewer.Metadata) > 0 {
-		var meta map[string]interface{}
-		if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
-			if v, ok := meta["favorites"]; ok && v != nil {
-				switch arr := v.(type) {
-				case []interface{}:
-					for _, it := range arr {
-						if str, ok := it.(string); ok && str != "" {
-							if id, err := uuid.Parse(strings.TrimSpace(str)); err == nil {
-								favSet[id] = struct{}{}
+		// Find viewer by name (mapped from bearer token 'username')
+		viewer, err := s.userRepo.GetByName(viewerName)
+		if err != nil || viewer == nil {
+			// Fallback to non-favorite response if viewer not found
+			return s.GetByOwnerUserID(ownerUserID)
+		}
+
+		// Parse favorites from viewer.Metadata
+		favSet := make(map[uuid.UUID]struct{})
+		if len(viewer.Metadata) > 0 {
+			var meta map[string]interface{}
+			if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
+				if v, ok := meta["favorites"]; ok && v != nil {
+					switch arr := v.(type) {
+					case []interface{}:
+						for _, it := range arr {
+							if str, ok := it.(string); ok && str != "" {
+								if id, err := uuid.Parse(strings.TrimSpace(str)); err == nil {
+									favSet[id] = struct{}{}
+								}
 							}
 						}
-					}
-				case []string:
-					for _, s2 := range arr {
-						if id, err := uuid.Parse(strings.TrimSpace(s2)); err == nil {
-							favSet[id] = struct{}{}
+					case []string:
+						for _, s2 := range arr {
+							if id, err := uuid.Parse(strings.TrimSpace(s2)); err == nil {
+								favSet[id] = struct{}{}
+							}
 						}
 					}
 				}
 			}
 		}
-	}
 
-	// Fetch links by owner UUID
-	links, err := s.linkRepo.GetByOwner(owner.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get links by owner: %w", err)
-	}
-
-	// Map to response type, omitting audit and owner fields; mark favorites
-	res := make([]LinkResponse, 0, len(links))
-	for i := range links {
-		lr := toLinkResponse(&links[i])
-		if _, ok := favSet[links[i].ID]; ok {
-			lr.Favorite = true
+		// Fetch links by owner UUID
+		links, err := s.linkRepo.GetByOwner(owner.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get links by owner: %w", err)
 		}
-		res = append(res, lr)
+
+		// Map to response type, omitting audit and owner fields; mark favorites
+		linkResponses := make([]LinkResponse, 0, len(links))
+		for i := range links {
+			lr := toLinkResponse(&links[i])
+			if _, ok := favSet[links[i].ID]; ok {
+				lr.Favorite = true
+			}
+			linkResponses = append(linkResponses, lr)
+		}
+
+		return linkResponses, nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
+
 	return res, nil
 }
 
@@ -236,9 +366,34 @@ func toLinkResponse(l *models.Link) LinkResponse {
 
 // DeleteLink deletes a link by UUID
 func (s *LinkService) DeleteLink(id uuid.UUID) error {
-	// Delegate to repository; repository Delete is idempotent
 	if err := s.linkRepo.Delete(id); err != nil {
 		return fmt.Errorf("failed to delete link: %w", err)
 	}
+
 	return nil
+}
+
+// invalidateLinkCache invalidates cache entries related to link operations
+func (s *LinkService) invalidateLinkCache(ownerUUIDStr string) {
+	// Get owner UUID
+	ownerUUID, err := uuid.Parse(ownerUUIDStr)
+	if err != nil {
+		return
+	}
+
+	// Try to get the owner as a user to find their user_id
+	if user, err := s.userRepo.GetByID(ownerUUID); err == nil && user != nil {
+		// Invalidate cache by user_id
+		_ = s.cache.Delete(fmt.Sprintf("links:owner:%s", user.UserID))
+
+		// Invalidate all viewer-specific caches for this owner (we can't know all viewers)
+		// This is a limitation - we'll rely on TTL expiration for viewer caches
+		// Alternatively, you could clear by pattern if your cache supports it
+	}
+
+	// Try to get the owner as a team
+	if team, err := s.teamRepo.GetByID(ownerUUID); err == nil && team != nil {
+		// Invalidate cache by team name
+		_ = s.cache.Delete(fmt.Sprintf("links:owner:%s", team.Name))
+	}
 }

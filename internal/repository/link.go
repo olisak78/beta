@@ -50,3 +50,17 @@ func (r *LinkRepository) Create(link *models.Link) error {
 func (r *LinkRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Link{}, "id = ?", id).Error
 }
+
+// GetByID retrieves a link by its UUID
+func (r *LinkRepository) GetByID(id uuid.UUID) (*models.Link, error) {
+	var link models.Link
+	if err := r.db.Where("id = ?", id).First(&link).Error; err != nil {
+		return nil, err
+	}
+	return &link, nil
+}
+
+// Update updates an existing link
+func (r *LinkRepository) Update(link *models.Link) error {
+	return r.db.Save(link).Error
+}

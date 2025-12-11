@@ -5,11 +5,27 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"developer-portal-backend/internal/database/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type noopTokenStore struct{}
+
+func (n *noopTokenStore) UpsertToken(userUUID uuid.UUID, provider string, token string, expiresAt time.Time) error {
+	return nil
+}
+func (n *noopTokenStore) GetValidToken(userUUID uuid.UUID, provider string) (*models.Token, error) {
+	return nil, nil
+}
+func (n *noopTokenStore) DeleteToken(userUUID uuid.UUID, provider string) error { return nil }
+func (n *noopTokenStore) CleanupExpiredTokens() error                           { return nil }
 
 func TestAuthConfig(t *testing.T) {
 	t.Run("valid config structure", func(t *testing.T) {
@@ -117,7 +133,7 @@ func TestJWTOperations(t *testing.T) {
 		},
 	}
 
-	service, err := NewAuthService(config, nil)
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
 	require.NoError(t, err)
 
 	userProfile := &UserProfile{
@@ -126,20 +142,20 @@ func TestJWTOperations(t *testing.T) {
 		Email:     "test@example.com",
 		Name:      "Test User",
 		AvatarURL: "https://avatars.githubusercontent.com/u/12345",
+		UUID:      "test-uuid",
 	}
 
 	// Test token generation
-	token, err := service.GenerateJWT(userProfile, "githubtools")
+	token, err := service.GenerateJWT(userProfile)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 
 	// Test token validation
 	validatedClaims, err := service.ValidateJWT(token)
 	assert.NoError(t, err)
-	assert.Equal(t, userProfile.ID, validatedClaims.UserID)
 	assert.Equal(t, userProfile.Username, validatedClaims.Username)
 	assert.Equal(t, userProfile.Email, validatedClaims.Email)
-	assert.Equal(t, "githubtools", validatedClaims.Provider)
+	assert.Equal(t, userProfile.UUID, validatedClaims.UUID)
 
 	// Test invalid token
 	_, err = service.ValidateJWT("invalid-token")
@@ -160,7 +176,7 @@ func TestAuthHandlers(t *testing.T) {
 		RedirectURL: "http://localhost:3000",
 	}
 
-	service, err := NewAuthService(config, nil)
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
 	require.NoError(t, err)
 
 	handler := NewAuthHandler(service)
@@ -213,7 +229,7 @@ func TestRefreshToken(t *testing.T) {
 		},
 	}
 
-	service, err := NewAuthService(config, nil)
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
 	require.NoError(t, err)
 
 	// Create a user profile
@@ -223,17 +239,19 @@ func TestRefreshToken(t *testing.T) {
 		Email:     "test@example.com",
 		Name:      "Test User",
 		AvatarURL: "https://avatars.githubusercontent.com/u/12345",
+		UUID:      "test-uuid",
 	}
 
 	// Generate initial token
-	token, err := service.GenerateJWT(userProfile, "githubtools")
+	token, err := service.GenerateJWT(userProfile)
 	require.NoError(t, err)
 
 	// Validate the token can be parsed
 	claims, err := service.ValidateJWT(token)
 	assert.NoError(t, err)
-	assert.Equal(t, userProfile.ID, claims.UserID)
-	assert.Equal(t, "githubtools", claims.Provider)
+	assert.Equal(t, userProfile.Username, claims.Username)
+	assert.Equal(t, userProfile.Email, claims.Email)
+	assert.Equal(t, userProfile.UUID, claims.UUID)
 }
 
 func TestConfigValidation(t *testing.T) {
@@ -340,17 +358,18 @@ func TestJWTExpiration(t *testing.T) {
 		},
 	}
 
-	service, err := NewAuthService(config, nil)
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
 	require.NoError(t, err)
 
 	userProfile := &UserProfile{
 		ID:       12345,
 		Username: "testuser",
 		Email:    "test@example.com",
+		UUID:     "test-uuid",
 	}
 
 	// Generate token
-	token, err := service.GenerateJWT(userProfile, "githubtools")
+	token, err := service.GenerateJWT(userProfile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, token, "Token should not be empty")
 
@@ -358,9 +377,86 @@ func TestJWTExpiration(t *testing.T) {
 	claims, err := service.ValidateJWT(token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
-	
+
 	// Verify all basic claims are set
-	assert.Equal(t, userProfile.ID, claims.UserID)
 	assert.Equal(t, userProfile.Username, claims.Username)
-	assert.Equal(t, "githubtools", claims.Provider)
+	assert.Equal(t, userProfile.Email, claims.Email)
+	assert.Equal(t, userProfile.UUID, claims.UUID)
+}
+
+func TestJWTExpiration_ExpiredTokenInvalid(t *testing.T) {
+	// Config with known secret and minimal provider to init service
+	config := &AuthConfig{
+		JWTSecret:   "test-signing-key-for-expired-token",
+		RedirectURL: "http://localhost:3000",
+		Providers: map[string]ProviderConfig{
+			"githubtools": {
+				ClientID:     "test-client-id",
+				ClientSecret: "test-client-secret",
+			},
+		},
+	}
+
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
+	require.NoError(t, err)
+
+	// Manually mint an already-expired token (exp in the past)
+	claims := &AuthClaims{
+		Username: "testuser",
+		Email:    "test@example.com",
+		UUID:     "test-uuid",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Minute)),
+			Issuer:    "developer-portal",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	expiredToken, err := token.SignedString([]byte(config.JWTSecret))
+	require.NoError(t, err)
+
+	// Validate should fail due to expiration
+	_, err = service.ValidateJWT(expiredToken)
+	assert.Error(t, err, "expected an error for expired token")
+}
+
+func TestJWTExpiration_58MinutesValid(t *testing.T) {
+	// Configure service to mint tokens with 58 minutes expiry
+	config := &AuthConfig{
+		JWTSecret:   "test-signing-key-for-58-minutes",
+		RedirectURL: "http://localhost:3000",
+		Providers: map[string]ProviderConfig{
+			"githubtools": {
+				ClientID:     "test-client-id",
+				ClientSecret: "test-client-secret",
+			},
+		},
+		JWTExpiresInSeconds: 58 * 60, // 58 minutes
+	}
+
+	service, err := NewAuthService(config, nil, &noopTokenStore{})
+	require.NoError(t, err)
+
+	// Create minimal profile
+	userProfile := &UserProfile{
+		ID:       1,
+		Username: "user58",
+		Email:    "user58@example.com",
+		UUID:     "uuid-58",
+	}
+
+	// Generate and validate token
+	token, err := service.GenerateJWT(userProfile)
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+
+	claims, err := service.ValidateJWT(token)
+	assert.NoError(t, err, "token with 58 minutes expiry should be valid")
+	require.NotNil(t, claims)
+
+	// Ensure the exp is ~58 minutes in the future (allow small processing skew)
+	require.NotNil(t, claims.ExpiresAt)
+	now := time.Now()
+	exp := claims.ExpiresAt.Time
+	assert.True(t, exp.After(now.Add(57*time.Minute)), "exp should be after ~57 minutes from now")
+	assert.True(t, exp.Before(now.Add(59*time.Minute)), "exp should be before ~59 minutes from now")
 }

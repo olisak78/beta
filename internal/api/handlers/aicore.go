@@ -30,11 +30,11 @@ func NewAICoreHandler(aicoreService service.AICoreServiceInterface, validator *v
 func (h *AICoreHandler) handleAICoreError(c *gin.Context, err error) {
 	switch {
 	case errors.IsAuthentication(err):
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": errors.ErrAuthenticationRequired.Error()})
 	case errors.IsAuthorization(err):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	case errors.IsConfiguration(err):
-		c.JSON(http.StatusForbidden, gin.H{"error": "No AI Core credentials configured for your team"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.ErrAICoreCredentialsNotConfigured.Message})
 	case errors.IsNotFound(err):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	default:
@@ -86,7 +86,7 @@ func (h *AICoreHandler) GetModels(c *gin.Context) {
 	if scenarioID == "" {
 		logger.FromGinContext(c).WithField("handler", "GetModels").
 			Warn("AI Core: Missing required scenarioId parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "scenarioId query parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingScenarioID.Error()})
 		return
 	}
 
@@ -189,11 +189,11 @@ func (h *AICoreHandler) CreateDeployment(c *gin.Context) {
 
 	// Validate that either configurationId or configurationRequest is provided, but not both
 	if req.ConfigurationID == nil && req.ConfigurationRequest == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Either configurationId or configurationRequest must be provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingConfigurationInput.Error()})
 		return
 	}
 	if req.ConfigurationID != nil && req.ConfigurationRequest != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ConfigurationId and configurationRequest cannot both be provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrBothConfigurationInputs.Error()})
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *AICoreHandler) CreateDeployment(c *gin.Context) {
 func (h *AICoreHandler) UpdateDeployment(c *gin.Context) {
 	deploymentID := c.Param("deploymentId")
 	if deploymentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "deploymentId parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingDeploymentID.Error()})
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *AICoreHandler) UpdateDeployment(c *gin.Context) {
 
 	// At least one field should be provided
 	if req.TargetStatus == "" && req.ConfigurationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one of targetStatus or configurationId must be provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingTargetStatusOrConfigID.Error()})
 		return
 	}
 
@@ -303,7 +303,7 @@ func (h *AICoreHandler) GetMe(c *gin.Context) {
 func (h *AICoreHandler) GetDeploymentDetails(c *gin.Context) {
 	deploymentID := c.Param("deploymentId")
 	if deploymentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "deploymentId parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingDeploymentID})
 		return
 	}
 
@@ -334,7 +334,7 @@ func (h *AICoreHandler) GetDeploymentDetails(c *gin.Context) {
 func (h *AICoreHandler) DeleteDeployment(c *gin.Context) {
 	deploymentID := c.Param("deploymentId")
 	if deploymentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "deploymentId parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrMissingDeploymentID})
 		return
 	}
 
@@ -430,14 +430,14 @@ func (h *AICoreHandler) UploadAttachment(c *gin.Context) {
 
 	// Parse multipart form with the size limit
 	if err := c.Request.ParseMultipartForm(maxTotalSize); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Files too large or invalid form data. Combined size limit is 5MB."})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrFileSizeTooLarge.Error()})
 		return
 	}
 
 	// Get the multipart form
 	form := c.Request.MultipartForm
 	if form == nil || form.File == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No files provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrNoFilesProvided.Error()})
 		return
 	}
 
@@ -451,7 +451,7 @@ func (h *AICoreHandler) UploadAttachment(c *gin.Context) {
 	}
 
 	if len(fileHeaders) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No files provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrNoFilesProvided.Error()})
 		return
 	}
 
@@ -463,7 +463,7 @@ func (h *AICoreHandler) UploadAttachment(c *gin.Context) {
 
 	if totalSize > maxTotalSize {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":     "Combined file size exceeds 5MB limit",
+			"error":     errors.ErrCombinedFileSizeExceeds.Error(),
 			"totalSize": totalSize,
 			"maxSize":   maxTotalSize,
 		})

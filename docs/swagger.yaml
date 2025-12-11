@@ -1,36 +1,5 @@
 basePath: /api/v1
 definitions:
-  auth.AuthClaims:
-    properties:
-      aud:
-        example: developer-portal
-        type: string
-      email:
-        example: john.doe@example.com
-        type: string
-      exp:
-        example: 1672531200
-        type: integer
-      iat:
-        example: 1672527600
-        type: integer
-      iss:
-        description: Standard JWT fields
-        example: developer-portal-backend
-        type: string
-      provider:
-        example: githubtools
-        type: string
-      sub:
-        example: "12345"
-        type: string
-      user_id:
-        example: 12345
-        type: integer
-      username:
-        example: johndoe
-        type: string
-    type: object
   auth.AuthLogoutResponse:
     properties:
       message:
@@ -57,14 +26,6 @@ definitions:
         example: true
         type: boolean
     type: object
-  auth.AuthValidateResponse:
-    properties:
-      claims:
-        $ref: '#/definitions/auth.AuthClaims'
-      valid:
-        example: true
-        type: boolean
-    type: object
   auth.UserProfile:
     properties:
       avatarUrl:
@@ -73,12 +34,79 @@ definitions:
         type: string
       id:
         type: integer
-      memberId:
-        description: ID of member with matching email
-        type: string
       name:
         type: string
       username:
+        type: string
+      uuid:
+        description: User UUID from database table
+        type: string
+    type: object
+  client.AlertHistoryPaginatedResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/client.AlertHistoryResponse'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  client.AlertHistoryResponse:
+    properties:
+      alertname:
+        type: string
+      annotations:
+        additionalProperties: true
+        type: object
+      createdAt:
+        type: string
+      endsAt:
+        type: string
+      fingerprint:
+        type: string
+      labels:
+        additionalProperties: true
+        type: object
+      landscape:
+        type: string
+      region:
+        type: string
+      severity:
+        type: string
+      startsAt:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  client.ProjectsResponse:
+    properties:
+      projects:
+        items:
+          type: string
+        type: array
+    type: object
+  client.UpdateLabelResponse:
+    properties:
+      fingerprint:
+        type: string
+      label:
+        properties:
+          key:
+            type: string
+          value:
+            type: string
+        type: object
+      message:
+        type: string
+      project:
         type: string
     type: object
   handlers.ClosePullRequestRequest:
@@ -244,36 +272,6 @@ definitions:
         type: string
       status:
         example: queued
-        type: string
-    type: object
-  handlers.ProjectResponse:
-    properties:
-      created_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
-      created_by:
-        example: user123
-        type: string
-      description:
-        example: This is a sample project
-        type: string
-      id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      metadata:
-        additionalProperties: true
-        type: object
-      name:
-        example: my-project
-        type: string
-      title:
-        example: My Project
-        type: string
-      updated_at:
-        example: "2023-01-01T00:00:00Z"
-        type: string
-      updated_by:
-        example: user123
         type: string
     type: object
   handlers.UpdateRepositoryFileRequest:
@@ -807,6 +805,39 @@ definitions:
     - owner
     - url
     type: object
+  service.CreatePluginRequest:
+    properties:
+      backend_server_url:
+        maxLength: 500
+        type: string
+      description:
+        maxLength: 200
+        type: string
+      icon:
+        maxLength: 50
+        minLength: 3
+        type: string
+      name:
+        maxLength: 40
+        minLength: 1
+        type: string
+      owner:
+        maxLength: 100
+        type: string
+      react_component_path:
+        maxLength: 500
+        type: string
+      title:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - backend_server_url
+    - icon
+    - name
+    - react_component_path
+    - title
+    type: object
   service.DocumentationResponse:
     properties:
       branch:
@@ -1008,19 +1039,17 @@ definitions:
     type: object
   service.LandscapeMinimalResponse:
     properties:
-      central-region:
-        type: boolean
+      auditlog:
+        type: string
+      cam:
+        type: string
       cockpit:
         type: string
       concourse:
         type: string
       control-center:
         type: string
-      debug:
-        type: string
       description:
-        type: string
-      destinations:
         type: string
       domain:
         type: string
@@ -1033,30 +1062,28 @@ definitions:
       gardener:
         type: string
       git:
-        description: Enriched top-level fields (replaces exposing raw metadata in
-          this endpoint)
         type: string
       grafana:
         type: string
       health:
         type: string
+      iaas-console:
+        type: string
       id:
         type: string
+      is-central-region:
+        type: boolean
       kibana:
         type: string
-      logs:
+      monitoring:
         type: string
       name:
         type: string
       operation-console:
         type: string
-      overview:
-        type: string
       plutono:
         type: string
       prometheus:
-        type: string
-      roles:
         type: string
       title:
         type: string
@@ -1113,6 +1140,47 @@ definitions:
       total_comments:
         example: 42
         type: integer
+    type: object
+  service.PluginListResponse:
+    properties:
+      limit:
+        type: integer
+      offset:
+        type: integer
+      plugins:
+        items:
+          $ref: '#/definitions/service.PluginResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  service.PluginResponse:
+    properties:
+      backend_server_url:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      owner:
+        type: string
+      react_component_path:
+        type: string
+      subscribed:
+        type: boolean
+      title:
+        type: string
+    type: object
+  service.PluginUIResponse:
+    properties:
+      content:
+        type: string
+      content_type:
+        type: string
     type: object
   service.PullRequest:
     properties:
@@ -1215,6 +1283,56 @@ definitions:
         maxLength: 1000
         type: string
     type: object
+  service.UpdateLinkRequest:
+    properties:
+      category_id:
+        type: string
+      description:
+        maxLength: 200
+        type: string
+      name:
+        maxLength: 40
+        minLength: 1
+        type: string
+      tags:
+        description: optional CSV string
+        maxLength: 200
+        type: string
+      url:
+        maxLength: 2000
+        type: string
+    required:
+    - category_id
+    - name
+    - url
+    type: object
+  service.UpdatePluginRequest:
+    properties:
+      backend_server_url:
+        maxLength: 500
+        type: string
+      description:
+        maxLength: 200
+        type: string
+      icon:
+        maxLength: 50
+        minLength: 3
+        type: string
+      name:
+        maxLength: 40
+        minLength: 1
+        type: string
+      owner:
+        maxLength: 100
+        type: string
+      react_component_path:
+        maxLength: 500
+        type: string
+      title:
+        maxLength: 100
+        minLength: 1
+        type: string
+    type: object
   service.UserResponse:
     properties:
       email:
@@ -1238,7 +1356,7 @@ definitions:
       uuid:
         type: string
     type: object
-  service.UserWithLinksResponse:
+  service.UserWithLinksAndPluginsResponse:
     properties:
       email:
         type: string
@@ -1254,6 +1372,11 @@ definitions:
         type: array
       mobile:
         type: string
+      plugins:
+        description: subscribed plugins
+        items:
+          $ref: '#/definitions/service.PluginResponse'
+        type: array
       portal_admin:
         type: boolean
       team_domain:
@@ -1278,7 +1401,6 @@ definitions:
           $ref: '#/definitions/service.UserResponse'
         type: array
     type: object
-host: localhost:7008
 info:
   contact:
     email: support@example.com
@@ -1772,6 +1894,214 @@ paths:
       summary: Upload file attachments for AI inference
       tags:
       - ai-core
+  /alert-history/alerts/{project}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve alerts for a specific project with optional filtering
+        and pagination
+      parameters:
+      - description: Project name (must be one of cis2, usrv, cloud_automation)
+        in: path
+        name: project
+        required: true
+        type: string
+      - default: 1
+        description: Page number (min 1)
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page (min 1, max 100)
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pageSize
+        type: integer
+      - description: Filter by severity (e.g., critical, warning, info)
+        in: query
+        name: severity
+        type: string
+      - description: Filter by region label
+        in: query
+        name: region
+        type: string
+      - description: Filter by landscape
+        in: query
+        name: landscape
+        type: string
+      - description: Filter by status (firing or resolved)
+        enum:
+        - firing
+        - resolved
+        in: query
+        name: status
+        type: string
+      - description: Filter by component label
+        in: query
+        name: component
+        type: string
+      - description: Filter by alert name
+        in: query
+        name: alertname
+        type: string
+      - description: Filter alerts after this time (RFC3339 format)
+        in: query
+        name: start_time
+        type: string
+      - description: Filter alerts before this time (RFC3339 format)
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved alerts
+          schema:
+            $ref: '#/definitions/client.AlertHistoryPaginatedResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get alerts by project
+      tags:
+      - alert-history
+  /alert-history/alerts/{project}/{fingerprint}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific alert by its unique fingerprint within a project
+      parameters:
+      - description: Project name (alphanumeric, dashes, underscores)
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Alert fingerprint (hexadecimal string, max 128 chars)
+        in: path
+        name: fingerprint
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved alert
+          schema:
+            $ref: '#/definitions/client.AlertHistoryResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Alert not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get alert by fingerprint
+      tags:
+      - alert-history
+  /alert-history/alerts/{project}/{fingerprint}/label:
+    put:
+      consumes:
+      - application/json
+      description: Update or add a label for a specific alert
+      parameters:
+      - description: Project name (alphanumeric, dashes, underscores)
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Alert fingerprint (hexadecimal string, max 128 chars)
+        in: path
+        name: fingerprint
+        required: true
+        type: string
+      - description: Label update request with 'key' and 'value' fields
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Label updated successfully
+          schema:
+            $ref: '#/definitions/client.UpdateLabelResponse'
+        "400":
+          description: Invalid request parameters or body
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Alert not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update alert label
+      tags:
+      - alert-history
+  /alert-history/projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all available projects configured in the alert
+        history system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved projects
+          schema:
+            $ref: '#/definitions/client.ProjectsResponse'
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all alert history projects
+      tags:
+      - alert-history
   /api/auth/{provider}/handler/frame:
     get:
       consumes:
@@ -1821,91 +2151,6 @@ paths:
       summary: Handle OAuth callback
       tags:
       - authentication
-  /api/auth/{provider}/logout:
-    post:
-      consumes:
-      - application/json
-      description: Logout user and invalidate authentication session
-      parameters:
-      - description: OAuth provider (githubtools or githubwdf)
-        in: path
-        name: provider
-        required: true
-        type: string
-      - description: Environment (development, staging, production)
-        in: query
-        name: env
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully logged out
-          schema:
-            $ref: '#/definitions/auth.AuthLogoutResponse'
-        "400":
-          description: Invalid provider
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Logout failed
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Logout user
-      tags:
-      - authentication
-  /api/auth/{provider}/refresh:
-    get:
-      consumes:
-      - application/json
-      description: Refresh or validate authentication token using refresh token, Authorization
-        header, or session cookies
-      parameters:
-      - description: OAuth provider (githubtools or githubwdf)
-        in: path
-        name: provider
-        required: true
-        type: string
-      - description: Environment (development, staging, production)
-        in: query
-        name: env
-        type: string
-      - description: Refresh token to use for getting new access token
-        in: query
-        name: refresh_token
-        type: string
-      - description: Bearer token for validation
-        example: '"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."'
-        in: header
-        name: Authorization
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully refreshed token
-          schema:
-            $ref: '#/definitions/auth.AuthRefreshResponse'
-        "400":
-          description: Invalid provider
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Authentication required or token invalid
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Token refresh failed
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Refresh authentication token
-      tags:
-      - authentication
   /api/auth/{provider}/start:
     get:
       consumes:
@@ -1941,31 +2186,75 @@ paths:
       summary: Start OAuth authentication
       tags:
       - authentication
-  /api/auth/validate:
+  /api/auth/logout:
     post:
       consumes:
       - application/json
-      description: Validate JWT token and return token claims
+      description: Logout user and invalidate authentication session
       parameters:
-      - description: Bearer token to validate
-        example: '"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."'
-        in: header
-        name: Authorization
-        required: true
+      - description: Environment (development, staging, production)
+        in: query
+        name: env
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Token is valid with claims
+          description: Successfully logged out
           schema:
-            $ref: '#/definitions/auth.AuthValidateResponse'
-        "401":
-          description: Authorization header required or token invalid
+            $ref: '#/definitions/auth.AuthLogoutResponse'
+        "400":
+          description: Invalid provider
           schema:
             additionalProperties: true
             type: object
-      summary: Validate JWT token
+        "500":
+          description: Logout failed
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout user
+      tags:
+      - authentication
+  /api/auth/refresh:
+    get:
+      consumes:
+      - application/json
+      description: Refresh or validate authentication token using Authorization header
+        or session cookies
+      parameters:
+      - description: Environment (development, staging, production)
+        in: query
+        name: env
+        type: string
+      - description: Bearer token for validation
+        example: '"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."'
+        in: header
+        name: Authorization
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully refreshed token
+          schema:
+            $ref: '#/definitions/auth.AuthRefreshResponse'
+        "400":
+          description: Invalid provider
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required or token invalid
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Token refresh failed
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh authentication token
       tags:
       - authentication
   /api/v1/projects/{projectId}/alerts:
@@ -2142,7 +2431,12 @@ paths:
               type: object
             type: array
         "400":
-          description: team-id or project-name parameter is required
+          description: Invalid parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
           schema:
             additionalProperties: true
             type: object
@@ -2156,6 +2450,20 @@ paths:
       summary: List components
       tags:
       - components
+  /components/health:
+    get:
+      parameters:
+      - description: Component ID (UUID)
+        in: query
+        name: component-id
+        type: string
+      - description: Landscape ID (UUID)
+        in: query
+        name: landscape-id
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
   /documentations:
     post:
       consumes:
@@ -3100,20 +3408,46 @@ paths:
       summary: Delete a link by ID
       tags:
       - links
-  /projects:
-    get:
+    put:
       consumes:
       - application/json
-      description: Retrieves all projects from the database
+      description: |-
+        Updates an existing link. Title will mirror name. Validates category_id exists. Tags are optional. Owner field cannot be changed.
+        updated_by is derived from the bearer token 'username' claim and is NOT required in the payload.
+      parameters:
+      - description: Link ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Link data
+        in: body
+        name: link
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdateLinkRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Successfully retrieved all projects
+          description: Successfully updated link
           schema:
-            items:
-              $ref: '#/definitions/handlers.ProjectResponse'
-            type: array
+            $ref: '#/definitions/service.LinkResponse'
+        "400":
+          description: Invalid request or validation failed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Link not found
+          schema:
+            additionalProperties: true
+            type: object
         "500":
           description: Internal server error
           schema:
@@ -3121,9 +3455,315 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Get all projects
+      summary: Update a link by ID
       tags:
-      - projects
+      - links
+  /plugins:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all plugins with pagination. When subscribed=true, returns
+        only plugins the authenticated user is subscribed to. When subscribed=false
+        or omitted, returns all plugins with subscription status marked for authenticated
+        users.
+      parameters:
+      - default: 20
+        description: Number of items to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        name: offset
+        type: integer
+      - default: false
+        description: When true, return only subscribed plugins. When false, return
+          all plugins with subscription status.
+        in: query
+        name: subscribed
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved plugins list
+          schema:
+            $ref: '#/definitions/service.PluginListResponse'
+        "400":
+          description: Invalid parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required when subscribed=true
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all plugins or only subscribed plugins
+      tags:
+      - plugins
+    post:
+      consumes:
+      - application/json
+      description: Create a new plugin with the provided information
+      parameters:
+      - description: Plugin creation request
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/service.CreatePluginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created plugin
+          schema:
+            $ref: '#/definitions/service.PluginResponse'
+        "400":
+          description: Invalid request body or validation error
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Plugin with same name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new plugin
+      tags:
+      - plugins
+  /plugins/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a plugin by its ID
+      parameters:
+      - description: Plugin ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Successfully deleted plugin
+        "400":
+          description: Invalid plugin ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plugin not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a plugin
+      tags:
+      - plugins
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific plugin by its ID
+      parameters:
+      - description: Plugin ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved plugin
+          schema:
+            $ref: '#/definitions/service.PluginResponse'
+        "400":
+          description: Invalid plugin ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plugin not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plugin by ID
+      tags:
+      - plugins
+    put:
+      consumes:
+      - application/json
+      description: Update an existing plugin with the provided information
+      parameters:
+      - description: Plugin ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plugin update request
+        in: body
+        name: plugin
+        required: true
+        schema:
+          $ref: '#/definitions/service.UpdatePluginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated plugin
+          schema:
+            $ref: '#/definitions/service.PluginResponse'
+        "400":
+          description: Invalid plugin ID or request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plugin not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Plugin with same name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a plugin
+      tags:
+      - plugins
+  /plugins/{id}/proxy:
+    get:
+      consumes:
+      - application/json
+      description: Proxy requests to plugin backend server with 30-second timeout,
+        caching (5 minutes for successful GET responses), and standardized response
+        format. Always returns 200 OK with metadata including actual backend status,
+        response time, and success flag.
+      parameters:
+      - description: Plugin ID (UUID)
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target path to proxy to plugin backend (e.g., /api/health, /api/status)
+        in: query
+        name: path
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Proxy response with metadata - always returns 200 OK regardless
+            of backend status
+          schema:
+            properties:
+              data:
+                type: object
+              error:
+                type: string
+              pluginSuccess:
+                type: boolean
+              responseTime:
+                type: integer
+              statusCode:
+                type: integer
+            type: object
+        "400":
+          description: Invalid plugin ID format or missing path parameter
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Plugin not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error (e.g., database connection issues)
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Proxy requests to plugin backend
+      tags:
+      - plugins
+  /plugins/{id}/ui:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the TSX React component content from GitHub for a specific
+        plugin
+      parameters:
+      - description: Plugin ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved plugin UI content
+          schema:
+            $ref: '#/definitions/service.PluginUIResponse'
+        "400":
+          description: Invalid plugin ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plugin not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plugin UI content
+      tags:
+      - plugins
   /self-service/jenkins/{jaasName}/{jobName}/{buildNumber}/status:
     get:
       description: Retrieves the current status of a Jenkins build. Poll this endpoint
@@ -3594,7 +4234,7 @@ paths:
         "200":
           description: Successfully retrieved user
           schema:
-            $ref: '#/definitions/service.UserWithLinksResponse'
+            $ref: '#/definitions/service.UserWithLinksAndPluginsResponse'
         "400":
           description: Invalid user_id
           schema:
@@ -3697,6 +4337,180 @@ paths:
       summary: Add a favorite link to a user
       tags:
       - users
+  /users/{user_id}/plugins/{plugin_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the given plugin_id from the user's metadata.subscribed
+        array. Initializes metadata if missing. Idempotent if plugin not present.
+      parameters:
+      - description: User ID (I/C/D user id, e.g. cis.devops)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Plugin ID (UUID)
+        in: path
+        name: plugin_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully removed subscribed plugin
+          schema:
+            $ref: '#/definitions/service.UserResponse'
+        "400":
+          description: Invalid user_id or plugin_id
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove a subscribed plugin from a user
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Adds the given plugin_id to the user's metadata.subscribed array.
+        Initializes metadata and subscribed if missing, and avoids duplicates.
+      parameters:
+      - description: User ID (I/C/D user id, e.g. cis.devops)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Plugin ID (UUID)
+        in: path
+        name: plugin_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully added subscribed plugin
+          schema:
+            $ref: '#/definitions/service.UserResponse'
+        "400":
+          description: Invalid user_id or plugin_id
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a subscribed plugin to a user
+      tags:
+      - users
+  /users/{user_id}/subscribed/{plugin_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the given plugin_id from the user's metadata.subscribed
+        array. Initializes metadata if missing. Idempotent if plugin not present.
+      parameters:
+      - description: User ID (I/C/D user id, e.g. cis.devops)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Plugin ID (UUID)
+        in: path
+        name: plugin_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully removed subscribed plugin
+          schema:
+            $ref: '#/definitions/service.UserResponse'
+        "400":
+          description: Invalid user_id or plugin_id
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove a subscribed plugin from a user
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Adds the given plugin_id to the user's metadata.subscribed array.
+        Initializes metadata and subscribed if missing, and avoids duplicates.
+      parameters:
+      - description: User ID (I/C/D user id, e.g. cis.devops)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Plugin ID (UUID)
+        in: path
+        name: plugin_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully added subscribed plugin
+          schema:
+            $ref: '#/definitions/service.UserResponse'
+        "400":
+          description: Invalid user_id or plugin_id
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add a subscribed plugin to a user
+      tags:
+      - users
   /users/me:
     get:
       description: Returns the user matching the bearer token 'username' claim, mapped
@@ -3707,7 +4521,7 @@ paths:
         "200":
           description: Successfully retrieved current user
           schema:
-            $ref: '#/definitions/service.UserWithLinksResponse'
+            $ref: '#/definitions/service.UserWithLinksAndPluginsResponse'
         "401":
           description: Missing username in token
           schema:

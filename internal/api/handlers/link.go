@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"net/http"
+	"errors"
 
 	"developer-portal-backend/internal/auth"
 	"developer-portal-backend/internal/service"
+	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -107,6 +110,112 @@ func (h *LinkHandler) CreateLink(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, link)
+}
+
+// UpdateLink handles PUT /links/:id
+// @Summary Update a link by ID
+// @Description Updates an existing link. Title will mirror name. Validates category_id exists. Tags are optional. Owner field cannot be changed.
+// @Description updated_by is derived from the bearer token 'username' claim and is NOT required in the payload.
+// @Tags links
+// @Accept json
+// @Produce json
+// @Param id path string true "Link ID (UUID)"
+// @Param link body service.UpdateLinkRequest true "Link data"
+// @Success 200 {object} service.LinkResponse "Successfully updated link"
+// @Failure 400 {object} map[string]interface{} "Invalid request or validation failed"
+// @Failure 401 {object} map[string]interface{} "Authentication required"
+// @Failure 404 {object} map[string]interface{} "Link not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Security BearerAuth
+// @Router /links/{id} [put]
+func (h *LinkHandler) UpdateLink(c *gin.Context) {
+	log := logger.FromGinContext(c)
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		log.WithField("link_id", idStr).Warn("Link update failed: invalid link ID")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid link ID"})
+		return
+	}
+
+	var req service.UpdateLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.WithFields(map[string]interface{}{
+			"link_id": id.String(),
+			"error":   err.Error(),
+		}).Warn("Link update failed: invalid request body")
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Populate updated_by from bearer token username
+	username, ok := auth.GetUsername(c)
+	if !ok || username == "" {
+		log.WithField("link_id", id.String()).Warn("Link update failed: missing username in token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing username in token"})
+		return
+	}
+	req.UpdatedBy = username
+
+	log.WithFields(map[string]interface{}{
+		"link_id":     id.String(),
+		"link_name":   req.Name,
+		"url":         req.URL,
+		"category_id": req.CategoryID,
+		"updated_by":  req.UpdatedBy,
+	}).Info("Updating link")
+
+	link, err := h.linkService.UpdateLink(id, &req)
+	if err != nil {
+		// Handle specific error types using error constants
+		if errors.Is(err, apperrors.ErrLinkNotFound) {
+			log.WithFields(map[string]interface{}{
+				"link_id": id.String(),
+				"error":   err.Error(),
+			}).Warn("Link update failed: link not found")
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, apperrors.ErrUserNotFound) {
+			log.WithFields(map[string]interface{}{
+				"link_id": id.String(),
+				"error":   err.Error(),
+			}).Warn("Link update failed: user not found")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, apperrors.ErrCategoryNotFound) {
+			log.WithFields(map[string]interface{}{
+				"link_id": id.String(),
+				"error":   err.Error(),
+			}).Warn("Link update failed: category not found")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if apperrors.IsValidation(err) {
+			log.WithFields(map[string]interface{}{
+				"link_id": id.String(),
+				"error":   err.Error(),
+			}).Warn("Link update failed: validation error")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		// Generic error
+		log.WithFields(map[string]interface{}{
+			"link_id": id.String(),
+			"error":   err.Error(),
+		}).Error("Link update failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update link"})
+		return
+	}
+
+	log.WithFields(map[string]interface{}{
+		"link_id":   link.ID,
+		"link_name": link.Name,
+	}).Info("Link updated successfully")
+
+	c.JSON(http.StatusOK, link)
 }
 
 // DeleteLink handles DELETE /links/:id

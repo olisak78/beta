@@ -3,26 +3,25 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	apperrors "developer-portal-backend/internal/errors"
 	"encoding/base64"
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
 
+	"developer-portal-backend/internal/database/models"
+
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 )
 
 // RefreshTokenData stores information about a refresh token
 type RefreshTokenData struct {
-	UserID      int64     `json:"user_id"`
-	Username    string    `json:"username"`
-	Email       string    `json:"email"`
-	MemberID    *string   `json:"member_id,omitempty"` // ID of member with matching email
+	UserUUID    string    `json:"user_uuid"`
 	Provider    string    `json:"provider"`
 	AccessToken string    `json:"access_token"`
 	ExpiresAt   time.Time `json:"expires_at"`
-	CreatedAt   time.Time `json:"created_at"`
 }
 
 // MemberRepository defines the interface for member operations needed by auth service
@@ -30,27 +29,28 @@ type UserRepository interface {
 	GetByEmail(email string) (interface{}, error)
 }
 
+// TokenStore defines persistence API for provider access tokens
+type TokenStore interface {
+	UpsertToken(userUUID uuid.UUID, provider string, token string, expiresAt time.Time) error
+	GetValidToken(userUUID uuid.UUID, provider string) (*models.Token, error)
+	DeleteToken(userUUID uuid.UUID, provider string) error
+	CleanupExpiredTokens() error
+}
+
 // AuthService provides authentication functionality
 type AuthService struct {
 	config        *AuthConfig
 	githubClients map[string]*GitHubClient
-	refreshTokens map[string]*RefreshTokenData // In-memory store for refresh tokens
-	tokenMutex    sync.RWMutex                 // Protect the refresh token store
-	userRepo      UserRepository               // Repository for member lookup
+	tokenStore    TokenStore
+	userRepo      UserRepository
 }
 
 // AuthClaims represents JWT token claims
 type AuthClaims struct {
-	UserID   int64  `json:"user_id" example:"12345"`
-	Username string `json:"username" example:"johndoe"`
-	Email    string `json:"email" example:"john.doe@example.com"`
-	Provider string `json:"provider" example:"githubtools"`
+	Username string `json:"username" example:"I012345"`
+	Email    string `json:"email" example:"john.doe@sap.com"`
+	UUID     string `json:"user_uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
 	// Standard JWT fields
-	Issuer               string `json:"iss,omitempty" example:"developer-portal-backend"`
-	Subject              string `json:"sub,omitempty" example:"12345"`
-	Audience             string `json:"aud,omitempty" example:"developer-portal"`
-	ExpiresAt            int64  `json:"exp,omitempty" example:"1672531200"`
-	IssuedAt             int64  `json:"iat,omitempty" example:"1672527600"`
 	jwt.RegisteredClaims `swaggerignore:"true"`
 }
 
@@ -61,11 +61,9 @@ type AuthStartResponse struct {
 
 // AuthHandlerResponse represents the response for auth handler endpoint
 type AuthHandlerResponse struct {
-	AccessToken  string      `json:"accessToken"`
-	TokenType    string      `json:"tokenType"`
-	ExpiresIn    int64       `json:"expiresIn"`
-	RefreshToken string      `json:"refreshToken,omitempty"`
-	Profile      UserProfile `json:"profile"`
+	AccessToken string `json:"accessToken"`
+	TokenType   string `json:"tokenType"`
+	ExpiresIn   int64  `json:"expiresIn"`
 }
 
 // RefreshTokenRequest represents the request for token refresh
@@ -95,7 +93,7 @@ type AuthValidateResponse struct {
 }
 
 // NewAuthService creates a new authentication service
-func NewAuthService(config *AuthConfig, userRepo UserRepository) (*AuthService, error) {
+func NewAuthService(config *AuthConfig, userRepo UserRepository, tokenStore TokenStore) (*AuthService, error) {
 	if err := config.ValidateConfig(); err != nil {
 		return nil, fmt.Errorf("invalid auth config: %w", err)
 	}
@@ -109,22 +107,21 @@ func NewAuthService(config *AuthConfig, userRepo UserRepository) (*AuthService, 
 	return &AuthService{
 		config:        config,
 		githubClients: githubClients,
-		refreshTokens: make(map[string]*RefreshTokenData),
-		tokenMutex:    sync.RWMutex{},
+		tokenStore:    tokenStore,
 		userRepo:      userRepo,
 	}, nil
 }
 
-// getMemberIDByEmail looks up a member by email and returns their ID as a string pointer
-// Returns nil if member is not found or an error occurs
-func (s *AuthService) getMemberIDByEmail(email string) *string {
+// getMemberIDByEmail looks up a member by email and returns their ID as a string
+// Returns empty string if member is not found or an error occurs
+func (s *AuthService) getMemberIDByEmail(email string) string {
 	if s.userRepo == nil || email == "" {
-		return nil
+		return ""
 	}
 
 	member, err := s.userRepo.GetByEmail(email)
 	if err != nil || member == nil {
-		return nil
+		return ""
 	}
 
 	// Use reflection to access the ID field from the member struct
@@ -139,17 +136,11 @@ func (s *AuthService) getMemberIDByEmail(email string) *string {
 		if idField.IsValid() {
 			// Convert UUID to string
 			idStr := fmt.Sprintf("%v", idField.Interface())
-			return &idStr
+			return idStr
 		}
 	}
 
-	return nil
-}
-
-// GetMemberIDByEmail is a public wrapper for getMemberIDByEmail
-// This allows handlers to look up member ID when needed
-func (s *AuthService) GetMemberIDByEmail(email string) *string {
-	return s.getMemberIDByEmail(email)
+	return ""
 }
 
 // GetAuthURL generates OAuth2 authorization URL
@@ -202,125 +193,45 @@ func (s *AuthService) HandleCallback(ctx context.Context, provider, code, state 
 		return nil, fmt.Errorf("failed to get user profile: %w", err)
 	}
 
-	// Look up member by email and populate MemberID if found
-	profile.MemberID = s.getMemberIDByEmail(profile.Email)
+	// Look up member by email and populate UUID if found
+	profile.UUID = s.getMemberIDByEmail(profile.Email)
+
+	// Persist provider access token in DB-backed token store (if user has UUID)
+	if s.tokenStore != nil && profile.UUID != "" {
+		userID, parseErr := uuid.Parse(profile.UUID)
+		if parseErr != nil {
+			return nil, fmt.Errorf("invalid user UUID: %w", parseErr)
+		}
+		if upsertErr := s.tokenStore.UpsertToken(userID, provider, token.AccessToken, time.Now().AddDate(0, 0, s.config.AccessTokenExpiresInDays)); upsertErr != nil {
+			return nil, fmt.Errorf("failed to store provider access token: %w", upsertErr)
+		}
+	}
 
 	// Generate JWT token
-	jwtToken, err := s.GenerateJWT(profile, provider)
+	jwtToken, err := s.GenerateJWT(profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT: %w", err)
 	}
 
-	// Generate refresh token
-	refreshToken, err := s.generateRefreshToken()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	// Store refresh token data
-	s.tokenMutex.Lock()
-	s.refreshTokens[refreshToken] = &RefreshTokenData{
-		UserID:      profile.ID,
-		Username:    profile.Username,
-		Email:       profile.Email,
-		MemberID:    profile.MemberID,
-		Provider:    provider,
-		AccessToken: token.AccessToken,                   // Store the original OAuth access token
-		ExpiresAt:   time.Now().Add(30 * 24 * time.Hour), // 30 days
-		CreatedAt:   time.Now(),
-	}
-	s.tokenMutex.Unlock()
-
 	response := &AuthHandlerResponse{
-		AccessToken:  jwtToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    3600, // 1 hour
-		RefreshToken: refreshToken,
-		Profile:      *profile,
+		AccessToken: jwtToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   int64(s.config.JWTExpiresInSeconds),
 	}
 
 	return response, nil
 }
 
-// RefreshToken generates a new JWT token from a refresh token
-func (s *AuthService) RefreshToken(refreshToken string) (*AuthHandlerResponse, error) {
-	s.tokenMutex.RLock()
-	tokenData, exists := s.refreshTokens[refreshToken]
-	s.tokenMutex.RUnlock()
-
-	if !exists {
-		return nil, fmt.Errorf("invalid refresh token")
-	}
-
-	// Check if refresh token has expired (valid for 30 days)
-	if time.Now().After(tokenData.ExpiresAt) {
-		// Clean up expired token
-		s.tokenMutex.Lock()
-		delete(s.refreshTokens, refreshToken)
-		s.tokenMutex.Unlock()
-		return nil, fmt.Errorf("refresh token has expired")
-	}
-
-	// Create user profile from stored data
-	profile := &UserProfile{
-		ID:       tokenData.UserID,
-		Username: tokenData.Username,
-		Email:    tokenData.Email,
-		MemberID: tokenData.MemberID,
-	}
-
-	// Generate new JWT token
-	jwtToken, err := s.GenerateJWT(profile, tokenData.Provider)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate new JWT: %w", err)
-	}
-
-	// Generate new refresh token
-	newRefreshToken, err := s.generateRefreshToken()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate new refresh token: %w", err)
-	}
-
-	// Store new refresh token and remove old one
-	s.tokenMutex.Lock()
-	delete(s.refreshTokens, refreshToken)
-	s.refreshTokens[newRefreshToken] = &RefreshTokenData{
-		UserID:      tokenData.UserID,
-		Username:    tokenData.Username,
-		Email:       tokenData.Email,
-		MemberID:    tokenData.MemberID,
-		Provider:    tokenData.Provider,
-		AccessToken: tokenData.AccessToken,               // Keep the original OAuth access token
-		ExpiresAt:   time.Now().Add(30 * 24 * time.Hour), // 30 days
-		CreatedAt:   time.Now(),
-	}
-	s.tokenMutex.Unlock()
-
-	response := &AuthHandlerResponse{
-		AccessToken:  jwtToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    3600, // 1 hour
-		RefreshToken: newRefreshToken,
-		Profile:      *profile,
-	}
-
-	return response, nil
-}
-
-// GenerateJWT creates a JWT token for the user
-func (s *AuthService) GenerateJWT(userProfile *UserProfile, provider string) (string, error) {
+// GenerateJWT creates a JWT token for the user (provider is deprecated hence ignored)
+func (s *AuthService) GenerateJWT(userProfile *UserProfile) (string, error) {
 	now := time.Now()
 	claims := &AuthClaims{
-		UserID:   userProfile.ID,
 		Username: userProfile.Username,
 		Email:    userProfile.Email,
-		Provider: provider,
+		UUID:     userProfile.UUID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			Issuer:    "developer-portal-backend",
-			Subject:   fmt.Sprintf("%d", userProfile.ID),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(s.config.JWTExpiresInSeconds) * time.Second)),
+			Issuer:    "developer-portal",
 		},
 	}
 
@@ -349,16 +260,6 @@ func (s *AuthService) ValidateJWT(tokenString string) (*AuthClaims, error) {
 	return nil, fmt.Errorf("invalid token")
 }
 
-// GenerateState generates a random state parameter for OAuth2
-func (s *AuthService) GenerateState() (string, error) {
-	return s.generateRandomString(32)
-}
-
-// generateRefreshToken generates a random refresh token
-func (s *AuthService) generateRefreshToken() (string, error) {
-	return s.generateRandomString(64)
-}
-
 // generateRandomString generates a random base64 encoded string
 func (s *AuthService) generateRandomString(length int) (string, error) {
 	bytes := make([]byte, length)
@@ -369,37 +270,38 @@ func (s *AuthService) generateRandomString(length int) (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-// GetGitHubAccessTokenFromClaims retrieves the GitHub OAuth access token for an authenticated user
-// using validated JWT claims. This is used to make GitHub API calls on behalf of the user.
-func (s *AuthService) GetGitHubAccessTokenFromClaims(claims *AuthClaims) (string, error) {
+func (s *AuthService) GetGitHubAccessToken(userUUID, provider string) (string, error) {
 	if s == nil {
-		return "", fmt.Errorf("auth service is not initialized")
+		return "", apperrors.ErrAuthServiceNotInitialized
+	}
+	// check userUUID is not empty
+	if userUUID == "" {
+		return "", apperrors.ErrUserUUIDMissing
+	}
+	// check provider is not empty
+	if provider == "" {
+		return "", apperrors.ErrProviderMissing
 	}
 
-	if claims == nil {
-		return "", fmt.Errorf("claims cannot be nil")
+	// Use DB-backed token store
+	if s.tokenStore == nil {
+		return "", apperrors.ErrTokenStoreNotInitialized
 	}
-
-	s.tokenMutex.RLock()
-	defer s.tokenMutex.RUnlock()
-
-	// Find a valid refresh token for this user/provider
-	for _, tokenData := range s.refreshTokens {
-		if tokenData.UserID == claims.UserID &&
-			tokenData.Provider == claims.Provider &&
-			time.Now().Before(tokenData.ExpiresAt) {
-
-			return tokenData.AccessToken, nil
-		}
+	uid, err := uuid.Parse(userUUID)
+	if err != nil {
+		return "", fmt.Errorf("invalid userUUID: %w", err)
 	}
-
-	return "", fmt.Errorf("no valid GitHub session found for user %d with provider %s", claims.UserID, claims.Provider)
+	tok, err := s.tokenStore.GetValidToken(uid, provider)
+	if err != nil || tok == nil || time.Now().After(tok.ExpiresAt) {
+		return "", fmt.Errorf("no valid GitHub token found for user %s with provider %s", userUUID, provider)
+	}
+	return tok.Token, nil
 }
 
 // GetGitHubClient retrieves the GitHub client for a specific provider
 func (s *AuthService) GetGitHubClient(provider string) (*GitHubClient, error) {
 	if s == nil {
-		return nil, fmt.Errorf("auth service is not initialized")
+		return nil, apperrors.ErrAuthServiceNotInitialized
 	}
 
 	client, exists := s.githubClients[provider]

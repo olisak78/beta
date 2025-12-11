@@ -22,6 +22,24 @@ func NewGitHubHandler(s service.GitHubServiceInterface) *GitHubHandler {
 	return &GitHubHandler{service: s}
 }
 
+// getAuthClaims extracts and validates auth claims from the Gin context
+// Returns the claims if successful, or sends an error response and returns nil
+func getAuthClaims(c *gin.Context) *auth.AuthClaims {
+	claimsInterface, exists := c.Get("auth_claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": apperrors.ErrAuthenticationRequired})
+		return nil
+	}
+
+	claims, ok := claimsInterface.(*auth.AuthClaims)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrAuthenticationInvalidClaims})
+		return nil
+	}
+
+	return claims
+}
+
 // GetMyPullRequests returns all pull requests created by the authenticated user
 // @Summary Get my pull requests
 // @Description Returns all pull requests created by the authenticated user across all repositories they have access to
@@ -38,16 +56,8 @@ func NewGitHubHandler(s service.GitHubServiceInterface) *GitHubHandler {
 // @Security BearerAuth
 // @Router /github/pull-requests [get]
 func (h *GitHubHandler) GetMyPullRequests(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
@@ -92,8 +102,11 @@ func (h *GitHubHandler) GetMyPullRequests(c *gin.Context) {
 		return
 	}
 
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
+
 	// Call service to get pull requests
-	response, err := h.service.GetUserOpenPullRequests(c.Request.Context(), claims, state, sort, direction, perPage, page)
+	response, err := h.service.GetUserOpenPullRequests(c.Request.Context(), claims.UUID, provider, state, sort, direction, perPage, page)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -121,24 +134,19 @@ func (h *GitHubHandler) GetMyPullRequests(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/contributions [get]
 func (h *GitHubHandler) GetUserTotalContributions(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
 	// Get query parameter for period (empty = use GitHub's default)
 	period := c.Query("period")
 
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
+
 	// Call service to get total contributions
-	response, err := h.service.GetUserTotalContributions(c.Request.Context(), claims, period)
+	response, err := h.service.GetUserTotalContributions(c.Request.Context(), claims.UUID, provider, period)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -172,33 +180,19 @@ func (h *GitHubHandler) GetUserTotalContributions(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/{provider}/heatmap [get]
 func (h *GitHubHandler) GetContributionsHeatmap(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
-		return
-	}
-
-	// Get provider from URL parameter (for route consistency, though auth uses claims.Provider)
-	provider := c.Param("provider")
-
-	// Validate that the URL provider matches the authenticated provider
-	if provider != "" && provider != claims.Provider {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider in URL does not match authenticated provider"})
-		return
-	}
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	// Get query parameter for period (empty = use GitHub's default)
 	period := c.Query("period")
 
 	// Call service to get contribution heatmap
-	response, err := h.service.GetContributionsHeatmap(c.Request.Context(), claims, period)
+	response, err := h.service.GetContributionsHeatmap(c.Request.Context(), claims.UUID, provider, period)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -236,24 +230,19 @@ func (h *GitHubHandler) GetContributionsHeatmap(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/average-pr-time [get]
 func (h *GitHubHandler) GetAveragePRMergeTime(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
 	// Get query parameter for period (default to 30d)
 	period := c.DefaultQuery("period", "30d")
 
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
+
 	// Call service to get average PR merge time
-	response, err := h.service.GetAveragePRMergeTime(c.Request.Context(), claims, period)
+	response, err := h.service.GetAveragePRMergeTime(c.Request.Context(), claims.UUID, provider, period)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -288,16 +277,8 @@ func (h *GitHubHandler) GetAveragePRMergeTime(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/repos/{owner}/{repo}/contents/{path} [get]
 func (h *GitHubHandler) GetRepositoryContent(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
@@ -306,9 +287,11 @@ func (h *GitHubHandler) GetRepositoryContent(c *gin.Context) {
 	repo := c.Param("repo")
 	path := c.Param("path")
 	ref := c.DefaultQuery("ref", "main")
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	// Call service to get repository content
-	content, err := h.service.GetRepositoryContent(c.Request.Context(), claims, owner, repo, path, ref)
+	content, err := h.service.GetRepositoryContent(c.Request.Context(), claims.UUID, provider, owner, repo, path, ref)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -339,16 +322,8 @@ func (h *GitHubHandler) GetRepositoryContent(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/asset [get]
 func (h *GitHubHandler) GetGitHubAsset(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
@@ -358,9 +333,11 @@ func (h *GitHubHandler) GetGitHubAsset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Asset URL is required"})
 		return
 	}
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	// Call service to fetch the asset
-	assetData, contentType, err := h.service.GetGitHubAsset(c.Request.Context(), claims, assetURL)
+	assetData, contentType, err := h.service.GetGitHubAsset(c.Request.Context(), claims.UUID, provider, assetURL)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -431,9 +408,11 @@ func (h *GitHubHandler) UpdateRepositoryFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: " + err.Error()})
 		return
 	}
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	// Call service to update repository file
-	response, err := h.service.UpdateRepositoryFile(c.Request.Context(), claims, owner, repo, path, req.Message, req.Content, req.SHA, req.Branch)
+	response, err := h.service.UpdateRepositoryFile(c.Request.Context(), claims.UUID, provider, owner, repo, path, req.Message, req.Content, req.SHA, req.Branch)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {
@@ -451,7 +430,7 @@ func (h *GitHubHandler) UpdateRepositoryFile(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
- // ClosePullRequestRequest represents the request body for closing a PR
+// ClosePullRequestRequest represents the request body for closing a PR
 type ClosePullRequestRequest struct {
 	Owner        string `json:"owner" binding:"required"`
 	Repo         string `json:"repo" binding:"required"`
@@ -473,18 +452,10 @@ type ClosePullRequestRequest struct {
 // @Failure 429 {object} ErrorResponse "Rate limit exceeded"
 // @Failure 502 {object} ErrorResponse "GitHub API error"
 // @Security BearerAuth
- // @Router /github/pull-requests/close/{pr_number} [patch]
+// @Router /github/pull-requests/close/{pr_number} [patch]
 func (h *GitHubHandler) ClosePullRequest(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
@@ -512,8 +483,11 @@ func (h *GitHubHandler) ClosePullRequest(c *gin.Context) {
 	// Parse delete_branch flag
 	deleteBranch := req.DeleteBranch
 
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
+
 	// Close PR (and optionally delete branch)
-	updatedPR, err := h.service.ClosePullRequest(c.Request.Context(), claims, req.Owner, req.Repo, prNumber, deleteBranch)
+	updatedPR, err := h.service.ClosePullRequest(c.Request.Context(), claims.UUID, provider, req.Owner, req.Repo, prNumber, deleteBranch)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrInvalidStatus) {
@@ -549,24 +523,18 @@ func (h *GitHubHandler) ClosePullRequest(c *gin.Context) {
 // @Security BearerAuth
 // @Router /github/pr-review-comments [get]
 func (h *GitHubHandler) GetPRReviewComments(c *gin.Context) {
-	// Get authenticated user claims from context (set by auth middleware)
-	claimsInterface, exists := c.Get("auth_claims")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-		return
-	}
-
-	claims, ok := claimsInterface.(*auth.AuthClaims)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid authentication claims"})
+	claims := getAuthClaims(c)
+	if claims == nil {
 		return
 	}
 
 	// Get query parameter for period (default to 30d)
 	period := c.DefaultQuery("period", "30d")
+	// get GitHub provider from param 'provider'. TODO set 'githubtools' if not found. prepare to support multiple providers in future - which client currently doesn't support. should be mandatory.
+	provider := c.DefaultQuery("provider", "githubtools")
 
 	// Call service to get PR review comments count
-	response, err := h.service.GetUserPRReviewComments(c.Request.Context(), claims, period)
+	response, err := h.service.GetUserPRReviewComments(c.Request.Context(), claims.UUID, provider, period)
 	if err != nil {
 		// Check for specific error types
 		if errors.Is(err, apperrors.ErrGitHubAPIRateLimitExceeded) {

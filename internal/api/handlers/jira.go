@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"developer-portal-backend/internal/errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -183,7 +184,7 @@ func (h *JiraHandler) GetMyIssuesCount(c *gin.Context) {
 	// Get query parameters
 	status := c.Query("status")
 	if status == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing query parameter: status"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.NewMissingQueryParam("status").Error()})
 		return
 	}
 
