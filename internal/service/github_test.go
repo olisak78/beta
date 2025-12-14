@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"developer-portal-backend/internal/auth"
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/mocks"
 	"developer-portal-backend/internal/service"
 
@@ -47,8 +46,14 @@ func TestGetUserOpenPullRequests_RequiresUUIDAndProvider(t *testing.T) {
 	assert.Contains(t, err.Error(), "userUUID and provider are required")
 }
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(authService, mockCache)
+func TestGetUserOpenPullRequests_DefaultsAppliedAndAuthCalled(t *testing.T) {
+	gh := service.NewGitHubService(nil)
+	// Empty state, sort, direction, perPage/page zero -> defaults applied internally.
+	_, err := gh.GetUserOpenPullRequests(context.Background(), "test-uuid", "githubtools", "", "", "", 0, 0)
+	// With non-empty uuid/provider the next step is token retrieval, which fails due to nil auth service.
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get GitHub access token")
+}
 
 func TestGetUserTotalContributions_RequiresUUIDAndProvider(t *testing.T) {
 	gh := service.NewGitHubService(nil)
@@ -64,9 +69,8 @@ func TestGetUserTotalContributions_AuthCalled(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to get GitHub access token")
 }
 
-	// Create service with nil auth service for this test
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
+func TestClosePullRequest_InputValidation(t *testing.T) {
+	gh := service.NewGitHubService(nil)
 
 	// Missing uuid/provider
 	_, err := gh.ClosePullRequest(context.Background(), "", "", "owner", "repo", 1, false)
@@ -88,8 +92,8 @@ func TestGetUserTotalContributions_AuthCalled(t *testing.T) {
 
 // The following tests use the test suite with mocked auth service
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestGetContributionsHeatmap_RequiresUUIDAndProvider() {
+	ctx := context.Background()
 
 	_, err := suite.service.GetContributionsHeatmap(ctx, "", "", "30d")
 	suite.Error(err)
@@ -110,19 +114,7 @@ func (suite *GitHubServiceTestSuite) TestGetContributionsHeatmap_InvalidPeriodFo
 	suite.Contains(err.Error(), "invalid period format")
 }
 
-// TestGetUserOpenPullRequests_DefaultParameters tests with default parameters
-func (suite *GitHubServiceTestSuite) TestGetUserOpenPullRequests_DefaultParameters() {
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
+func (suite *GitHubServiceTestSuite) TestGetContributionsHeatmap_ProviderNotConfigured() {
 	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
@@ -174,21 +166,7 @@ func (suite *GitHubServiceTestSuite) TestGetContributionsHeatmap_ClientRetrieval
 	suite.Contains(err.Error(), "failed to get GitHub client")
 }
 
-// TestGetUserOpenPullRequests_NoValidSession tests when user has no valid GitHub session
-func (suite *GitHubServiceTestSuite) TestGetUserOpenPullRequests_NoValidSession() {
-	// This test demonstrates the error case when no valid session exists
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
-	// Create service with nil auth service to simulate no session
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
+func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_RequiresUUIDAndProvider() {
 	ctx := context.Background()
 
 	_, err := suite.service.GetAveragePRMergeTime(ctx, "", "", "30d")
@@ -196,19 +174,7 @@ func (suite *GitHubServiceTestSuite) TestGetUserOpenPullRequests_NoValidSession(
 	suite.Equal(err.Error(), apperrors.ErrMissingUserUUIDAndProvider.Error())
 }
 
-// TestParameterValidation tests parameter validation and defaults
-func (suite *GitHubServiceTestSuite) TestParameterValidation() {
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
+func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_InvalidPeriodFormat() {
 	ctx := context.Background()
 
 	testCases := []struct {
@@ -230,109 +196,7 @@ func (suite *GitHubServiceTestSuite) TestParameterValidation() {
 	}
 }
 
-// TestGitHubUserStructure tests GitHubUser structure
-func (suite *GitHubServiceTestSuite) TestGitHubUserStructure() {
-	user := service.GitHubUser{
-		Login:     "johndoe",
-		ID:        12345,
-		AvatarURL: "https://avatars.githubusercontent.com/u/12345",
-	}
-
-	assert.Equal(suite.T(), "johndoe", user.Login)
-	assert.Equal(suite.T(), int64(12345), user.ID)
-	assert.Contains(suite.T(), user.AvatarURL, "avatars.githubusercontent.com")
-}
-
-// TestRepositoryStructure tests Repository structure
-func (suite *GitHubServiceTestSuite) TestRepositoryStructure() {
-	repo := service.Repository{
-		Name:     "my-awesome-repo",
-		FullName: "octocat/my-awesome-repo",
-		Owner:    "octocat",
-		Private:  true,
-	}
-
-	assert.Equal(suite.T(), "my-awesome-repo", repo.Name)
-	assert.Equal(suite.T(), "octocat/my-awesome-repo", repo.FullName)
-	assert.Equal(suite.T(), "octocat", repo.Owner)
-	assert.True(suite.T(), repo.Private)
-}
-
-// TestEmptyPullRequestsResponse tests response with no PRs
-func (suite *GitHubServiceTestSuite) TestEmptyPullRequestsResponse() {
-	response := service.PullRequestsResponse{
-		PullRequests: []service.PullRequest{},
-		Total:        0,
-	}
-
-	assert.Equal(suite.T(), 0, response.Total)
-	assert.Empty(suite.T(), response.PullRequests)
-	assert.NotNil(suite.T(), response.PullRequests) // Should be empty slice, not nil
-}
-
-// TestContextCancellation tests context cancellation handling
-func (suite *GitHubServiceTestSuite) TestContextCancellation() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
-	// Create a cancelled context
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
-
-	result, err := githubService.GetUserOpenPullRequests(ctx, claims, "open", "created", "desc", 30, 1)
-
-	// Should fail (either at auth or context check)
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), result)
-}
-
-// TestContextTimeout tests context timeout handling
-func (suite *GitHubServiceTestSuite) TestContextTimeout() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
-	// Create a context with very short timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-	defer cancel()
-
-	// Sleep to ensure timeout
-	time.Sleep(1 * time.Millisecond)
-
-	result, err := githubService.GetUserOpenPullRequests(ctx, claims, "open", "created", "desc", 30, 1)
-
-	// Should fail due to timeout or auth
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), result)
-}
-
-// TestServiceCreationWithNilAuthService tests service creation
-func (suite *GitHubServiceTestSuite) TestServiceCreationWithNilAuthService() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	assert.NotNil(suite.T(), githubService)
-	// Service should be created even with nil auth service
-	// It will fail on actual API calls, but creation should succeed
-}
-
-// TestGetUserTotalContributions_NilClaims tests with nil claims
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_NilClaims() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_TokenRetrievalFailure() {
 	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
@@ -344,28 +208,16 @@ func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_NilClaims() {
 	suite.Contains(err.Error(), apperrors.ErrTokenStoreNotInitialized.Message)
 }
 
-// TestGetUserTotalContributions_DefaultPeriod tests with default period
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_DefaultPeriod() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
+func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_ClientRetrievalFailure() {
 	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
 		GetGitHubAccessToken("test-uuid", "githubtools").
 		Return("test-token", nil)
 
-// TestGetUserTotalContributions_ValidPeriods tests various valid period formats
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_ValidPeriods() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubService(nil, mockCache)
+	suite.mockAuthSvc.EXPECT().
+		GetGitHubClient("githubtools").
+		Return(nil, assert.AnError)
 
 	_, err := suite.service.GetAveragePRMergeTime(ctx, "test-uuid", "githubtools", "30d")
 	suite.Error(err)
@@ -397,10 +249,8 @@ func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_ValidPeriods() {
 	}
 }
 
-// TestGetUserTotalContributions_InvalidPeriods tests various invalid period formats
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_InvalidPeriods() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_TokenRetrievalErrors() {
+	ctx := context.Background()
 
 	testCases := []struct {
 		name          string
@@ -468,18 +318,7 @@ githubService := service.NewGitHubService(nil, mockCache)
 	}
 }
 
-// TestGetUserTotalContributions_LargePeriod tests period larger than 365 days
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_LargePeriod() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
+func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_ClientRetrievalFailure() {
 	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
@@ -495,21 +334,8 @@ githubService := service.NewGitHubService(nil, mockCache)
 	suite.ErrorIs(err, apperrors.ErrAuthServiceNotInitialized)
 }
 
-// TestGetUserTotalContributions_ContextCancellation tests context cancellation handling
-func (suite *GitHubServiceTestSuite) TestGetUserTotalContributions_ContextCancellation() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
-	// Create a cancelled context
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_DefaultRefBehavior() {
+	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
 		GetGitHubAccessToken("test-uuid", "githubtools").
@@ -554,10 +380,22 @@ func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_PathNormalization(
 		},
 	}
 
-	// 2. Create service (with real auth service in production)
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			suite.mockAuthSvc.EXPECT().
+				GetGitHubAccessToken("test-uuid", "githubtools").
+				Return("test-token", nil)
 
+			suite.mockAuthSvc.EXPECT().
+				GetGitHubClient("githubtools").
+				Return(nil, nil)
+
+			// Path normalization happens before API call
+			_, err := suite.service.GetRepositoryContent(ctx, "test-uuid", "githubtools", "owner", "repo", tc.path, "main")
+			suite.Error(err) // Expected to fail at API call
+		})
+	}
+}
 
 func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_VariousParameters() {
 	ctx := context.Background()
@@ -629,10 +467,8 @@ func (suite *GitHubServiceTestSuite) TestGetRepositoryContent_VariousParameters(
 	}
 }
 
-// TestErrorMessages tests that error messages are descriptive
-func (suite *GitHubServiceTestSuite) TestErrorMessages() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestUpdateRepositoryFile_TokenRetrievalErrors() {
+	ctx := context.Background()
 
 	testCases := []struct {
 		name          string
@@ -711,19 +547,33 @@ githubService := service.NewGitHubService(nil, mockCache)
 	}
 }
 
-// TestGetUserOpenPullRequests_StateAllParameter tests the specific fix for state=all
-// This test documents the behavior where state=all should work correctly
-// Bug fix: GitHub Search API doesn't support state:all qualifier, so we omit it
-func (suite *GitHubServiceTestSuite) TestGetUserOpenPullRequests_StateAllParameter() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestUpdateRepositoryFile_ClientRetrievalFailure() {
+	ctx := context.Background()
 
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
+	suite.mockAuthSvc.EXPECT().
+		GetGitHubAccessToken("test-uuid", "githubtools").
+		Return("test-token", nil)
+
+	suite.mockAuthSvc.EXPECT().
+		GetGitHubClient("githubtools").
+		Return(nil, apperrors.ErrAuthServiceNotInitialized)
+
+	_, err := suite.service.UpdateRepositoryFile(
+		ctx,
+		"test-uuid",
+		"githubtools",
+		"owner",
+		"repo",
+		"README.md",
+		"Update README",
+		"# Updated Content",
+		"sha123",
+		"main",
+	)
+
+	suite.Error(err)
+	suite.ErrorIs(err, apperrors.ErrAuthServiceNotInitialized)
+}
 
 func (suite *GitHubServiceTestSuite) TestUpdateRepositoryFile_ParameterValidation() {
 	ctx := context.Background()
@@ -946,58 +796,7 @@ func (suite *GitHubServiceTestSuite) TestGetGitHubAsset_URLValidation() {
 	}
 }
 
-// Benchmark test for response structure creation
-func BenchmarkPullRequestCreation(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_ = service.PullRequest{
-			ID:        int64(i),
-			Number:    i,
-			Title:     fmt.Sprintf("PR %d", i),
-			State:     "open",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			HTMLURL:   fmt.Sprintf("https://github.com/owner/repo/pull/%d", i),
-			Draft:     false,
-			User: service.GitHubUser{
-				Login:     "testuser",
-				ID:        12345,
-				AvatarURL: "https://avatars.githubusercontent.com/u/12345",
-			},
-			Repo: service.Repository{
-				Name:     "test-repo",
-				FullName: "owner/test-repo",
-				Owner:    "owner",
-				Private:  false,
-			},
-		}
-	}
-}
-
-// TestGetAveragePRMergeTime_NilClaims tests with nil claims
-func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_NilClaims() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
-	ctx := context.Background()
-
-	result, err := githubService.GetAveragePRMergeTime(ctx, nil, "30d")
-
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), result)
-	assert.Contains(suite.T(), err.Error(), "authentication required")
-}
-
-// TestGetAveragePRMergeTime_InvalidPeriod tests with invalid period format
-func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_InvalidPeriod() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
-
-	claims := &auth.AuthClaims{
-		UserID:   12345,
-		Username: "testuser",
-		Email:    "test@example.com",
-		Provider: "githubtools",
-	}
-
+func (suite *GitHubServiceTestSuite) TestGetGitHubAsset_ParameterCombinations() {
 	ctx := context.Background()
 
 	testCases := []struct {
@@ -1044,10 +843,8 @@ githubService := service.NewGitHubService(nil, mockCache)
 	}
 }
 
-// TestGetAveragePRMergeTime_DefaultPeriod tests default period handling
-func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_DefaultPeriod() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestGetUserPRReviewComments_RequiresUUIDAndProvider() {
+	ctx := context.Background()
 
 	_, err := suite.service.GetUserPRReviewComments(ctx, "", "", "30d")
 	suite.Error(err)
@@ -1063,10 +860,8 @@ func (suite *GitHubServiceTestSuite) TestGetUserPRReviewComments_InvalidPeriodFo
 	suite.Contains(err.Error(), "invalid period format")
 }
 
-// TestGetAveragePRMergeTime_NoAuthService tests when auth service fails
-func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_NoAuthService() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+func (suite *GitHubServiceTestSuite) TestGetUserPRReviewComments_DefaultPeriod() {
+	ctx := context.Background()
 
 	suite.mockAuthSvc.EXPECT().
 		GetGitHubAccessToken("test-uuid", "githubtools").
@@ -1241,10 +1036,31 @@ func (suite *GitHubServiceTestSuite) TestGetContributionsHeatmap_PeriodValidatio
 func (suite *GitHubServiceTestSuite) TestClosePullRequest_MissingUserUUIDOrProvider() {
 	ctx := context.Background()
 
-// TestGetAveragePRMergeTime_VariousPeriods tests various valid period formats
-func (suite *GitHubServiceTestSuite) TestGetAveragePRMergeTime_VariousPeriods() {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
+	testCases := []struct {
+		name          string
+		userUUID      string
+		provider      string
+		expectedError string
+	}{
+		{
+			name:          "BothEmpty",
+			userUUID:      "",
+			provider:      "",
+			expectedError: "userUUID and provider are required",
+		},
+		{
+			name:          "EmptyUserUUID",
+			userUUID:      "",
+			provider:      "githubtools",
+			expectedError: "userUUID and provider are required",
+		},
+		{
+			name:          "EmptyProvider",
+			userUUID:      "test-uuid",
+			provider:      "",
+			expectedError: "userUUID and provider are required",
+		},
+	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
@@ -1366,365 +1182,116 @@ func (suite *GitHubServiceTestSuite) TestClosePullRequest_GetClientErrors() {
 	}
 }
 
-// ClosePullRequest tests
+func (suite *GitHubServiceTestSuite) TestGetUserPRReviewComments_GitHubClientCreation() {
+	ctx := context.Background()
 
-// TestClosePullRequest_Success_WithBranchDeletion verifies closing an open PR and deleting its branch
-func TestClosePullRequest_Success_WithBranchDeletion(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	testCases := []struct {
+		name              string
+		provider          string
+		setupMocks        func()
+		expectedError     string
+		shouldFailAtSetup bool
+	}{
+		{
+			name:     "GetClientError",
+			provider: "githubtools",
+			setupMocks: func() {
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubAccessToken("test-uuid", "githubtools").
+					Return("test-token", nil)
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubClient("githubtools").
+					Return(nil, fmt.Errorf("GitHub client not found for provider githubtools"))
+			},
+			expectedError:     "failed to get GitHub client",
+			shouldFailAtSetup: true,
+		},
+		{
+			name:     "NilConfig_CreatesStandardClient",
+			provider: "githubtools",
+			setupMocks: func() {
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubAccessToken("test-uuid", "githubtools").
+					Return("test-token", nil)
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubClient("githubtools").
+					Return(nil, nil)
+			},
+			expectedError:     "failed to get user",
+			shouldFailAtSetup: false,
+		},
+		{
+			name:     "EmptyEnterpriseURL_CreatesStandardClient",
+			provider: "github",
+			setupMocks: func() {
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubAccessToken("test-uuid", "github").
+					Return("test-token", nil)
+				// Return GitHubClient with nil config (empty enterprise URL)
+				githubClient := &auth.GitHubClient{}
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubClient("github").
+					Return(githubClient, nil)
+			},
+			expectedError:     "failed to get user",
+			shouldFailAtSetup: false,
+		},
+		{
+			name:     "ValidEnterpriseURL_CreatesEnterpriseClient",
+			provider: "githubtools",
+			setupMocks: func() {
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubAccessToken("test-uuid", "githubtools").
+					Return("test-token", nil)
+				// Return GitHubClient with enterprise URL
+				githubClient := auth.NewGitHubClient(&auth.ProviderConfig{
+					EnterpriseBaseURL: "https://github.enterprise.com",
+				})
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubClient("githubtools").
+					Return(githubClient, nil)
+			},
+			expectedError:     "failed to get user",
+			shouldFailAtSetup: false,
+		},
+		{
+			name:     "InvalidEnterpriseURL_FailsClientCreation",
+			provider: "githubtools",
+			setupMocks: func() {
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubAccessToken("test-uuid", "githubtools").
+					Return("test-token", nil)
+				// Return GitHubClient with invalid enterprise URL
+				githubClient := auth.NewGitHubClient(&auth.ProviderConfig{
+					EnterpriseBaseURL: "://invalid-url",
+				})
+				suite.mockAuthSvc.EXPECT().
+					GetGitHubClient("githubtools").
+					Return(githubClient, nil)
+			},
+			expectedError:     "failed to create GitHub Enterprise client",
+			shouldFailAtSetup: true,
+		},
+	}
 
-	capturedDelete := false
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			tc.setupMocks()
 
-	// Mock GitHub API server
-	var mockGitHubServer *httptest.Server
-	mockGitHubServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+			result, err := suite.service.GetUserPRReviewComments(ctx, "test-uuid", tc.provider, "30d")
 
-		// Handle GET PR
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/42") {
-			resp := map[string]interface{}{
-				"id":         int64(123456789),
-				"number":     42,
-				"title":      "Test PR",
-				"state":      "open",
-				"created_at": "2025-01-01T12:00:00Z",
-				"updated_at": "2025-01-01T12:00:00Z",
-				"html_url":   mockGitHubServer.URL + "/owner/repo/pull/42",
-				"draft":      false,
-				"user": map[string]interface{}{
-					"login":      "testuser",
-					"id":         int64(12345),
-					"avatar_url": "https://avatars.githubusercontent.com/u/12345",
-				},
-				"head": map[string]interface{}{
-					"ref": "feature-branch",
-					"repo": map[string]interface{}{
-						"name": "repo",
-						"owner": map[string]interface{}{
-							"login": "owner",
-						},
-					},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-
-		// Handle PATCH (close PR)
-		if r.Method == http.MethodPatch && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/42") {
-			resp := map[string]interface{}{
-				"id":         int64(123456789),
-				"number":     42,
-				"title":      "Test PR",
-				"state":      "closed",
-				"created_at": "2025-01-01T12:00:00Z",
-				"updated_at": "2025-01-02T12:00:00Z",
-				"html_url":   mockGitHubServer.URL + "/owner/repo/pull/42",
-				"draft":      false,
-				"user": map[string]interface{}{
-					"login":      "testuser",
-					"id":         int64(12345),
-					"avatar_url": "https://avatars.githubusercontent.com/u/12345",
-				},
-				"head": map[string]interface{}{
-					"ref": "feature-branch",
-					"repo": map[string]interface{}{
-						"name": "repo",
-						"owner": map[string]interface{}{
-							"login": "owner",
-						},
-					},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-
-		// Handle DELETE ref (branch deletion)
-		if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/repos/owner/repo/git/refs/heads/feature-branch") {
-			capturedDelete = true
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		// Fallback
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	// Mock auth service
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	// Service under test
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	// Execute
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 42, true)
-
-	// Assert
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Equal(t, "closed", result.State)
-	assert.Equal(t, 42, result.Number)
-	assert.Equal(t, "owner", result.Repo.Owner)
-	assert.Equal(t, "repo", result.Repo.Name)
-	assert.True(t, capturedDelete, "branch deletion should be attempted")
-}
-
-// TestClosePullRequest_AlreadyClosed verifies error when PR is already closed
-func TestClosePullRequest_AlreadyClosed(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	var mockGitHubServer *httptest.Server
-	mockGitHubServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/99") {
-			w.Header().Set("Content-Type", "application/json")
-			resp := map[string]interface{}{
-				"id":         int64(111),
-				"number":     99,
-				"title":      "Closed PR",
-				"state":      "closed",
-				"created_at": "2025-01-01T12:00:00Z",
-				"updated_at": "2025-01-05T12:00:00Z",
-				"html_url":   mockGitHubServer.URL + "/owner/repo/pull/99",
-				"user": map[string]interface{}{
-					"login":      "testuser",
-					"id":         int64(12345),
-					"avatar_url": "https://avatars.githubusercontent.com/u/12345",
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 99, true)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-	assert.Contains(t, err.Error(), "already closed")
-}
-
-// TestClosePullRequest_NotFound verifies not found error when PR does not exist
-func TestClosePullRequest_NotFound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	var mockGitHubServer *httptest.Server
-	mockGitHubServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/7") {
-			w.WriteHeader(http.StatusNotFound)
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": "Not Found"})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 7, true)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-	assert.Contains(t, err.Error(), "not found")
-}
-
-// TestClosePullRequest_RateLimitOnGet verifies rate limit on initial PR fetch
-func TestClosePullRequest_RateLimitOnGet(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	var mockGitHubServer *httptest.Server
-	mockGitHubServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/1") {
-			w.WriteHeader(http.StatusForbidden)
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": "API rate limit exceeded"})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 1, true)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-	assert.Contains(t, err.Error(), "rate limit")
-}
-
-// TestClosePullRequest_DeleteBranch404Ignored verifies 404 during branch deletion is ignored
-func TestClosePullRequest_DeleteBranch404Ignored(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	var mockGitHubServer *httptest.Server
-	mockGitHubServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// GET open PR
-		if r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/50") {
-			w.Header().Set("Content-Type", "application/json")
-			resp := map[string]interface{}{
-				"id":         int64(500),
-				"number":     50,
-				"title":      "PR to close",
-				"state":      "open",
-				"created_at": "2025-01-01T12:00:00Z",
-				"updated_at": "2025-01-01T12:00:00Z",
-				"html_url":   mockGitHubServer.URL + "/owner/repo/pull/50",
-				"user": map[string]interface{}{
-					"login":      "testuser",
-					"id":         int64(12345),
-					"avatar_url": "https://avatars.githubusercontent.com/u/12345",
-				},
-				"head": map[string]interface{}{
-					"ref": "feature-branch",
-					"repo": map[string]interface{}{
-						"name": "repo",
-						"owner": map[string]interface{}{
-							"login": "owner",
-						},
-					},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		// PATCH close PR
-		if r.Method == http.MethodPatch && strings.Contains(r.URL.Path, "/repos/owner/repo/pulls/50") {
-			w.Header().Set("Content-Type", "application/json")
-			resp := map[string]interface{}{
-				"id":         int64(500),
-				"number":     50,
-				"title":      "PR to close",
-				"state":      "closed",
-				"created_at": "2025-01-01T12:00:00Z",
-				"updated_at": "2025-01-02T12:00:00Z",
-				"html_url":   mockGitHubServer.URL + "/owner/repo/pull/50",
-				"user": map[string]interface{}{
-					"login":      "testuser",
-					"id":         int64(12345),
-					"avatar_url": "https://avatars.githubusercontent.com/u/12345",
-				},
-				"head": map[string]interface{}{
-					"ref": "feature-branch",
-					"repo": map[string]interface{}{
-						"name": "repo",
-						"owner": map[string]interface{}{
-							"login": "owner",
-						},
-					},
-				},
-			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		// DELETE branch -> 404 (ignored by service)
-		if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/repos/owner/repo/git/refs/heads/feature-branch") {
-			w.WriteHeader(http.StatusNotFound)
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": "branch not found"})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 50, true)
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Equal(t, "closed", result.State)
-}
+			suite.Error(err)
+			suite.Nil(result)
+			suite.Contains(err.Error(), tc.expectedError)
 
 			if tc.shouldFailAtSetup {
 				// Error should occur during client setup
 				suite.NotContains(err.Error(), "failed to get user")
 			}
-			_ = json.NewEncoder(w).Encode(resp)
-			return
-		}
-		// DELETE branch -> 500 error (should bubble up)
-		if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/repos/owner/repo/git/refs/heads/feature-branch") {
-			w.WriteHeader(http.StatusInternalServerError)
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": "internal error"})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer mockGitHubServer.Close()
-
-	mockAuthService := mocks.NewMockGitHubAuthService(ctrl)
-	mockAuthService.EXPECT().GetGitHubAccessTokenFromClaims(gomock.Any()).Return("token", nil)
-	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
-	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
-
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 123, Provider: "githubtools"}
-
-	result, err := githubService.ClosePullRequest(context.Background(), claims, "owner", "repo", 77, true)
-
-	require.Error(t, err)
-	require.Nil(t, result)
-	assert.Contains(t, err.Error(), "failed to delete branch")
+		})
+	}
 }
 
-// TestClosePullRequest_InputValidation verifies input validation errors
-func TestClosePullRequest_InputValidation(t *testing.T) {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-githubService := service.NewGitHubService(nil, mockCache)
-
-	// Nil claims
-	res, err := githubService.ClosePullRequest(context.Background(), nil, "owner", "repo", 1, false)
-	require.Error(t, err)
-	require.Nil(t, res)
-	assert.Contains(t, err.Error(), "authentication required")
-
-	// Missing owner/repo
-	claims := &auth.AuthClaims{UserID: 1, Provider: "githubtools"}
-	res, err = githubService.ClosePullRequest(context.Background(), claims, "", "repo", 1, false)
-	require.Error(t, err)
-	require.Nil(t, res)
-	assert.Contains(t, err.Error(), "owner and repo are required")
+func TestGitHubServiceTestSuite(t *testing.T) {
+	suite.Run(t, new(GitHubServiceTestSuite))
 }

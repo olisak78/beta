@@ -2,9 +2,7 @@ package service
 
 import (
 	"fmt"
-	"time"
 
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/repository"
 
@@ -14,24 +12,18 @@ import (
 
 // CategoryService provides category-related business logic
 type CategoryService struct {
-	repo         repository.CategoryRepositoryInterface
-	validator    *validator.Validate
-	cache        cache.CacheService
-	cacheWrapper *cache.CacheWrapper
-	cacheTTL     time.Duration
+	repo      repository.CategoryRepositoryInterface
+	validator *validator.Validate
 }
 
 // Ensure CategoryService implements CategoryServiceInterface
 var _ CategoryServiceInterface = (*CategoryService)(nil)
 
 // NewCategoryService creates a new CategoryService
-func NewCategoryService(repo repository.CategoryRepositoryInterface, validator *validator.Validate, cacheService cache.CacheService) *CategoryService {
+func NewCategoryService(repo repository.CategoryRepositoryInterface, validator *validator.Validate) *CategoryService {
 	return &CategoryService{
-		repo:         repo,
-		validator:    validator,
-		cache:        cacheService,
-		cacheWrapper: cache.NewCacheWrapper(cacheService, 30*time.Minute),
-		cacheTTL:     30 * time.Minute,
+		repo:      repo,
+		validator: validator,
 	}
 }
 
@@ -63,34 +55,23 @@ func (s *CategoryService) GetAll(page, pageSize int) (*CategoryListResponse, err
 		pageSize = 1000
 	}
 
-	cacheKey := fmt.Sprintf("categories:page=%d:pageSize=%d", page, pageSize)
-
-	var response CategoryListResponse
-	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTL, &response, func() (interface{}, error) {
-		offset := (page - 1) * pageSize
-		cats, total, err := s.repo.GetAll(pageSize, offset)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get categories: %w", err)
-		}
-
-		responses := make([]CategoryResponse, len(cats))
-		for i, c := range cats {
-			responses[i] = s.toResponse(&c)
-		}
-
-		return &CategoryListResponse{
-			Categories: responses,
-			Total:      total,
-			Page:       page,
-			PageSize:   pageSize,
-		}, nil
-	})
-
+	offset := (page - 1) * pageSize
+	cats, total, err := s.repo.GetAll(pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get categories: %w", err)
 	}
 
-	return &response, nil
+	responses := make([]CategoryResponse, len(cats))
+	for i, c := range cats {
+		responses[i] = s.toResponse(&c)
+	}
+
+	return &CategoryListResponse{
+		Categories: responses,
+		Total:      total,
+		Page:       page,
+		PageSize:   pageSize,
+	}, nil
 }
 
 // toResponse converts a Category model to API response

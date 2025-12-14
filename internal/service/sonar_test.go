@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"time"
 	"net/http"
 	"testing"
 
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 
 	"github.com/stretchr/testify/assert"
@@ -36,8 +34,7 @@ func baseSonarCfg() *config.Config {
 }
 
 func newSonarWithTransport(cfg *config.Config, rt roundTripFunc) *SonarService {
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	s := NewSonarService(cfg, mockCache)
+	s := NewSonarService(cfg)
 	s.httpClient = &http.Client{Transport: rt}
 	return s
 }
@@ -103,8 +100,7 @@ func TestSonar_GetComponentMeasures_ConfigMissing(t *testing.T) {
 		SonarHost: "", // missing
 		SonarToken: "x",
 	}
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	svc := NewSonarService(cfg, mockCache)
+	svc := NewSonarService(cfg)
 	res, err := svc.GetComponentMeasures("proj")
 	assert.Error(t, err)
 	assert.Nil(t, res)
@@ -113,8 +109,7 @@ func TestSonar_GetComponentMeasures_ConfigMissing(t *testing.T) {
 
 func TestSonar_GetComponentMeasures_ProjectKeyMissing(t *testing.T) {
 	cfg := baseSonarCfg()
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	svc := NewSonarService(cfg, mockCache)
+	svc := NewSonarService(cfg)
 	res, err := svc.GetComponentMeasures("")
 	assert.Error(t, err)
 	assert.Nil(t, res)
@@ -125,8 +120,7 @@ func TestSonar_GetComponentMeasures_InvalidHostURL(t *testing.T) {
 	cfg := baseSonarCfg()
 	// Invalid host with space to trigger url.Parse error
 	cfg.SonarHost = "bad host with space"
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	svc := NewSonarService(cfg, mockCache)
+	svc := NewSonarService(cfg)
 	res, err := svc.GetComponentMeasures("proj")
 	assert.Error(t, err)
 	assert.Nil(t, res)

@@ -15,7 +15,6 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
-	"developer-portal-backend/internal/cache"
 )
 
 // userRepoAdapter adapts repository.MemberRepository to auth.MemberRepository
@@ -28,7 +27,7 @@ func (a *userRepoAdapter) GetByEmail(email string) (interface{}, error) {
 }
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(db *gorm.DB, cfg *config.Config, cacheService cache.CacheService) *gin.Engine {
+func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Create router
 	router := gin.New()
 
@@ -56,23 +55,14 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config, cacheService cache.CacheServic
 	pluginRepo := repository.NewPluginRepository(db)
 
 	// Initialize services
-	userService := service.NewUserService(userRepo, linkRepo, validator)
-	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator, cacheService)
+	userService := service.NewUserService(userRepo, linkRepo, pluginRepo, validator)
+	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator)
 	projectService := service.NewProjectService(projectRepo, validator)
-	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator, cacheService)
-	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator, cacheService)
-	categoryService := service.NewCategoryService(categoryRepo, validator, cacheService)
-	linkService := service.NewLinkService(linkRepo, userRepo, teamRepo, categoryRepo, validator, cacheService)
+	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator)
+	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator)
+	categoryService := service.NewCategoryService(categoryRepo, validator)
+	linkService := service.NewLinkService(linkRepo, userRepo, teamRepo, categoryRepo, validator)
 	docService := service.NewDocumentationService(docRepo, teamRepo, validator)
-	ldapService := service.NewLDAPService(cfg)
-	jiraService := service.NewJiraService(cfg, cacheService)
-	// Initialize Jira PAT on startup: use fixed-name PAT with machine identifier, delete existing if present, then create a new one
-	if err := jiraService.InitializePATOnStartup(); err != nil {
-		log.Printf("Warning: Jira PAT initialization failed: %v", err)
-	}
-	jenkinsService := service.NewJenkinsService(cfg)
-	sonarService := service.NewSonarService(cfg, cacheService)
-	aicoreService := service.NewAICoreService(userRepo, teamRepo, groupRepo, organizationRepo)
 
 	pluginService := service.NewPluginService(pluginRepo, userRepo, validator)
 
@@ -126,7 +116,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config, cacheService cache.CacheServic
 	jiraHandler := handlers.NewJiraHandler(jiraService)
 	jenkinsHandler := handlers.NewJenkinsHandler(jenkinsService)
 	sonarHandler := handlers.NewSonarHandler(sonarService)
-	githubService := service.NewGitHubService(authService, cacheService)
+	githubService := service.NewGitHubService(authService)
 	githubHandler := handlers.NewGitHubHandler(githubService)
 	pluginHandler := handlers.NewPluginHandlerWithGitHub(pluginService, githubService)
 	aicoreHandler := handlers.NewAICoreHandler(aicoreService, validator)
@@ -359,4 +349,3 @@ func SetupHealthRoutes(db *gorm.DB) *gin.Engine {
 
 	return router
 }
-

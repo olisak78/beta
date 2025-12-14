@@ -3,10 +3,8 @@ package service_test
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"developer-portal-backend/internal/database/models"
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/mocks"
 	"developer-portal-backend/internal/service"
 
@@ -29,8 +27,7 @@ func (suite *CategoryServiceTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.mockCategoryRepo = mocks.NewMockCategoryRepositoryInterface(suite.ctrl)
 	suite.validator = validator.New()
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	suite.categoryService = service.NewCategoryService(suite.mockCategoryRepo, suite.validator, mockCache)
+	suite.categoryService = service.NewCategoryService(suite.mockCategoryRepo, suite.validator)
 }
 
 func (suite *CategoryServiceTestSuite) TearDownTest() {

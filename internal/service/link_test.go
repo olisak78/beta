@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-	"time"
 
 	"developer-portal-backend/internal/database/models"
 	"developer-portal-backend/internal/mocks"
 	"developer-portal-backend/internal/service"
-	"developer-portal-backend/internal/cache"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -72,14 +70,12 @@ func (suite *LinkServiceTestSuite) SetupTest() {
 	suite.teamRepo = &teamRepoStub{}
 	suite.validator = validator.New()
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
 	suite.linkService = service.NewLinkService(
 		suite.mockLinkRepo,
 		suite.mockUserRepo,
 		suite.teamRepo, // use stub instead of gomock for team repo to satisfy full interface
 		suite.mockCategoryRepo,
-		suite.validator, 
-		mockCache,
+		suite.validator,
 	)
 }
 
@@ -104,7 +100,7 @@ func (suite *LinkServiceTestSuite) TestCreateLink_Success_UserOwner() {
 	// created_by validation: found as user
 	suite.mockUserRepo.EXPECT().GetByUserID(createdBy).Return(&models.User{UserID: createdBy}, nil)
 	// owner validation: found as user by ID
-	suite.mockUserRepo.EXPECT().GetByID(ownerID).Return(&models.User{BaseModel: models.BaseModel{ID: ownerID}}, nil).AnyTimes()
+	suite.mockUserRepo.EXPECT().GetByID(ownerID).Return(&models.User{BaseModel: models.BaseModel{ID: ownerID}}, nil)
 	// category validation: found
 	suite.mockCategoryRepo.EXPECT().GetByID(categoryID).Return(&models.Category{BaseModel: models.BaseModel{ID: categoryID}}, nil)
 	// create: set ID on the entity
@@ -167,7 +163,7 @@ func (suite *LinkServiceTestSuite) TestCreateLink_URLMaxLength() {
 	
 	// Setup mocks for successful creation
 	suite.mockUserRepo.EXPECT().GetByUserID(createdBy).Return(&models.User{UserID: createdBy}, nil)
-	suite.mockUserRepo.EXPECT().GetByID(ownerID).Return(&models.User{BaseModel: models.BaseModel{ID: ownerID}}, nil).AnyTimes()
+	suite.mockUserRepo.EXPECT().GetByID(ownerID).Return(&models.User{BaseModel: models.BaseModel{ID: ownerID}}, nil)
 	suite.mockCategoryRepo.EXPECT().GetByID(categoryID).Return(&models.Category{BaseModel: models.BaseModel{ID: categoryID}}, nil)
 	suite.mockLinkRepo.EXPECT().Create(gomock.Any()).DoAndReturn(func(l *models.Link) error {
 		l.ID = uuid.New()

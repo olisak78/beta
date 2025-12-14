@@ -6,13 +6,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"time"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"developer-portal-backend/internal/auth"
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/mocks"
 	"developer-portal-backend/internal/service"
 
@@ -122,8 +120,7 @@ func TestGetUserOpenPullRequests_FullFlow_WithMocks(t *testing.T) {
 		Times(1)
 
 	// Create GitHub service with mock auth
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
 
 	provider := "githubtools"
 	claims := &auth.AuthClaims{
@@ -217,8 +214,8 @@ func TestGetUserOpenPullRequests_ClosedState(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
 	claims := &auth.AuthClaims{
 		UUID: "test-uuid",
 	}
@@ -252,9 +249,9 @@ func TestGetUserOpenPullRequests_EmptyResults(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "githubtools"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	result, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 30, 1)
 
@@ -274,9 +271,9 @@ func TestGetUserOpenPullRequests_TokenRetrievalFailure(t *testing.T) {
 		Return("", fmt.Errorf("no valid session found")).
 		Times(1)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	result, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 30, 1)
 
@@ -297,9 +294,9 @@ func TestGetUserOpenPullRequests_GitHubClientRetrievalFailure(t *testing.T) {
 		Return(nil, fmt.Errorf("client not found")).
 		Times(1)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "invalid"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "invalid"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	result, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 30, 1)
 
@@ -329,9 +326,9 @@ func TestGetUserOpenPullRequests_GitHubAPIRateLimit(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "githubtools"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	result, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 30, 1)
 
@@ -364,9 +361,9 @@ func TestGetUserOpenPullRequests_DefaultParameterNormalization(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "githubtools"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	// Call with empty parameters to test defaults
 	_, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "", "", "", 0, 0)
@@ -402,9 +399,9 @@ func TestGetUserOpenPullRequests_PaginationParameters(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "githubtools"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	// Test with specific pagination
 	_, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 50, 3)
@@ -463,9 +460,9 @@ func TestGetUserOpenPullRequests_PRDataParsing(t *testing.T) {
 	envConfig := &auth.ProviderConfig{EnterpriseBaseURL: mockGitHubServer.URL}
 	mockAuthService.EXPECT().GetGitHubClient(gomock.Any()).Return(auth.NewGitHubClient(envConfig), nil)
 
-	mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-	githubService := service.NewGitHubServiceWithAdapter(mockAuthService, mockCache)
-	claims := &auth.AuthClaims{UserID: 12345, Provider: "githubtools"}
+	githubService := service.NewGitHubServiceWithAdapter(mockAuthService)
+	provider := "githubtools"
+	claims := &auth.AuthClaims{UUID: "test-uuid"}
 
 	result, err := githubService.GetUserOpenPullRequests(context.Background(), claims.UUID, provider, "open", "created", "desc", 30, 1)
 

@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/config"
 
 	"github.com/stretchr/testify/assert"
@@ -133,8 +132,7 @@ func TestJiraService_GetIssues_TeamFilter(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			result, err := service.GetIssues(tt.filters)
@@ -293,8 +291,7 @@ func TestJiraService_GetIssues_UserFilter(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			result, err := service.GetIssues(tt.filters)
@@ -401,8 +398,7 @@ func TestJiraService_GetIssuesCount(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			count, err := service.GetIssuesCount(tt.filters)
@@ -502,8 +498,7 @@ func TestJiraService_GetIssues_Pagination(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			result, err := service.GetIssues(tt.filters)
@@ -555,9 +550,7 @@ func TestJiraService_ConfigurationValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(tt.config, mockCache)
+			service := NewJiraService(tt.config)
 
 			// Test GetIssues returns configuration error
 			filters := JiraIssueFilters{Project: "TEST", Status: "Open"}
@@ -634,8 +627,7 @@ func TestJiraService_JQLValidation(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			_, err := service.GetIssues(tt.filters)
@@ -701,8 +693,7 @@ func TestJiraService_URLValidation(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			filters := JiraIssueFilters{
 				Project: "SAPBTPCFS",
@@ -880,8 +871,7 @@ func TestJiraService_NewParameterFilters(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			result, err := service.GetIssues(tt.filters)
@@ -993,8 +983,7 @@ func TestJiraService_NewParameterValidation(t *testing.T) {
 				JiraUser:     "testuser",
 				JiraPassword: "testpass",
 			}
-			mockCache := cache.NewInMemoryCache(5*time.Minute, 10*time.Minute)
-			service := NewJiraService(cfg, mockCache)
+			service := NewJiraService(cfg)
 
 			// Execute test
 			_, err := service.GetIssues(tt.filters)
