@@ -151,7 +151,10 @@ func handleOrganizationsFromYAML(db *gorm.DB, dataDir string) error {
 
 			if lookup.RowsAffected == 0 {
 				// Create new organization
-				metadataJSON, _ := json.Marshal(o.Metadata)
+				metadataJSON, err := json.Marshal(o.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal organization %s metadata: %w", o.Name, err)
+				}
 				newOrg := models.Organization{
 					BaseModel: models.BaseModel{
 						Name:        o.Name,
@@ -171,7 +174,10 @@ func handleOrganizationsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(o.Metadata)
+			yamlMD, err := json.Marshal(o.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal organization %s metadata: %w", o.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if o.Metadata != nil {
@@ -252,7 +258,10 @@ func handleGroupsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 			if grpTx.RowsAffected == 0 {
 				// Create new group
-				metadataJSON, _ := json.Marshal(g.Metadata)
+				metadataJSON, err := json.Marshal(g.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal group %s metadata: %w", g.Name, err)
+				}
 				newGroup := models.Group{
 					BaseModel: models.BaseModel{
 						Name:        g.Name,
@@ -274,7 +283,10 @@ func handleGroupsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(g.Metadata)
+			yamlMD, err := json.Marshal(g.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal group %s metadata: %w", g.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if g.Metadata != nil {
@@ -356,7 +368,10 @@ func handleTeamsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 			if teamTx.RowsAffected == 0 {
 				// Create new team
-				metadataJSON, _ := json.Marshal(t.Metadata)
+				metadataJSON, err := json.Marshal(t.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal team %s metadata: %w", t.Name, err)
+				}
 				newTeam := models.Team{
 					BaseModel: models.BaseModel{
 						Name:        t.Name,
@@ -378,7 +393,10 @@ func handleTeamsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(t.Metadata)
+			yamlMD, err := json.Marshal(t.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal team %s metadata: %w", t.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if t.Metadata != nil {
@@ -440,22 +458,100 @@ func handleUsersFromYAML(db *gorm.DB, dataDir string) error {
 
 	return db.Transaction(func(tx *gorm.DB) error {
 		created := 0
+		updated := 0
 		unchanged := 0
 
 		for _, u := range items {
-			// Existence check: by users.name only
-			var exists int64
-			if err := tx.Model(&models.User{}).Where("name = ?", u.UserID).Limit(1).Count(&exists).Error; err != nil {
-				return fmt.Errorf("existence check (name) for user %s failed: %w", u.UserID, err)
+			var dbUser models.User
+			// Resolve user by name without ErrRecordNotFound logs:
+			if err := tx.Where("user_id = ?", u.UserID).Limit(1).Find(&dbUser).Error; err != nil {
+				return fmt.Errorf("query user %s: %w", u.UserID, err)
 			}
+			// if dbUser found, compare metadata.ai_instances
+			if dbUser.ID != uuid.Nil {
+				// Safely unmarshal existing metadata; empty/invalid, start with empty map
+				var dbUserMetadata map[string]interface{}
+				if len(dbUser.Metadata) > 0 {
+					if err := json.Unmarshal(dbUser.Metadata, &dbUserMetadata); err != nil || dbUserMetadata == nil {
+						dbUserMetadata = map[string]interface{}{}
+					}
+				} else {
+					dbUserMetadata = map[string]interface{}{}
+				}
 
-			if exists > 0 {
-				unchanged++
-				continue // Do nothing per requirement
+				// YAML is the source of truth for ai_instances:
+				// - If YAML provides ai_instances: set DB to that value (update only if different)
+				// - If YAML omits ai_instances (including nil metadata): remove ai_instances from DB metadata if present
+				var yamlAI interface{}
+				yamlHasAI := false
+				if u.Metadata != nil {
+					if v, ok := u.Metadata["ai_instances"]; ok {
+						yamlHasAI = true
+						yamlAI = v
+					}
+				}
+
+				existingAI, exists := dbUserMetadata["ai_instances"]
+
+				if yamlHasAI {
+					// Compare existing vs YAML value semantically
+					existingJSONBytes, err := json.Marshal(existingAI)
+					if err != nil {
+						return fmt.Errorf("marshal existing ai_instances for user %s: %w", u.UserID, err)
+					}
+					yamlJSONBytes, err := json.Marshal(yamlAI)
+					if err != nil {
+						return fmt.Errorf("marshal YAML ai_instances for user %s: %w", u.UserID, err)
+					}
+
+					if !jsonEqual(json.RawMessage(existingJSONBytes), json.RawMessage(yamlJSONBytes)) {
+						// Update metadata.ai_instances to YAML-provided value
+						dbUserMetadata["ai_instances"] = yamlAI
+						updatedMetadataJSON, err := json.Marshal(dbUserMetadata)
+						if err != nil {
+							return fmt.Errorf("marshal updated metadata for user %s: %w", u.UserID, err)
+						}
+						if err := tx.Model(&dbUser).Updates(map[string]interface{}{
+							"metadata":   updatedMetadataJSON,
+							"updated_by": "cis.devops",
+							"updated_at": gorm.Expr("CURRENT_TIMESTAMP"),
+						}).Error; err != nil {
+							return fmt.Errorf("update user %s metadata.ai_instances: %w", u.UserID, err)
+						}
+						updated++
+						continue
+					}
+
+					unchanged++
+					continue
+				} else {
+					// YAML omits ai_instances: ensure DB does not have it
+					if exists {
+						delete(dbUserMetadata, "ai_instances")
+						updatedMetadataJSON, err := json.Marshal(dbUserMetadata)
+						if err != nil {
+							return fmt.Errorf("marshal updated metadata for user %s: %w", u.UserID, err)
+						}
+						if err := tx.Model(&dbUser).Updates(map[string]interface{}{
+							"metadata":   updatedMetadataJSON,
+							"updated_by": "cis.devops",
+							"updated_at": gorm.Expr("CURRENT_TIMESTAMP"),
+						}).Error; err != nil {
+							return fmt.Errorf("remove user %s metadata.ai_instances: %w", u.UserID, err)
+						}
+						updated++
+						continue
+					}
+
+					unchanged++
+					continue
+				}
 			}
-
 			// Create new user
-			metadataJSON, _ := json.Marshal(u.Metadata)
+			metadataJSON, err := json.Marshal(u.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal user %s metadata: %w", u.UserID, err)
+			}
 			fullTitle := u.FirstName + " " + u.LastName
 			newUser := models.User{
 				BaseModel: models.BaseModel{
@@ -490,9 +586,9 @@ func handleUsersFromYAML(db *gorm.DB, dataDir string) error {
 			}
 			created++
 		}
-
-		log.Printf("Users handling completed. %d created, %d unchanged, %d total in YAML", created, unchanged, len(items))
+		log.Printf("Users handling completed. %d created, %d updated, %d unchanged, %d total in YAML", created, updated, unchanged, len(items))
 		return nil
+
 	})
 }
 
@@ -517,7 +613,10 @@ func handleProjectsFromYAML(db *gorm.DB, dataDir string) error {
 
 			if projTx.RowsAffected == 0 {
 				// Create new project
-				metadataJSON, _ := json.Marshal(p.Metadata)
+				metadataJSON, err := json.Marshal(p.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal project %s metadata: %w", p.Name, err)
+				}
 				newProj := models.Project{
 					BaseModel: models.BaseModel{
 						Name:        p.Name,
@@ -535,7 +634,10 @@ func handleProjectsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(p.Metadata)
+			yamlMD, err := json.Marshal(p.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal project %s metadata: %w", p.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if p.Metadata != nil {
@@ -614,7 +716,10 @@ func handleLandscapesFromYAML(db *gorm.DB, dataDir string) error {
 			}
 			if lsTx.RowsAffected == 0 {
 				// Create new landscape
-				metadataJSON, _ := json.Marshal(l.Metadata)
+				metadataJSON, err := json.Marshal(l.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal landscape %s metadata: %w", l.Name, err)
+				}
 				newLandscape := models.Landscape{
 					BaseModel: models.BaseModel{
 						Name:        l.Name,
@@ -635,7 +740,10 @@ func handleLandscapesFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(l.Metadata)
+			yamlMD, err := json.Marshal(l.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal landscape %s metadata: %w", l.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if l.Metadata != nil {
@@ -726,7 +834,10 @@ func handleComponentsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 			if compTx.RowsAffected == 0 {
 				// Create new component
-				metadataJSON, _ := json.Marshal(c.Metadata)
+				metadataJSON, err := json.Marshal(c.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal component %s metadata: %w", c.Name, err)
+				}
 				newComponent := models.Component{
 					BaseModel: models.BaseModel{
 						Name:        c.Name,
@@ -746,7 +857,10 @@ func handleComponentsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(c.Metadata)
+			yamlMD, err := json.Marshal(c.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal component %s metadata: %w", c.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if c.Metadata != nil {
@@ -816,7 +930,10 @@ func handleCategoriesFromYAML(db *gorm.DB, dataDir string) error {
 
 			if catTx.RowsAffected == 0 {
 				// Create new category
-				metadataJSON, _ := json.Marshal(c.Metadata)
+				metadataJSON, err := json.Marshal(c.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal category %s metadata: %w", c.Name, err)
+				}
 				newCat := models.Category{
 					BaseModel: models.BaseModel{
 						Name:        c.Name,
@@ -836,7 +953,10 @@ func handleCategoriesFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(c.Metadata)
+			yamlMD, err := json.Marshal(c.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal category %s metadata: %w", c.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if c.Metadata != nil {
@@ -933,7 +1053,10 @@ func handleLinksFromYAML(db *gorm.DB, dataDir string) error {
 				return fmt.Errorf("query link %s: %w", l.Title, lookup.Error)
 			}
 
-			yamlMD, _ := json.Marshal(l.Metadata)
+			yamlMD, err := json.Marshal(l.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal link %s metadata: %w", l.Title, err)
+			}
 
 			if lookup.RowsAffected == 0 {
 				// Create new link
@@ -1034,7 +1157,10 @@ func handlePluginsFromYAML(db *gorm.DB, dataDir string) error {
 
 			if pluginTx.RowsAffected == 0 {
 				// Create new plugin
-				metadataJSON, _ := json.Marshal(p.Metadata)
+				metadataJSON, err := json.Marshal(p.Metadata)
+				if err != nil {
+					return fmt.Errorf("marshal plugin %s metadata: %w", p.Name, err)
+				}
 				newPlugin := models.Plugin{
 					BaseModel: models.BaseModel{
 						Name:        p.Name,
@@ -1056,7 +1182,10 @@ func handlePluginsFromYAML(db *gorm.DB, dataDir string) error {
 			}
 
 			// Existing: check if data is identical (including metadata; treat nil YAML metadata as no change)
-			yamlMD, _ := json.Marshal(p.Metadata)
+			yamlMD, err := json.Marshal(p.Metadata)
+			if err != nil {
+				return fmt.Errorf("marshal plugin %s metadata: %w", p.Name, err)
+			}
 			// Merge DB metadata with YAML overrides (YAML wins on conflicts) for comparison
 			var mergedMD []byte
 			if p.Metadata != nil {

@@ -8,6 +8,7 @@ import (
 	"developer-portal-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // LandscapeHandler handles HTTP requests for landscape operations
@@ -53,4 +54,43 @@ func (h *LandscapeHandler) ListLandscapesByQuery(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, mins)
+}
+
+// DeleteLandscape handles DELETE /landscapes/:id
+// @Summary Delete a landscape by ID
+// @Description Delete a landscape by its ID
+// @Tags landscapes
+// @Accept json
+// @Produce json
+// @Param id path string true "Landscape ID"
+// @Success 204 "Successfully deleted landscape"
+// @Failure 400 {object} map[string]interface{} "Invalid landscape ID"
+// @Failure 404 {object} map[string]interface{} "Landscape not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Security BearerAuth
+// @Router /landscapes/{id} [delete]
+func (h *LandscapeHandler) DeleteLandscape(c *gin.Context) {
+	idParam := c.Param("id")
+	if idParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "landscape ID is required"})
+		return
+	}
+
+	landscapeID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid landscape ID format"})
+		return
+	}
+
+	err = h.landscapeService.DeleteLandscape(landscapeID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrLandscapeNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

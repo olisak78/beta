@@ -99,6 +99,7 @@ if [ "$DEPLOY_ENVIRONMENT" == "dev" ]; then
     GITHUB_WDF_APP_CLIENT_ID="${GITHUB_WDF_APP_CLIENT_ID_DEV}"
     GITHUB_WDF_APP_CLIENT_SECRET="${GITHUB_WDF_APP_CLIENT_SECRET_DEV}"
     JWT_SECRET="${JWT_SECRET_DEV}"
+    TOKEN_SECRET="${TOKEN_SECRET_DEV}"
     OAUTH_ENCRYPTION_KEY="${OAUTH_ENCRYPTION_KEY_DEV}"
 else
     # Use PROD-suffixed variables for prod environment
@@ -107,6 +108,7 @@ else
     GITHUB_WDF_APP_CLIENT_ID="${GITHUB_WDF_APP_CLIENT_ID_PROD}"
     GITHUB_WDF_APP_CLIENT_SECRET="${GITHUB_WDF_APP_CLIENT_SECRET_PROD}"
     JWT_SECRET="${JWT_SECRET_PROD}"
+    TOKEN_SECRET="${TOKEN_SECRET_PROD}"
     OAUTH_ENCRYPTION_KEY="${OAUTH_ENCRYPTION_KEY_PROD}"
 fi
 
@@ -118,6 +120,7 @@ check_required_vars() {
     local missing=()
 
     [ -z "$JWT_SECRET" ] && missing+=("JWT_SECRET")
+    [ -z "$TOKEN_SECRET" ] && missing+=("TOKEN_SECRET")
     [ -z "$DB_PASSWORD" ] && missing+=("DB_PASSWORD")
     [ -z "$LDAP_HOST" ] && missing+=("LDAP_HOST")
     [ -z "$LDAP_BIND_DN" ] && missing+=("LDAP_BIND_DN")
@@ -222,6 +225,7 @@ SET_FLAGS="$SET_FLAGS --set config.deployEnvironment=$DEPLOY_ENVIRONMENT"
 SET_FLAGS="$SET_FLAGS --set ingress.host=$INGRESS_HOST"
 SET_FLAGS="$SET_FLAGS --set auth.redirectUrl=$AUTH_REDIRECT_URL"
 SET_FLAGS="$SET_FLAGS --set jwt.secret=$JWT_SECRET"
+SET_FLAGS="$SET_FLAGS --set token.secret=$TOKEN_SECRET"
 SET_FLAGS="$SET_FLAGS --set postgresql.auth.password=$DB_PASSWORD"
 SET_FLAGS="$SET_FLAGS --set ldap.host=$LDAP_HOST"
 SET_FLAGS="$SET_FLAGS --set ldap.bindDN=$LDAP_BIND_DN"
@@ -413,4 +417,3 @@ echo ""
 if [ ! -z "$AI_CORE_VALUES_FILE" ] && [ -f "$AI_CORE_VALUES_FILE" ]; then
     rm -f "$AI_CORE_VALUES_FILE"
 fi
-

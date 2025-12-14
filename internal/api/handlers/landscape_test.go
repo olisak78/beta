@@ -45,6 +45,7 @@ func (suite *LandscapeHandlerTestSuite) TearDownTest() {
 // setupRoutes sets up the routes for testing
 func (suite *LandscapeHandlerTestSuite) setupRoutes() {
 	suite.router.GET("/landscapes", suite.handler.ListLandscapesByQuery)
+	suite.router.DELETE("/landscapes/:id", suite.handler.DeleteLandscape)
 }
 
 // TestListLandscapesByQuery_MissingProjectName tests when project-name parameter is missing
@@ -217,6 +218,97 @@ func (suite *LandscapeHandlerTestSuite) TestListLandscapesByQuery_MultipleLandsc
 	assert.Equal(suite.T(), "staging", response[1].Name)
 	assert.Equal(suite.T(), "prod", response[2].Name)
 	assert.Equal(suite.T(), "qa", response[3].Name)
+}
+
+// TestDeleteLandscape_Success tests successful deletion of a landscape
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_Success() {
+	landscapeID := uuid.New()
+
+	suite.mockService.EXPECT().DeleteLandscape(landscapeID).Return(nil)
+
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/"+landscapeID.String(), nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNoContent, w.Code)
+	assert.Empty(suite.T(), w.Body.String())
+}
+
+// TestDeleteLandscape_MissingID tests when landscape ID is missing
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_MissingID() {
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/", nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+}
+
+// TestDeleteLandscape_InvalidID tests when landscape ID format is invalid
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_InvalidID() {
+	invalidID := "invalid-uuid"
+
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/"+invalidID, nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Contains(suite.T(), response["error"], "invalid landscape ID format")
+}
+
+// TestDeleteLandscape_LandscapeNotFound tests when landscape does not exist
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_LandscapeNotFound() {
+	landscapeID := uuid.New()
+
+	suite.mockService.EXPECT().DeleteLandscape(landscapeID).Return(apperrors.ErrLandscapeNotFound)
+
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/"+landscapeID.String(), nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Contains(suite.T(), response["error"], apperrors.ErrLandscapeNotFound.Error())
+}
+
+// TestDeleteLandscape_InternalServerError tests when service returns an internal error
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_InternalServerError() {
+	landscapeID := uuid.New()
+	internalError := apperrors.ErrDatabaseConnection
+
+	suite.mockService.EXPECT().DeleteLandscape(landscapeID).Return(internalError)
+
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/"+landscapeID.String(), nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Contains(suite.T(), response["error"], apperrors.ErrDatabaseConnection.Message)
+}
+
+// TestDeleteLandscape_EmptyID tests when landscape ID is empty string
+func (suite *LandscapeHandlerTestSuite) TestDeleteLandscape_EmptyID() {
+	req := httptest.NewRequest(http.MethodDelete, "/landscapes/", nil)
+	w := httptest.NewRecorder()
+
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
 }
 
 // Run the test suite

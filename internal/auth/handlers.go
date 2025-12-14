@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"developer-portal-backend/internal/logger"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,15 +52,18 @@ func NewAuthHandler(service *AuthService) *AuthHandler {
 // @Router /api/auth/{provider}/start [get]
 func (h *AuthHandler) Start(c *gin.Context) {
 	provider := c.Param("provider")
+	log := logger.FromGinContext(c).WithField("Provider", provider)
 
 	// Validate provider
 	if provider == "" {
+		log.Warn("Provider is required")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider is required"})
 		return
 	}
 
 	// Validate supported providers
 	if provider != "githubtools" && provider != "githubwdf" {
+		log.Warn("Unsupported provider")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported provider"})
 		return
 	}
@@ -66,6 +71,7 @@ func (h *AuthHandler) Start(c *gin.Context) {
 	// Generate state parameter for OAuth2 security
 	state, err := h.service.generateRandomString(32)
 	if err != nil {
+		log.Errorf("Failed to generate state parameter: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate state parameter"})
 		return
 	}
@@ -73,11 +79,13 @@ func (h *AuthHandler) Start(c *gin.Context) {
 	// Get authorization URL
 	authURL, err := h.service.GetAuthURL(provider, state)
 	if err != nil {
+		log.WithField("State", state).Errorf("Failed to generate authorization URL: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authorization URL", "details": err.Error()})
 		return
 	}
 
-	// Redirect to GHES OAuth authorization URL
+	// Redirect to GitHub OAuth authorization URL
+	log.WithField("Auth URL", authURL).Debug("Redirecting to OAuth provider authorization URL")
 	c.Redirect(http.StatusFound, authURL)
 }
 
@@ -102,9 +110,20 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 	state := c.Query("state")
 	errorParam := c.Query("error")
 
+	// structured logger with safe context (do not log auth code/token)
+	log := logger.FromGinContext(c).WithFields(map[string]interface{}{
+		"Provider":     provider,
+		"State":        state,
+		"code_present": code != "",
+	})
+
 	// OAuth errors from provider
 	if errorParam != "" {
 		errorDescription := c.Query("error_description")
+		log.WithFields(map[string]interface{}{
+			"error":             errorParam,
+			"error_description": errorDescription,
+		}).Error("OAuth error from provider callback")
 		errorHTML := `<!doctype html><html><body><script>
 (function(){
   var msg = { type: "authorization_response", error: { name: "OAuthError", message: "` + escapeJSString(errorParam) + `: ` + escapeJSString(errorDescription) + `" } };
@@ -118,14 +137,17 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 
 	// Validate params
 	if provider == "" {
+		log.Error("Provider is required in callback")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Provider is required"})
 		return
 	}
 	if code == "" {
+		log.Error("Authorization code is required")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization code is required"})
 		return
 	}
 	if state == "" {
+		log.Error("State parameter is required")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "State parameter is required"})
 		return
 	}
@@ -133,6 +155,7 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 	// Service callback – may return various shapes; we'll normalize in JS
 	serviceResp, err := h.service.HandleCallback(c.Request.Context(), provider, code, state)
 	if err != nil {
+		log.Errorf("HandleCallback failed: %v", err)
 		errorHTML := `<!doctype html><html><body><script>
 (function(){
   var msg = { type: "authorization_response", error: { name: "Error", message: "` + escapeJSString(err.Error()) + `" } };
@@ -146,9 +169,11 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 
 	// Set session cookies for later use by refresh endpoint
 	c.SetCookie("auth_token", serviceResp.AccessToken, h.service.config.JWTExpiresInSeconds, "/", "", true, true) // httpOnly for security
+	log.Debug("OAuth callback successful; set auth cookie")
 
 	// Embed the raw service response and normalize to the regular-token payload in the browser.
 	raw := formatResponseAsJSON(serviceResp)
+	log.Debug("service response was formatted for HTML embedding")
 
 	successHTML := `<!doctype html><html><body><script>
 (function(){
@@ -196,19 +221,23 @@ func (h *AuthHandler) HandlerFrame(c *gin.Context) {
 // @Tags authentication
 // @Accept json
 // @Produce json
-// @Param Authorization header string false "Bearer token for validation" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param Authorization header string false "Bearer token for validation" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp...")
 // @Success 200 {object} AuthRefreshResponse "Successfully refreshed token"
 // @Failure 400 {object} map[string]interface{} "Invalid provider"
 // @Failure 401 {object} map[string]interface{} "Authentication required or token invalid"
 // @Failure 500 {object} map[string]interface{} "Token refresh failed"
 // @Router /api/auth/refresh [get]
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	authTokenCookie, err1 := c.Cookie("auth_token")
+	log := logger.FromGinContext(c)
+	authTokenCookie, err := c.Cookie("auth_token")
+	log = log.WithField("cookie_present", err == nil && authTokenCookie != "")
 
-	if err1 == nil && authTokenCookie != "" {
+	if err == nil && authTokenCookie != "" {
 		// Validate the JWT token from cookie
 		claims, err := h.service.ValidateJWT(authTokenCookie)
-		if err == nil {
+		if err != nil {
+			log.Errorf("ValidateJWT failed: %v", err)
+		} else {
 			// Generate a new JWT token for the current session
 			userProfile := &UserProfile{
 				Username: claims.Username,
@@ -218,18 +247,26 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 			newJWT, err := h.service.GenerateJWT(userProfile)
 			if err == nil {
+				log.Debug("JWT validated; issuing new token")
 				c.JSON(http.StatusOK, gin.H{
 					"accessToken": newJWT,
 				})
 				return
+			} else {
+				log.Errorf("GenerateJWT failed: %v", err)
 			}
 		}
 	}
 
 	// No valid session found, return 401 Unauthorized
+	if err != nil {
+		log.Errorf("auth_token cookie read error; returning 401 Unauthorized: %v", err)
+	} else {
+		log.Warn("No auth_token found; returning 401 Unauthorized")
+	}
 	c.JSON(http.StatusUnauthorized, gin.H{
 		"error":   "Authentication required",
-		"details": "No valid session found. Please authenticate first.",
+		"details": "No valid auth_token found. Need to authenticate first.",
 	})
 	return
 }
@@ -263,63 +300,4 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
-}
-
-// ---------- tiny helpers for Refresh normalization ----------
-
-func firstString(m map[string]interface{}, keys ...string) string {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			if s, ok := v.(string); ok {
-				return s
-			}
-		}
-	}
-	return ""
-}
-
-func firstInt64(m map[string]interface{}, keys ...string) int64 {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			switch t := v.(type) {
-			case float64:
-				return int64(t)
-			case int64:
-				return t
-			case int:
-				return int64(t)
-			case json.Number:
-				if iv, err := t.Int64(); err == nil {
-					return iv
-				}
-			}
-		}
-	}
-	return 0
-}
-
-func firstAny(m map[string]interface{}, keys ...string) interface{} {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			return v
-		}
-	}
-	return nil
-}
-
-func joinInterfaces(arr []interface{}, sep string) string {
-	sb := strings.Builder{}
-	for i, v := range arr {
-		if i > 0 {
-			sb.WriteString(sep)
-		}
-		switch s := v.(type) {
-		case string:
-			sb.WriteString(s)
-		default:
-			b, _ := json.Marshal(s)
-			sb.Write(b)
-		}
-	}
-	return sb.String()
 }

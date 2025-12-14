@@ -216,8 +216,12 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config, cacheService cache.CacheServic
 			components.GET("/health", componentHandler.ComponentHealth) // GET /api/v1/components/health?component-id=<>&landscape-id=<>
 		}
 
-		// Query-param endpoint: /api/v1/landscapes?project-name=<project_name>
-		v1.GET("/landscapes", landscapeHandler.ListLandscapesByQuery)
+		// Landscapes routes
+		landscapes := v1.Group("/landscapes")
+		{
+			landscapes.GET("", landscapeHandler.ListLandscapesByQuery)  // GET /api/v1/landscapes?project-name=<project_name>
+			landscapes.DELETE("/:id", landscapeHandler.DeleteLandscape) // DELETE /api/v1/landscapes/:id
+		}
 
 		// CIS public endpoints proxy: /api/v1/cis-public/proxy?url=<component_public_url>
 		// Used for proxying health checks, version info, and other public endpoints

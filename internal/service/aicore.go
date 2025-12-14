@@ -541,7 +541,7 @@ func (s *AICoreService) getTeamsForUser(member *models.User) ([]string, error) {
 	return nil, errors.ErrUserNotAssignedToTeam
 }
 
-// getAICoreTeamsFromMetadata extracts team names from the member's metadata.ai_core_member_of field
+// getAICoreTeamsFromMetadata extracts team names from the member's metadata.ai_instances field
 func (s *AICoreService) getAICoreTeamsFromMetadata(member *models.User) []string {
 	var teamNames []string
 
@@ -554,13 +554,13 @@ func (s *AICoreService) getAICoreTeamsFromMetadata(member *models.User) []string
 		return teamNames
 	}
 
-	aiCoreMemberOf, exists := metadata["ai_core_member_of"]
+	aiInstances, exists := metadata["ai_instances"]
 	if !exists {
 		return teamNames
 	}
 
-	// Handle different possible types for ai_core_member_of
-	switch v := aiCoreMemberOf.(type) {
+	// Handle different possible types for ai_instances
+	switch v := aiInstances.(type) {
 	case []interface{}:
 		// Array of team names
 		for _, teamNameInterface := range v {

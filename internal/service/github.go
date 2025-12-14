@@ -184,18 +184,18 @@ func (s *GitHubService) GetUserOpenPullRequests(ctx context.Context, userUUID, p
 		"perPage":   fmt.Sprintf("%d", perPage),
 		"page":      fmt.Sprintf("%d", page),
 	}
-	cacheKey := cache.GitHubCacheKey("pull-requests", fmt.Sprintf("%d", claims.UserID), params)
+	cacheKey := cache.GitHubCacheKey("pull-requests", userUUID, params)
 
 	var response PullRequestsResponse
 	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.GitHubPullRequests, &response, func() (interface{}, error) {
 		// Get GitHub access token using validated JWT claims
-		accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+		accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub access token: %w", err)
 		}
 
 		// Get GitHub client configuration for the user's provider
-		githubClientConfig, err := s.authService.GetGitHubClient(claims.Provider)
+		githubClientConfig, err := s.authService.GetGitHubClient(provider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub client: %w", err)
 		}
@@ -525,7 +525,7 @@ func (s *GitHubService) GetContributionsHeatmap(ctx context.Context, userUUID, p
 	}
 
 	params := map[string]string{"period": period}
-	cacheKey := cache.GitHubCacheKey("heatmap", fmt.Sprintf("%d", claims.UserID), params)
+	cacheKey := cache.GitHubCacheKey("heatmap", userUUID, params)
 
 	var response ContributionsHeatmapResponse
 	err := s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.GitHubContributions, &response, func() (interface{}, error) {
@@ -594,15 +594,15 @@ func (s *GitHubService) GetContributionsHeatmap(ctx context.Context, userUUID, p
 			}`, from.Format(time.RFC3339), to.Format(time.RFC3339))
 		}
 
-		accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+		accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
 		if err != nil {
 			log.Errorf("Failed to get GitHub access token: %v", err)
 			return nil, fmt.Errorf("failed to get GitHub access token: %w", err)
 		}
 
-		githubClientConfig, err := s.authService.GetGitHubClient(claims.Provider)
+		githubClientConfig, err := s.authService.GetGitHubClient(provider)
 		if err != nil {
-			log.Errorf("Failed to get GitHub client for provider '%s': %v", claims.Provider, err)
+			log.Errorf("Failed to get GitHub client for provider '%s': %v", provider, err)
 			return nil, fmt.Errorf("failed to get GitHub client: %w", err)
 		}
 
@@ -758,9 +758,9 @@ func (s *GitHubService) GetContributionsHeatmap(ctx context.Context, userUUID, p
 }
 
 // GetAveragePRMergeTime retrieves the average time to merge PRs for the authenticated user
-func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, claims *auth.AuthClaims, period string) (*AveragePRMergeTimeResponse, error) {
-	if claims == nil {
-		return nil, fmt.Errorf("authentication required")
+func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, userUUID, provider string, period string) (*AveragePRMergeTimeResponse, error) {
+	if userUUID == "" || provider == "" {
+		return nil, apperrors.ErrMissingUserUUIDAndProvider
 	}
 
 	log := logger.WithContext(ctx).WithFields(map[string]interface{}{
@@ -786,21 +786,22 @@ func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, claims *auth.
 	}
 
 	params := map[string]string{"period": period}
-	cacheKey := cache.GitHubCacheKey("pr-merge-time", fmt.Sprintf("%d", claims.UserID), params)
+	cacheKey := cache.GitHubCacheKey("pr-merge-time", userUUID, params)
 
 	var response AveragePRMergeTimeResponse
 	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.GitHubPullRequests, &response, func() (interface{}, error) {
 		log.Debugf("Querying merged PRs from %s to %s", from.Format(time.RFC3339), to.Format(time.RFC3339))
 
-		accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+		accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
+
 		if err != nil {
 			log.Errorf("Failed to get GitHub access token: %v", err)
 			return nil, fmt.Errorf("failed to get GitHub access token: %w", err)
 		}
 
-		githubClientConfig, err := s.authService.GetGitHubClient(claims.Provider)
+		githubClientConfig, err := s.authService.GetGitHubClient(provider)
 		if err != nil {
-			log.Errorf("Failed to get GitHub client for provider '%s': %v", claims.Provider, err)
+			log.Errorf("Failed to get GitHub client for provider '%s': %v", provider, err)
 			return nil, fmt.Errorf("failed to get GitHub client: %w", err)
 		}
 
@@ -1048,9 +1049,9 @@ func (s *GitHubService) GetAveragePRMergeTime(ctx context.Context, claims *auth.
 }
 
 // GetUserPRReviewComments gets the total number of PR review comments made by the authenticated user
-func (s *GitHubService) GetUserPRReviewComments(ctx context.Context, claims *auth.AuthClaims, period string) (*PRReviewCommentsResponse, error) {
-	if claims == nil {
-		return nil, fmt.Errorf("authentication required")
+func (s *GitHubService) GetUserPRReviewComments(ctx context.Context, userUUID, provider string, period string) (*PRReviewCommentsResponse, error) {
+	if userUUID == "" || provider == "" {
+		return nil, apperrors.ErrMissingUserUUIDAndProvider
 	}
 
 	// Parse period (default to 30 days)
@@ -1073,16 +1074,16 @@ func (s *GitHubService) GetUserPRReviewComments(ctx context.Context, claims *aut
 	}
 
 	params := map[string]string{"period": period}
-	cacheKey := cache.GitHubCacheKey("pr-review-comments", fmt.Sprintf("%d", claims.UserID), params)
+	cacheKey := cache.GitHubCacheKey("pr-review-comments", userUUID, params)
 
 	var response PRReviewCommentsResponse
 	err = s.cacheWrapper.GetOrSetTyped(cacheKey, s.cacheTTLs.GitHubPullRequests, &response, func() (interface{}, error) {
-		accessToken, err := s.authService.GetGitHubAccessTokenFromClaims(claims)
+		accessToken, err := s.authService.GetGitHubAccessToken(userUUID, provider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub access token: %w", err)
 		}
 
-		githubClientConfig, err := s.authService.GetGitHubClient(claims.Provider)
+		githubClientConfig, err := s.authService.GetGitHubClient(provider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GitHub client: %w", err)
 		}

@@ -196,7 +196,7 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_GroupManager_Success() {
 	email := "group.manager@example.com"
 
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-alpha", "team-beta"},
+		"ai_instances": []string{"team-alpha", "team-beta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
@@ -255,7 +255,7 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_OrganizationManager_Succ
 	email := "org.manager@example.com"
 
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-alpha", "team-beta"},
+		"ai_instances": []string{"team-alpha", "team-beta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
@@ -310,7 +310,7 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_PartialCredentials_Succe
 	email := "group.manager@example.com"
 
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-alpha", "team-beta"},
+		"ai_instances": []string{"team-alpha", "team-beta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
@@ -448,7 +448,7 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_APIError_SkipsTeam() {
 	email := "group.manager@example.com"
 
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-alpha", "team-beta"},
+		"ai_instances": []string{"team-alpha", "team-beta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
@@ -647,9 +647,9 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_MetadataTeams_Success() 
 	email := "user.with.metadata@example.com"
 	teamID := uuid.New()
 
-	// Create metadata with ai_core_member_of field
+	// Create metadata with ai_instances field
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-gamma", "team-delta"},
+		"ai_instances": []string{"team-gamma", "team-delta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 
@@ -719,9 +719,9 @@ func (suite *AICoreServiceTestSuite) TestGetDeployments_MetadataOnly_Success() {
 	// Setup - User with NO team assignment but WITH metadata teams
 	email := "metadata.only@example.com"
 
-	// Create metadata with ai_core_member_of field
+	// Create metadata with ai_instances field
 	metadata := map[string]interface{}{
-		"ai_core_member_of": []string{"team-gamma", "team-delta"},
+		"ai_instances": []string{"team-gamma", "team-delta"},
 	}
 	metadataJSON, _ := json.Marshal(metadata)
 

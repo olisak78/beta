@@ -659,8 +659,6 @@ users:
     metadata:
       ai_instances:
         - cfs-agentic-platform
-      ai_core_member_of:
-        - cfs-agentic-platform
   - name: I074932
     team_name: team-sasha
     first_name: Sasha
@@ -815,8 +813,6 @@ users:
     team_role: member
     metadata:
       ai_instances:
-        - cfs-agentic-platform
-      ai_core_member_of:
         - cfs-agentic-platform
   - name: I353686
     team_name: team-alex
@@ -1120,8 +1116,6 @@ users:
       portal_admin: true
       ai_instances:
         - ask-ai
-        - cfs-agentic-platform
-      ai_core_member_of:
         - cfs-agentic-platform
   - name: I572966
     team_name: team-eyal
