@@ -3,6 +3,7 @@ package service
 import (
 	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/logger"
 	"developer-portal-backend/internal/repository"
 	"encoding/json"
 	"fmt"
@@ -119,6 +120,7 @@ func (s *UserService) CreateUser(req *CreateUserRequest) (*UserResponse, error) 
 
 	// Check if email already exists (unique within system)
 	if existingUser, err := s.repo.GetByEmail(req.Email); err == nil && existingUser != nil {
+		logger.New().WithField("error", err).Error("Error getting user by email")
 		return nil, apperrors.ErrUserExists
 	}
 
@@ -169,6 +171,7 @@ func (s *UserService) AddFavoriteLinkByUserID(userID string, linkID uuid.UUID) (
 	// Load user by string user_id
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -239,6 +242,7 @@ func (s *UserService) RemoveFavoriteLinkByUserID(userID string, linkID uuid.UUID
 	// Load user by string user_id
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -305,6 +309,7 @@ func (s *UserService) AddSubscribedPluginByUserID(userID string, pluginID uuid.U
 	// Load user by string user_id
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -375,6 +380,7 @@ func (s *UserService) RemoveSubscribedPluginByUserID(userID string, pluginID uui
 	// Load user by string user_id
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -433,6 +439,7 @@ func (s *UserService) RemoveSubscribedPluginByUserID(userID string, pluginID uui
 func (s *UserService) GetUserByID(id uuid.UUID) (*UserResponse, error) {
 	user, err := s.repo.GetByID(id)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by ID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -447,6 +454,7 @@ func (s *UserService) GetUserByUserID(userID string) (*UserResponse, error) {
 
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by UserID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -462,6 +470,7 @@ func (s *UserService) GetUserByName(name string) (*UserResponse, error) {
 
 	user, err := s.repo.GetByName(name)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by name")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -492,6 +501,7 @@ func (s *UserService) GetUserByUserIDWithPlugins(userID string) ([]PluginRespons
 
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by UserID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -500,7 +510,7 @@ func (s *UserService) GetUserByUserIDWithPlugins(userID string) ([]PluginRespons
 
 // GetSubscribedPluginsFromUser extracts and fetches subscribed plugins from user metadata
 func (s *UserService) GetSubscribedPluginsFromUser(user *models.User) []PluginResponse {
-	var subscribedPlugins []PluginResponse
+	subscribedPlugins := make([]PluginResponse, 0)
 	if len(user.Metadata) > 0 {
 		var meta map[string]interface{}
 		if err := json.Unmarshal(user.Metadata, &meta); err == nil && meta != nil {
@@ -553,6 +563,7 @@ func (s *UserService) GetUserByNameWithLinksAndPlugins(name string) (*UserWithLi
 
 	user, err := s.repo.GetByName(name)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by name")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -576,6 +587,7 @@ func (s *UserService) GetUserByUserIDWithLinks(userID string) (*UserWithLinksAnd
 
 	user, err := s.repo.GetByUserID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 
@@ -719,12 +731,14 @@ func (s *UserService) UpdateUser(id uuid.UUID, req *UpdateUserRequest) (*UserRes
 
 	user, err := s.repo.GetByID(id)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by id")
 		return nil, apperrors.ErrUserNotFound
 	}
 
 	// Check email uniqueness if email is being updated
 	if req.Email != nil && *req.Email != user.Email {
 		if existingUser, err := s.repo.GetByEmail(*req.Email); err == nil && existingUser != nil {
+			logger.New().WithField("error", err).Error("Error getting user by email")
 			return nil, apperrors.ErrUserExists
 		}
 	}
@@ -766,6 +780,7 @@ func (s *UserService) UpdateUserTeam(userID uuid.UUID, teamID uuid.UUID, updated
 	}
 	user, err := s.repo.GetByID(userID)
 	if err != nil || user == nil {
+		logger.New().WithField("error", err).Error("Error getting user by userID")
 		return nil, apperrors.ErrUserNotFound
 	}
 	user.TeamID = &teamID
@@ -780,6 +795,7 @@ func (s *UserService) UpdateUserTeam(userID uuid.UUID, teamID uuid.UUID, updated
 func (s *UserService) DeleteUser(id uuid.UUID) error {
 	_, err := s.repo.GetByID(id)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by id")
 		return apperrors.ErrUserNotFound
 	}
 
@@ -877,6 +893,7 @@ type QuickLinksResponse struct {
 func (s *UserService) GetQuickLinks(id uuid.UUID) (*QuickLinksResponse, error) {
 	// Validate member exists
 	if _, err := s.repo.GetByID(id); err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by name")
 		return nil, apperrors.ErrUserNotFound
 	}
 	return &QuickLinksResponse{QuickLinks: []QuickLink{}}, nil
@@ -890,6 +907,7 @@ func (s *UserService) AddQuickLink(id uuid.UUID, req *AddQuickLinkRequest) (*Use
 	}
 	user, err := s.repo.GetByID(id)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by id")
 		return nil, apperrors.ErrUserNotFound
 	}
 	return s.convertToResponse(user), nil
@@ -902,6 +920,7 @@ func (s *UserService) RemoveQuickLink(id uuid.UUID, linkURL string) (*UserRespon
 	}
 	user, err := s.repo.GetByID(id)
 	if err != nil {
+		logger.New().WithField("error", err).Error("Error getting user by id")
 		return nil, apperrors.ErrUserNotFound
 	}
 	return s.convertToResponse(user), nil

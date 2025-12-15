@@ -239,6 +239,52 @@ func (suite *ProjectRepositoryTestSuite) TestGetByNameNotFound() {
 // 	// NOTE: Status field removed from Project model in new schema
 // }
 
+func (suite *ProjectRepositoryTestSuite) TestGetHealthURL_WithHealth() {
+	// Create project with metadata.health template
+	project := suite.factories.Project.WithName("project-health-1")
+	project.Metadata = []byte(`{"health":"https://health.ingress.{landscape_domain}{health_suffix}"}`)
+
+	err := suite.repo.Create(project)
+	suite.NoError(err)
+
+	url, err := suite.repo.GetHealthURL(project.ID)
+	suite.NoError(err)
+	suite.Equal("https://health.ingress.{landscape_domain}{health_suffix}", url)
+}
+
+func (suite *ProjectRepositoryTestSuite) TestGetHealthURL_NoMetadata() {
+	// Create project with nil metadata
+	project := suite.factories.Project.WithName("project-health-2")
+	project.Metadata = nil
+
+	err := suite.repo.Create(project)
+	suite.NoError(err)
+
+	url, err := suite.repo.GetHealthURL(project.ID)
+	suite.NoError(err)
+	suite.Equal("", url)
+}
+
+func (suite *ProjectRepositoryTestSuite) TestGetHealthURL_NoHealthField() {
+	// Create project with metadata but without health field
+	project := suite.factories.Project.WithName("project-health-3")
+	project.Metadata = []byte(`{"views":["grid"]}`)
+
+	err := suite.repo.Create(project)
+	suite.NoError(err)
+
+	url, err := suite.repo.GetHealthURL(project.ID)
+	suite.NoError(err)
+	suite.Equal("", url)
+}
+
+func (suite *ProjectRepositoryTestSuite) TestGetHealthURL_ProjectNotFound() {
+	// Call with non-existent project ID
+	_, err := suite.repo.GetHealthURL(uuid.New())
+	suite.Error(err)
+	suite.Equal(gorm.ErrRecordNotFound, err)
+}
+
 // Run the test suite
 func TestProjectRepositoryTestSuite(t *testing.T) {
 	suite.Run(t, new(ProjectRepositoryTestSuite))

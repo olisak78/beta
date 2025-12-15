@@ -1,6 +1,7 @@
 package service
 
 import (
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
@@ -15,20 +16,53 @@ import (
 
 // LandscapeService handles business logic for landscapes
 type LandscapeService struct {
-	repo             *repository.LandscapeRepository
-	organizationRepo *repository.OrganizationRepository
-	projectRepo      *repository.ProjectRepository
+	repo             repository.LandscapeRepositoryInterface
+	organizationRepo repository.OrganizationRepositoryInterface
+	projectRepo      repository.ProjectRepositoryInterface
 	validator        *validator.Validate
+	cache            cache.CacheService
+	ttlConfig        cache.TTLConfig
 }
 
 // NewLandscapeService creates a new landscape service
-func NewLandscapeService(repo *repository.LandscapeRepository, orgRepo *repository.OrganizationRepository, projectRepo *repository.ProjectRepository, validator *validator.Validate) *LandscapeService {
+func NewLandscapeService(repo repository.LandscapeRepositoryInterface, orgRepo repository.OrganizationRepositoryInterface, projectRepo repository.ProjectRepositoryInterface, validator *validator.Validate) *LandscapeService {
 	return &LandscapeService{
 		repo:             repo,
 		organizationRepo: orgRepo,
 		projectRepo:      projectRepo,
 		validator:        validator,
+		cache:            cache.NewNoOpCache(), // Default to no-op cache
+		ttlConfig:        cache.DefaultTTLConfig(),
 	}
+}
+
+// NewLandscapeServiceWithCache creates a new landscape service with caching support
+func NewLandscapeServiceWithCache(
+	repo repository.LandscapeRepositoryInterface,
+	orgRepo repository.OrganizationRepositoryInterface,
+	projectRepo repository.ProjectRepositoryInterface,
+	validator *validator.Validate,
+	cacheService cache.CacheService,
+	ttlConfig cache.TTLConfig,
+) *LandscapeService {
+	return &LandscapeService{
+		repo:             repo,
+		organizationRepo: orgRepo,
+		projectRepo:      projectRepo,
+		validator:        validator,
+		cache:            cacheService,
+		ttlConfig:        ttlConfig,
+	}
+}
+
+// SetCache sets the cache service (useful for testing or late initialization)
+func (s *LandscapeService) SetCache(cacheService cache.CacheService) {
+	s.cache = cacheService
+}
+
+// SetTTLConfig sets the TTL configuration
+func (s *LandscapeService) SetTTLConfig(config cache.TTLConfig) {
+	s.ttlConfig = config
 }
 
 // CreateLandscapeRequest represents the request to create a landscape (new model)
@@ -137,363 +171,165 @@ func (s *LandscapeService) CreateLandscape(req *CreateLandscapeRequest) (*Landsc
 		return nil, fmt.Errorf("failed to create landscape: %w", err)
 	}
 
+	// Invalidate relevant caches after creation
+	s.invalidateLandscapeCaches(landscape)
+
 	return s.toResponse(landscape), nil
 }
 
-// GetLandscapeByID retrieves a landscape by ID
+// GetLandscapeByID retrieves a landscape by ID with caching
 func (s *LandscapeService) GetLandscapeByID(id uuid.UUID) (*LandscapeResponse, error) {
-	landscape, err := s.repo.GetByID(id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrLandscapeNotFound
-		}
-		return nil, fmt.Errorf("failed to get landscape: %w", err)
-	}
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeByID, id.String())
 
-	return s.toResponse(landscape), nil
+	// Create a cache wrapper for this operation
+	wrapper := cache.NewCacheWrapper[*LandscapeResponse](s.cache)
+
+	return wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeByID, func() (*LandscapeResponse, error) {
+		landscape, err := s.repo.GetByID(id)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.ErrLandscapeNotFound
+			}
+			return nil, fmt.Errorf("failed to get landscape: %w", err)
+		}
+		return s.toResponse(landscape), nil
+	})
 }
 
-// GetByName retrieves a landscape by name (organization scope not applicable in new model)
+// GetByName retrieves a landscape by name with caching (organization scope not applicable in new model)
 func (s *LandscapeService) GetByName(_ uuid.UUID, name string) (*LandscapeResponse, error) {
-	landscape, err := s.repo.GetByName(name)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrLandscapeNotFound
-		}
-		return nil, fmt.Errorf("failed to get landscape: %w", err)
-	}
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeByName, name)
 
-	return s.toResponse(landscape), nil
+	wrapper := cache.NewCacheWrapper[*LandscapeResponse](s.cache)
+
+	return wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeByName, func() (*LandscapeResponse, error) {
+		landscape, err := s.repo.GetByName(name)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.ErrLandscapeNotFound
+			}
+			return nil, fmt.Errorf("failed to get landscape: %w", err)
+		}
+		return s.toResponse(landscape), nil
+	})
 }
 
-// GetLandscapesByOrganization retrieves landscapes for an organization with pagination
+// GetLandscapesByOrganization retrieves landscapes for an organization with pagination and caching
 // Note: organization scope is not present in the new model; returns all landscapes paginated.
 func (s *LandscapeService) GetLandscapesByOrganization(_ uuid.UUID, limit, offset int) ([]LandscapeResponse, int64, error) {
-	// Note: OrganizationID is no longer a direct relationship, but keeping interface for backward compatibility
 	if limit < 1 || limit > 100 {
 		limit = 20
 	}
 
-	// Pass through nil orgID for compatibility; repository ignores it internally.
-	landscapes, total, err := s.repo.GetByOrganizationID(uuid.Nil, limit, offset)
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeList, fmt.Sprintf("limit:%d:offset:%d", limit, offset))
+
+	type cachedResult struct {
+		Responses []LandscapeResponse `json:"responses"`
+		Total     int64               `json:"total"`
+	}
+
+	wrapper := cache.NewCacheWrapper[cachedResult](s.cache)
+
+	result, err := wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeList, func() (cachedResult, error) {
+		landscapes, total, repoErr := s.repo.GetActiveLandscapes(limit, offset)
+		if repoErr != nil {
+			return cachedResult{}, fmt.Errorf("failed to get landscapes: %w", repoErr)
+		}
+
+		responses := make([]LandscapeResponse, len(landscapes))
+		for i, landscape := range landscapes {
+			responses[i] = *s.toResponse(&landscape)
+		}
+
+		return cachedResult{Responses: responses, Total: total}, nil
+	})
+
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get landscapes: %w", err)
+		return nil, 0, err
 	}
 
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
-
-	return responses, total, nil
+	return result.Responses, result.Total, nil
 }
 
-// GetByType retrieves landscapes by environment within an organization (org ignored)
-func (s *LandscapeService) GetByType(_ uuid.UUID, environment string, page, pageSize int) (*LandscapeListResponse, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	offset := (page - 1) * pageSize
-	landscapes, total, err := s.repo.GetByType(uuid.Nil, environment, pageSize, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get landscapes by environment: %w", err)
-	}
-
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
-
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
-}
-
-// GetByStatus retrieves landscapes by status within an organization (status not present; returns all)
-func (s *LandscapeService) GetByStatus(_ uuid.UUID, status string, page, pageSize int) (*LandscapeListResponse, error) {
-	_ = status // status is not a column in the new model
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	offset := (page - 1) * pageSize
-	landscapes, total, err := s.repo.GetByStatus("", pageSize, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get landscapes by status: %w", err)
-	}
-
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
-
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
-}
-
-// GetActiveLandscapes retrieves "active" landscapes (no status column; returns all)
-func (s *LandscapeService) GetActiveLandscapes(organizationID uuid.UUID, page, pageSize int) (*LandscapeListResponse, error) {
-	return s.GetByStatus(organizationID, "active", page, pageSize)
-}
-
-// GetByTypeAndStatus retrieves landscapes by environment and status (status ignored)
-func (s *LandscapeService) GetByTypeAndStatus(_ uuid.UUID, environment string, status string, page, pageSize int) (*LandscapeListResponse, error) {
-	_ = status
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	offset := (page - 1) * pageSize
-	landscapes, total, err := s.repo.GetLandscapesByTypeAndStatus(uuid.Nil, environment, status, pageSize, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get landscapes by environment and status: %w", err)
-	}
-
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
-
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
-}
-
-// GetProductionLandscapes retrieves production landscapes
-func (s *LandscapeService) GetProductionLandscapes(organizationID uuid.UUID, page, pageSize int) (*LandscapeListResponse, error) {
-	return s.GetByType(organizationID, "production", page, pageSize)
-}
-
-// GetDevelopmentLandscapes retrieves development landscapes
-func (s *LandscapeService) GetDevelopmentLandscapes(organizationID uuid.UUID, page, pageSize int) (*LandscapeListResponse, error) {
-	return s.GetByType(organizationID, "development", page, pageSize)
-}
-
-// GetStagingLandscapes retrieves staging landscapes
-func (s *LandscapeService) GetStagingLandscapes(organizationID uuid.UUID, page, pageSize int) (*LandscapeListResponse, error) {
-	return s.GetByType(organizationID, "staging", page, pageSize)
-}
-
-// GetByProject retrieves landscapes used by a specific project
-func (s *LandscapeService) GetByProject(projectID uuid.UUID, page, pageSize int) (*LandscapeListResponse, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	offset := (page - 1) * pageSize
-	landscapes, total, err := s.repo.GetLandscapesByProjectID(projectID, pageSize, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get landscapes by project: %w", err)
-	}
-
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
-
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
-}
-
-// GetByProjectName resolves a project by name and returns all its landscapes (unpaginated cap)
+// GetByProjectName retrieves landscapes by project name with pagination and caching
 func (s *LandscapeService) GetByProjectName(projectName string) (*LandscapeListResponse, error) {
-	if projectName == "" {
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeByProject, projectName)
+
+	wrapper := cache.NewCacheWrapper[*LandscapeListResponse](s.cache)
+
+	return wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeByProject, func() (*LandscapeListResponse, error) {
+		// Get project by name
+		project, err := s.projectRepo.GetByName(projectName)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.ErrProjectNotFound
+			}
+			return nil, fmt.Errorf("failed to find project: %w", err)
+		}
+
+		// Check if project is nil
+		if project == nil {
+			return nil, apperrors.ErrProjectNotFound
+		}
+
+		// Get landscapes by project ID (using active landscapes query with project filter)
+		landscapes, total, err := s.repo.GetLandscapesByProjectID(project.ID, 100, 0)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get landscapes by project: %w", err)
+		}
+
+		responses := make([]LandscapeResponse, len(landscapes))
+		for i, landscape := range landscapes {
+			responses[i] = *s.toResponse(&landscape)
+		}
+
 		return &LandscapeListResponse{
-			Landscapes: []LandscapeResponse{},
-			Total:      0,
+			Landscapes: responses,
+			Total:      total,
 			Page:       1,
-			PageSize:   0,
+			PageSize:   100,
 		}, nil
-	}
-	project, err := s.projectRepo.GetByName(projectName)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrProjectNotFound
-		}
-		return nil, fmt.Errorf("failed to resolve project by name: %w", err)
-	}
-	if project == nil {
-		return nil, apperrors.ErrProjectNotFound
-	}
-	// Return all landscapes for this project (using large page size)
-	return s.GetByProject(project.ID, 1, 1000)
+	})
 }
 
-// GetByProjectNameAll returns all landscapes for a project name without pagination and with minimal fields
+// GetByProjectNameAll retrieves all landscapes by project name (minimal response) with caching
 func (s *LandscapeService) GetByProjectNameAll(projectName string) ([]LandscapeMinimalResponse, error) {
-	if projectName == "" {
-		return []LandscapeMinimalResponse{}, nil
-	}
-	project, err := s.projectRepo.GetByName(projectName)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrProjectNotFound
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeByProject, projectName, "all")
+
+	wrapper := cache.NewCacheWrapper[[]LandscapeMinimalResponse](s.cache)
+
+	return wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeByProject, func() ([]LandscapeMinimalResponse, error) {
+		// Get project by name
+		project, err := s.projectRepo.GetByName(projectName)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, apperrors.ErrProjectNotFound
+			}
+			return nil, fmt.Errorf("failed to find project: %w", err)
 		}
-		return nil, fmt.Errorf("failed to resolve project by name: %w", err)
-	}
-	if project == nil {
-		return nil, apperrors.ErrProjectNotFound
-	}
-	landscapes, _, err := s.repo.GetLandscapesByProjectID(project.ID, 1000000, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get landscapes by project: %w", err)
-	}
-	responses := make([]LandscapeMinimalResponse, len(landscapes))
-	for i, l := range landscapes {
-		enr := enrichLandscapeMetadata(l.Metadata)
-		responses[i] = LandscapeMinimalResponse{
-			// common
-			ID:          l.ID,
-			Name:        l.Name,
-			Title:       l.Title,
-			Description: l.Description,
-			Domain:      l.Domain,
-			Environment: l.Environment,
-			Git:         enr.Git,
-			Cockpit:     enr.Cockpit,
-			Cam:         enr.Cam,
-			IaasConsole: enr.IaasConsole,
-			Auditlog:    enr.Auditlog,
-			// cis20
-			Concourse:        enr.Concourse,
-			Kibana:           enr.Kibana,
-			Dynatrace:        enr.Dynatrace,
-			Grafana:          enr.Grafana,
-			ControlCenter:    enr.ControlCenter,
-			IsCentralRegion:  enr.IsCentralRegion,
-			Extension:        enr.Extension,
-			OperationConsole: enr.OperationConsole,
-			Type:             enr.Type,
-			// usrv
-			Prometheus: enr.Prometheus,
-			Gardener:   enr.Gardener,
-			Plutono:    enr.Plutono,
-			//neo
-			Monitoring: enr.Monitoring,
-			// cloud automation
-			Health: enr.Health,
+
+		// Get all landscapes by project ID
+		landscapes, _, err := s.repo.GetLandscapesByProjectID(project.ID, 1000, 0)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get landscapes by project: %w", err)
 		}
-	}
-	return responses, nil
+
+		responses := make([]LandscapeMinimalResponse, len(landscapes))
+		for i, landscape := range landscapes {
+			responses[i] = s.toMinimalResponse(&landscape)
+		}
+
+		return responses, nil
+	})
 }
 
-type LandscapeEnrichment struct {
-	Git              string
-	Concourse        string
-	Kibana           string
-	Dynatrace        string
-	Cockpit          string
-	Grafana          string
-	ControlCenter    string
-	IsCentralRegion  bool
-	Extension        bool
-	OperationConsole string
-	Type             string
-	Prometheus       string
-	Gardener         string
-	Plutono          string
-	Cam              string
-	IaasConsole      string
-	Auditlog         string
-	Health           string
-	Monitoring       string
-}
-
-func enrichLandscapeMetadata(raw json.RawMessage) LandscapeEnrichment {
-	m := map[string]interface{}{}
-	if len(raw) > 0 {
-		_ = json.Unmarshal(raw, &m)
-	}
-	enr := LandscapeEnrichment{}
-	if repo, ok := m["git"].(string); ok && repo != "" {
-		enr.Git = repo
-	}
-	if concourse, ok := m["concourse"].(string); ok && concourse != "" {
-		enr.Concourse = concourse
-	}
-	if cockpit, ok := m["cockpit"].(string); ok && cockpit != "" {
-		enr.Cockpit = cockpit
-	}
-	if dynatrace, ok := m["dynatrace"].(string); ok && dynatrace != "" {
-		enr.Dynatrace = dynatrace
-	}
-	if grafana, ok := m["grafana"].(string); ok && grafana != "" {
-		enr.Grafana = grafana
-	}
-	if prometheus, ok := m["prometheus"].(string); ok && prometheus != "" {
-		enr.Prometheus = prometheus
-	}
-	if gardener, ok := m["gardener"].(string); ok && gardener != "" {
-		enr.Gardener = gardener
-	}
-	if kibana, ok := m["kibana"].(string); ok && kibana != "" {
-		enr.Kibana = kibana
-	}
-	if type_, ok := m["type"].(string); ok && type_ != "" {
-		enr.Type = type_
-	}
-	if true == m["is-central-region"] {
-		enr.IsCentralRegion = true
-	}
-	if controlCenter, ok := m["control-center"].(string); ok && controlCenter != "" {
-		enr.ControlCenter = controlCenter
-	}
-	if operationConsole, ok := m["operations-console"].(string); ok && operationConsole != "" {
-		enr.OperationConsole = operationConsole
-	}
-	if true == m["extension"] {
-		enr.Extension = true
-	}
-	if plutono, ok := m["plutono"].(string); ok && plutono != "" {
-		enr.Plutono = plutono
-	}
-	if health, ok := m["health"].(string); ok && health != "" {
-		enr.Health = health
-	}
-	if cam, ok := m["cam"].(string); ok && cam != "" {
-		enr.Cam = cam
-	}
-	if iaasConsole, ok := m["iaas-console"].(string); ok && iaasConsole != "" {
-		enr.IaasConsole = iaasConsole
-	}
-	if monitoring, ok := m["monitoring"].(string); ok && monitoring != "" {
-		enr.Monitoring = monitoring
-	}
-	if auditlog, ok := m["auditlog"].(string); ok && auditlog != "" {
-		enr.Auditlog = auditlog
-	}
-	return enr
-}
-
-// ListByQuery searches landscapes with filters
+// ListByQuery searches landscapes with filters and caching
 func (s *LandscapeService) ListByQuery(q string, domains []string, environments []string, limit int, offset int) (*LandscapeListResponse, error) {
+	// Validate limit to prevent divide by zero
+	if limit < 1 {
+		limit = 20
+	}
+
 	// Convert limit/offset to page/pageSize
 	page := (offset / limit) + 1
 	pageSize := limit
@@ -502,7 +338,7 @@ func (s *LandscapeService) ListByQuery(q string, domains []string, environments 
 	return s.Search(uuid.Nil, q, page, pageSize)
 }
 
-// Search searches landscapes by name, title, or description (org ignored)
+// Search searches landscapes by name, title, or description with caching (org ignored)
 func (s *LandscapeService) Search(_ uuid.UUID, query string, page, pageSize int) (*LandscapeListResponse, error) {
 	if page < 1 {
 		page = 1
@@ -512,22 +348,28 @@ func (s *LandscapeService) Search(_ uuid.UUID, query string, page, pageSize int)
 	}
 
 	offset := (page - 1) * pageSize
-	landscapes, total, err := s.repo.Search(uuid.Nil, query, pageSize, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search landscapes: %w", err)
-	}
+	cacheKey := cache.BuildKey(cache.KeyPrefixLandscapeSearch, fmt.Sprintf("q:%s:page:%d:size:%d", query, page, pageSize))
 
-	responses := make([]LandscapeResponse, len(landscapes))
-	for i, landscape := range landscapes {
-		responses[i] = *s.toResponse(&landscape)
-	}
+	wrapper := cache.NewCacheWrapper[*LandscapeListResponse](s.cache)
 
-	return &LandscapeListResponse{
-		Landscapes: responses,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-	}, nil
+	return wrapper.GetOrFetch(cacheKey, s.ttlConfig.LandscapeSearch, func() (*LandscapeListResponse, error) {
+		landscapes, total, err := s.repo.Search(uuid.Nil, query, pageSize, offset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search landscapes: %w", err)
+		}
+
+		responses := make([]LandscapeResponse, len(landscapes))
+		for i, landscape := range landscapes {
+			responses[i] = *s.toResponse(&landscape)
+		}
+
+		return &LandscapeListResponse{
+			Landscapes: responses,
+			Total:      total,
+			Page:       page,
+			PageSize:   pageSize,
+		}, nil
+	})
 }
 
 // UpdateLandscape updates a landscape
@@ -566,13 +408,16 @@ func (s *LandscapeService) UpdateLandscape(id uuid.UUID, req *UpdateLandscapeReq
 		return nil, fmt.Errorf("failed to update landscape: %w", err)
 	}
 
+	// Invalidate caches after update
+	s.invalidateLandscapeCaches(landscape)
+
 	return s.toResponse(landscape), nil
 }
 
 // DeleteLandscape deletes a landscape
 func (s *LandscapeService) DeleteLandscape(id uuid.UUID) error {
-	// Check if landscape exists
-	_, err := s.repo.GetByID(id)
+	// Check if landscape exists and get it for cache invalidation
+	landscape, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.ErrLandscapeNotFound
@@ -584,13 +429,16 @@ func (s *LandscapeService) DeleteLandscape(id uuid.UUID) error {
 		return fmt.Errorf("failed to delete landscape: %w", err)
 	}
 
+	// Invalidate caches after deletion
+	s.invalidateLandscapeCaches(landscape)
+
 	return nil
 }
 
 // SetStatus sets the status of a landscape (no-op in new model; kept for API compatibility)
 func (s *LandscapeService) SetStatus(id uuid.UUID, status string) error {
 	// Check if landscape exists
-	_, err := s.repo.GetByID(id)
+	landscape, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperrors.ErrLandscapeNotFound
@@ -602,49 +450,45 @@ func (s *LandscapeService) SetStatus(id uuid.UUID, status string) error {
 		return fmt.Errorf("failed to set landscape status: %w", err)
 	}
 
+	// Invalidate caches after status change
+	s.invalidateLandscapeCaches(landscape)
+
 	return nil
 }
 
 // GetWithOrganization retrieves a landscape with organization details (no org relation in new model)
 func (s *LandscapeService) GetWithOrganization(id uuid.UUID) (*models.Landscape, error) {
-	landscape, err := s.repo.GetWithOrganization(id)
+	landscape, err := s.repo.GetByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperrors.ErrLandscapeNotFound
 		}
-		return nil, fmt.Errorf("failed to get landscape with organization: %w", err)
+		return nil, fmt.Errorf("failed to get landscape: %w", err)
 	}
 
 	return landscape, nil
 }
 
-// GetWithProjects retrieves a landscape with its projects (no relations in new model; returns entity)
-func (s *LandscapeService) GetWithProjects(id uuid.UUID) (*models.Landscape, error) {
-	landscape, err := s.repo.GetWithProjects(id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrLandscapeNotFound
-		}
-		return nil, fmt.Errorf("failed to get landscape with projects: %w", err)
-	}
+// invalidateLandscapeCaches invalidates all cache entries related to a landscape
+func (s *LandscapeService) invalidateLandscapeCaches(landscape *models.Landscape) {
+	// Invalidate by ID
+	_ = s.cache.Delete(cache.BuildKey(cache.KeyPrefixLandscapeByID, landscape.ID.String()))
 
-	return landscape, nil
+	// Invalidate by name
+	_ = s.cache.Delete(cache.BuildKey(cache.KeyPrefixLandscapeByName, landscape.Name))
+
+	// Clear list caches (they will be rebuilt on next request)
+	// Note: For a more sophisticated implementation, you might want to track all
+	// cache keys and invalidate them selectively
+	s.cache.Clear()
 }
 
-// GetWithFullDetails retrieves a landscape with all relationships
-func (s *LandscapeService) GetWithFullDetails(id uuid.UUID) (*models.Landscape, error) {
-	landscape, err := s.repo.GetWithFullDetails(id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperrors.ErrLandscapeNotFound
-		}
-		return nil, fmt.Errorf("failed to get landscape with full details: %w", err)
-	}
-
-	return landscape, nil
+// InvalidateAllCaches clears all landscape-related caches
+func (s *LandscapeService) InvalidateAllCaches() {
+	s.cache.Clear()
 }
 
-// toResponse converts a landscape model to response (new model)
+// toResponse converts a landscape model to response
 func (s *LandscapeService) toResponse(landscape *models.Landscape) *LandscapeResponse {
 	return &LandscapeResponse{
 		ID:          landscape.ID,
@@ -655,7 +499,92 @@ func (s *LandscapeService) toResponse(landscape *models.Landscape) *LandscapeRes
 		Domain:      landscape.Domain,
 		Environment: landscape.Environment,
 		Metadata:    landscape.Metadata,
-		CreatedAt:   landscape.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:   landscape.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		CreatedAt:   landscape.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:   landscape.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
+}
+
+// toMinimalResponse converts a landscape model to minimal response with metadata enrichment
+func (s *LandscapeService) toMinimalResponse(landscape *models.Landscape) LandscapeMinimalResponse {
+	resp := LandscapeMinimalResponse{
+		ID:          landscape.ID,
+		Name:        landscape.Name,
+		Title:       landscape.Title,
+		Description: landscape.Description,
+		Domain:      landscape.Domain,
+		Environment: landscape.Environment,
+	}
+
+	// Enrich from metadata if present
+	if len(landscape.Metadata) > 0 {
+		var m map[string]interface{}
+		if err := json.Unmarshal(landscape.Metadata, &m); err == nil {
+			resp = s.enrichMinimalResponse(resp, m)
+		}
+	}
+
+	return resp
+}
+
+// enrichMinimalResponse enriches minimal response with metadata fields
+func (s *LandscapeService) enrichMinimalResponse(enr LandscapeMinimalResponse, m map[string]interface{}) LandscapeMinimalResponse {
+	if auditlog, ok := m["auditlog"].(string); ok && auditlog != "" {
+		enr.Auditlog = auditlog
+	}
+	if cam, ok := m["cam"].(string); ok && cam != "" {
+		enr.Cam = cam
+	}
+	if cockpit, ok := m["cockpit"].(string); ok && cockpit != "" {
+		enr.Cockpit = cockpit
+	}
+	if concourse, ok := m["concourse"].(string); ok && concourse != "" {
+		enr.Concourse = concourse
+	}
+	if controlCenter, ok := m["control-center"].(string); ok && controlCenter != "" {
+		enr.ControlCenter = controlCenter
+	}
+	if dynatrace, ok := m["dynatrace"].(string); ok && dynatrace != "" {
+		enr.Dynatrace = dynatrace
+	}
+	if extension, ok := m["extension"].(bool); ok {
+		enr.Extension = extension
+	}
+	if gardener, ok := m["gardener"].(string); ok && gardener != "" {
+		enr.Gardener = gardener
+	}
+	if git, ok := m["git"].(string); ok && git != "" {
+		enr.Git = git
+	}
+	if grafana, ok := m["grafana"].(string); ok && grafana != "" {
+		enr.Grafana = grafana
+	}
+	if health, ok := m["health"].(string); ok && health != "" {
+		enr.Health = health
+	}
+	if iaasConsole, ok := m["iaas-console"].(string); ok && iaasConsole != "" {
+		enr.IaasConsole = iaasConsole
+	}
+	if isCentralRegion, ok := m["is-central-region"].(bool); ok {
+		enr.IsCentralRegion = isCentralRegion
+	}
+	if kibana, ok := m["kibana"].(string); ok && kibana != "" {
+		enr.Kibana = kibana
+	}
+	if monitoring, ok := m["monitoring"].(string); ok && monitoring != "" {
+		enr.Monitoring = monitoring
+	}
+	if operationConsole, ok := m["operation-console"].(string); ok && operationConsole != "" {
+		enr.OperationConsole = operationConsole
+	}
+	if plutono, ok := m["plutono"].(string); ok && plutono != "" {
+		enr.Plutono = plutono
+	}
+	if prometheus, ok := m["prometheus"].(string); ok && prometheus != "" {
+		enr.Prometheus = prometheus
+	}
+	if landscapeType, ok := m["type"].(string); ok && landscapeType != "" {
+		enr.Type = landscapeType
+	}
+
+	return enr
 }

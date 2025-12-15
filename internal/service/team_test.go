@@ -1,7 +1,10 @@
 package service_test
 
 import (
+	apperrors "developer-portal-backend/internal/errors"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
 
 	"developer-portal-backend/internal/database/models"
@@ -13,32 +16,44 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
+	"gorm.io/gorm"
 )
 
 // TeamServiceTestSuite defines the test suite for TeamService
 type TeamServiceTestSuite struct {
 	suite.Suite
-	ctrl         *gomock.Controller
-	mockTeamRepo *mocks.MockTeamRepositoryInterface
-	mockOrgRepo  *mocks.MockOrganizationRepositoryInterface
-	mockUserRepo *mocks.MockUserRepositoryInterface
-	teamService  *service.TeamService
-	validator    *validator.Validate
+	ctrl              *gomock.Controller
+	mockTeamRepo      *mocks.MockTeamRepositoryInterface
+	mockGroupRepo     *mocks.MockGroupRepositoryInterface
+	mockOrgRepo       *mocks.MockOrganizationRepositoryInterface
+	mockUserRepo      *mocks.MockUserRepositoryInterface
+	mockLinkRepo      *mocks.MockLinkRepositoryInterface
+	mockComponentRepo *mocks.MockComponentRepositoryInterface
+	teamService       *service.TeamService
+	validator         *validator.Validate
 }
 
 // SetupTest sets up the test suite
 func (suite *TeamServiceTestSuite) SetupTest() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.mockTeamRepo = mocks.NewMockTeamRepositoryInterface(suite.ctrl)
+	suite.mockGroupRepo = mocks.NewMockGroupRepositoryInterface(suite.ctrl)
 	suite.mockOrgRepo = mocks.NewMockOrganizationRepositoryInterface(suite.ctrl)
 	suite.mockUserRepo = mocks.NewMockUserRepositoryInterface(suite.ctrl)
+	suite.mockLinkRepo = mocks.NewMockLinkRepositoryInterface(suite.ctrl)
+	suite.mockComponentRepo = mocks.NewMockComponentRepositoryInterface(suite.ctrl)
 	suite.validator = validator.New()
 
-	// Since TeamService uses concrete repository types instead of interfaces,
-	// we can't properly mock them for unit testing. This is a design issue
-	// that would need to be fixed in the service layer.
-	// For now, we'll focus on testing validation logic and other testable parts.
-	suite.teamService = nil
+	// Initialize TeamService with mocked dependencies
+	suite.teamService = service.NewTeamService(
+		suite.mockTeamRepo,
+		suite.mockGroupRepo,
+		suite.mockOrgRepo,
+		suite.mockUserRepo,
+		suite.mockLinkRepo,
+		suite.mockComponentRepo,
+		suite.validator,
+	)
 }
 
 // TearDownTest cleans up after each test
@@ -46,9 +61,116 @@ func (suite *TeamServiceTestSuite) TearDownTest() {
 	suite.ctrl.Finish()
 }
 
-// Since we can't properly mock the concrete repository types that TeamService expects,
-// let's test individual service methods using a different approach
-// We'll test the service logic by creating minimal tests that focus on validation
+// GetByID Tests
+
+func (suite *TeamServiceTestSuite) TestGetByID_Success() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:          teamID,
+			Name:        "backend-team",
+			Title:       "Backend Team",
+			Description: "Team responsible for backend services",
+		},
+		GroupID:    groupID,
+		Owner:      "I12345",
+		Email:      "backend@example.com",
+		PictureURL: "https://example.com/team.png",
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.GetByID(teamID)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+	assert.Equal(suite.T(), "backend-team", result.Name)
+	assert.Equal(suite.T(), "Backend Team", result.Title)
+	assert.Equal(suite.T(), "Team responsible for backend services", result.Description)
+	assert.Equal(suite.T(), groupID, result.GroupID)
+	assert.Equal(suite.T(), orgID, result.OrganizationID)
+	assert.Equal(suite.T(), "I12345", result.Owner)
+	assert.Equal(suite.T(), "backend@example.com", result.Email)
+	assert.Equal(suite.T(), "https://example.com/team.png", result.PictureURL)
+}
+
+func (suite *TeamServiceTestSuite) TestGetByID_NotFound() {
+	teamID := uuid.New()
+
+	// Mock expectations - return gorm.ErrRecordNotFound
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.GetByID(teamID)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetByID_RepositoryError() {
+	teamID := uuid.New()
+	expectedError := errors.New("database connection error")
+
+	// Mock expectations - return a generic error
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, expectedError)
+
+	// Execute
+	result, err := suite.teamService.GetByID(teamID)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get team")
+	assert.NotErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetByID_GroupRepoError() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:          teamID,
+			Name:        "backend-team",
+			Title:       "Backend Team",
+			Description: "Team responsible for backend services",
+		},
+		GroupID:    groupID,
+		Owner:      "I12345",
+		Email:      "backend@example.com",
+		PictureURL: "https://example.com/team.png",
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(nil, errors.New("group not found"))
+
+	// Execute
+	result, err := suite.teamService.GetByID(teamID)
+
+	// Assert - should now fail when group lookup fails (proper error handling)
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get group for team")
+}
 
 // TestCreateTeamValidation tests the validation logic for creating a team
 func (suite *TeamServiceTestSuite) TestCreateTeamValidation() {
@@ -556,31 +678,31 @@ func (suite *TeamServiceTestSuite) TestTechnicalTeamFiltering() {
 // TestTechnicalTeamFilteringTotalAdjustment tests that the total count is adjusted correctly
 func (suite *TeamServiceTestSuite) TestTechnicalTeamFilteringTotalAdjustment() {
 	testCases := []struct {
-		name                string
-		totalFromDB         int64
-		teamsFromDB         int
-		filteredTeamsCount  int
+		name                  string
+		totalFromDB           int64
+		teamsFromDB           int
+		filteredTeamsCount    int
 		expectedAdjustedTotal int64
 	}{
 		{
-			name:                "Technical team present - adjust total",
-			totalFromDB:         10,
-			teamsFromDB:         5,
-			filteredTeamsCount:  4,
+			name:                  "Technical team present - adjust total",
+			totalFromDB:           10,
+			teamsFromDB:           5,
+			filteredTeamsCount:    4,
 			expectedAdjustedTotal: 9, // 10 - 1
 		},
 		{
-			name:                "Technical team not present - no adjustment",
-			totalFromDB:         10,
-			teamsFromDB:         5,
-			filteredTeamsCount:  5,
+			name:                  "Technical team not present - no adjustment",
+			totalFromDB:           10,
+			teamsFromDB:           5,
+			filteredTeamsCount:    5,
 			expectedAdjustedTotal: 10,
 		},
 		{
-			name:                "Single technical team - adjust to zero",
-			totalFromDB:         1,
-			teamsFromDB:         1,
-			filteredTeamsCount:  0,
+			name:                  "Single technical team - adjust to zero",
+			totalFromDB:           1,
+			teamsFromDB:           1,
+			filteredTeamsCount:    0,
 			expectedAdjustedTotal: 0,
 		},
 	}
@@ -603,10 +725,10 @@ func (suite *TeamServiceTestSuite) TestTechnicalTeamFilteringEdgeCases() {
 	technicalTeamName := "team-developer-portal-technical"
 
 	testCases := []struct {
-		name           string
-		teams          []models.Team
-		expectedCount  int
-		expectedNames  []string
+		name          string
+		teams         []models.Team
+		expectedCount int
+		expectedNames []string
 	}{
 		{
 			name:          "Empty team list",
@@ -681,6 +803,2103 @@ func (suite *TeamServiceTestSuite) TestTechnicalTeamFilteringEdgeCases() {
 			}
 		})
 	}
+}
+
+// GetAllTeams Tests
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_Success() {
+	orgID := uuid.New()
+	groupID := uuid.New()
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-2",
+				Title: "Team 2",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return(teams, int64(2), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil).Times(2)
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Teams, 2)
+	assert.Equal(suite.T(), int64(2), result.Total)
+	assert.Equal(suite.T(), 1, result.Page)
+	assert.Equal(suite.T(), 20, result.PageSize)
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_OrganizationNotFound() {
+	orgID := uuid.New()
+
+	// Mock expectations - organization not found
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrOrganizationNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_OrganizationRepoError() {
+	orgID := uuid.New()
+	expectedError := errors.New("database connection error")
+
+	// Mock expectations - database error
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(nil, expectedError)
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to verify organization")
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_TeamRepoError() {
+	orgID := uuid.New()
+	expectedError := errors.New("database query failed")
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	// Mock expectations
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return(nil, int64(0), expectedError)
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get teams")
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_FiltersTechnicalTeam() {
+	orgID := uuid.New()
+	groupID := uuid.New()
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-developer-portal-technical",
+				Title: "Technical Team",
+			},
+			GroupID: groupID,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-2",
+				Title: "Team 2",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return(teams, int64(3), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil).Times(2) // Only for non-technical teams
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Teams, 2)          // Technical team filtered out
+	assert.Equal(suite.T(), int64(2), result.Total) // Total adjusted
+	assert.Equal(suite.T(), "team-1", result.Teams[0].Name)
+	assert.Equal(suite.T(), "team-2", result.Teams[1].Name)
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_PaginationDefaults() {
+	orgID := uuid.New()
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	// Mock expectations - with invalid pagination
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return([]models.Team{}, int64(0), nil)
+
+	// Execute with invalid page and pageSize
+	result, err := suite.teamService.GetAllTeams(&orgID, 0, 0)
+
+	// Assert - defaults applied
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), 1, result.Page)      // Default page
+	assert.Equal(suite.T(), 20, result.PageSize) // Default pageSize
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_PaginationMaxLimit() {
+	orgID := uuid.New()
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	// Mock expectations - with pageSize > 100
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return([]models.Team{}, int64(0), nil)
+
+	// Execute with pageSize > 100
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 150)
+
+	// Assert - capped at 20 (default)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), 20, result.PageSize)
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithOrgID_ToResponseError() {
+	orgID := uuid.New()
+	groupID := uuid.New()
+
+	org := &models.Organization{
+		BaseModel: models.BaseModel{
+			ID:   orgID,
+			Name: "test-org",
+		},
+	}
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	// Mock expectations - group lookup fails
+	suite.mockOrgRepo.EXPECT().GetByID(orgID).Return(org, nil)
+	suite.mockTeamRepo.EXPECT().GetByOrganizationID(orgID, 20, 0).Return(teams, int64(1), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(nil, errors.New("group not found"))
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(&orgID, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to convert team to response")
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithoutOrgID_Success() {
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-2",
+				Title: "Team 2",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetAll().Return(teams, nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil).Times(2)
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(nil, 1, 20)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Teams, 2)
+	assert.Equal(suite.T(), int64(2), result.Total)
+	assert.Equal(suite.T(), 1, result.Page)
+	assert.Equal(suite.T(), 2, result.PageSize) // PageSize = number of teams
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithoutOrgID_RepoError() {
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetAll().Return(nil, errors.New("database connection failed"))
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(nil, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get all teams")
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithoutOrgID_FiltersTechnicalTeam() {
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-developer-portal-technical",
+				Title: "Technical Team",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetAll().Return(teams, nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil).Times(1) // Only for non-technical team
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(nil, 1, 20)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Teams, 1) // Technical team filtered out
+	assert.Equal(suite.T(), int64(1), result.Total)
+	assert.Equal(suite.T(), "team-1", result.Teams[0].Name)
+	assert.NotEqual(suite.T(), "team-developer-portal-technical", result.Teams[0].Name)
+}
+
+func (suite *TeamServiceTestSuite) TestGetAllTeams_WithoutOrgID_ToResponseError() {
+	groupID := uuid.New()
+
+	teams := []models.Team{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "team-1",
+				Title: "Team 1",
+			},
+			GroupID: groupID,
+		},
+	}
+
+	// Mock expectations - group lookup fails
+	suite.mockTeamRepo.EXPECT().GetAll().Return(teams, nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(nil, errors.New("group not found"))
+
+	// Execute
+	result, err := suite.teamService.GetAllTeams(nil, 1, 20)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to convert team to response")
+}
+
+// GetTeamComponentsByID Tests
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_Success() {
+	teamID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:    teamID,
+			Name:  "backend-team",
+			Title: "Backend Team",
+		},
+	}
+
+	components := []models.Component{
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "api-service",
+				Title: "API Service",
+			},
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:    uuid.New(),
+				Name:  "auth-service",
+				Title: "Auth Service",
+			},
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockComponentRepo.EXPECT().GetComponentsByTeamID(teamID, 100, 0).Return(components, int64(2), nil)
+
+	// Execute
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 100)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result, 2)
+	assert.Equal(suite.T(), int64(2), total)
+	assert.Equal(suite.T(), "api-service", result[0].Name)
+	assert.Equal(suite.T(), "auth-service", result[1].Name)
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_TeamNotFound() {
+	teamID := uuid.New()
+
+	// Mock expectations - team not found
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 100)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), int64(0), total)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_TeamRepoError() {
+	teamID := uuid.New()
+	expectedError := errors.New("database connection error")
+
+	// Mock expectations - database error
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, expectedError)
+
+	// Execute
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 100)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), int64(0), total)
+	assert.Contains(suite.T(), err.Error(), "failed to get team")
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_ComponentRepoError() {
+	teamID := uuid.New()
+	expectedError := errors.New("database query failed")
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: "backend-team",
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockComponentRepo.EXPECT().GetComponentsByTeamID(teamID, 100, 0).Return(nil, int64(0), expectedError)
+
+	// Execute
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 100)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), int64(0), total)
+	assert.Contains(suite.T(), err.Error(), "failed to get components by team")
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_EmptyComponents() {
+	teamID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: "backend-team",
+		},
+	}
+
+	// Mock expectations - no components
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockComponentRepo.EXPECT().GetComponentsByTeamID(teamID, 100, 0).Return([]models.Component{}, int64(0), nil)
+
+	// Execute
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 100)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result, 0)
+	assert.Equal(suite.T(), int64(0), total)
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_PaginationDefaults() {
+	teamID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: "backend-team",
+		},
+	}
+
+	components := []models.Component{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "component-1",
+			},
+		},
+	}
+
+	// Mock expectations - with invalid pagination (page < 1)
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockComponentRepo.EXPECT().GetComponentsByTeamID(teamID, 100, 0).Return(components, int64(1), nil)
+
+	// Execute with invalid page
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 0, 0)
+
+	// Assert - defaults applied (page=1, pageSize=100)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result, 1)
+	assert.Equal(suite.T(), int64(1), total)
+}
+
+func (suite *TeamServiceTestSuite) TestGetTeamComponentsByID_PaginationMaxLimit() {
+	teamID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: "backend-team",
+		},
+	}
+
+	components := []models.Component{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "component-1",
+			},
+		},
+	}
+
+	// Mock expectations - with pageSize > 100
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockComponentRepo.EXPECT().GetComponentsByTeamID(teamID, 100, 0).Return(components, int64(1), nil)
+
+	// Execute with pageSize > 100
+	result, total, err := suite.teamService.GetTeamComponentsByID(teamID, 1, 150)
+
+	// Assert - capped at 100
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result, 1)
+	assert.Equal(suite.T(), int64(1), total)
+}
+
+// GetBySimpleName Tests
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_Success() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:    teamID,
+			Name:  teamName,
+			Title: "Backend Team",
+		},
+		GroupID: groupID,
+		Owner:   "I12345",
+		Email:   "backend@example.com",
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	members := []models.User{
+		{
+			BaseModel: models.BaseModel{
+				ID: uuid.New(),
+			},
+			UserID:     "I12345",
+			FirstName:  "John",
+			LastName:   "Doe",
+			Email:      "john@example.com",
+			TeamID:     &teamID,
+			TeamDomain: models.TeamDomainDeveloper,
+			TeamRole:   models.TeamRoleMember,
+		},
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return(members, int64(1), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+	assert.Equal(suite.T(), teamName, result.Name)
+	assert.Len(suite.T(), result.Members, 1)
+	assert.Equal(suite.T(), "John", result.Members[0].FirstName)
+	assert.Len(suite.T(), result.Links, 1)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_EmptyName() {
+	// Execute with empty name
+	result, err := suite.teamService.GetBySimpleName("")
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), err.Error(), apperrors.NewMissingQueryParam("team_name").Error())
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_TeamNotFound() {
+	teamName := "non-existent-team"
+
+	// Mock expectations - team not found
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_TeamRepoError() {
+	teamName := "backend-team"
+
+	// Mock expectations - database error
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(nil, errors.New("database connection error"))
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get team by name")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_UserRepoError() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	expectedError := errors.New("database query failed")
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: uuid.New(),
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return(nil, int64(0), expectedError)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get team members")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_GroupRepoError() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	members := []models.User{}
+
+	// Mock expectations - group lookup fails
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return(members, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(nil, errors.New("group not found"))
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to convert team to response")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_NoMembers() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Mock expectations - no members
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return([]models.Link{}, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Members, 0)
+	assert.Len(suite.T(), result.Links, 0)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_LinkRepoError() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	members := []models.User{
+		{
+			BaseModel: models.BaseModel{
+				ID: uuid.New(),
+			},
+			UserID:    "I12345",
+			FirstName: "John",
+			LastName:  "Doe",
+			TeamID:    &teamID,
+		},
+	}
+
+	// Mock expectations - link repo error (should be handled gracefully)
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return(members, int64(1), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(nil, errors.New("link fetch error"))
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert - should succeed with empty links (error is logged internally)
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Members, 1)
+	assert.Len(suite.T(), result.Links, 0)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_MultipleMembers() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	members := []models.User{
+		{
+			BaseModel: models.BaseModel{
+				ID: uuid.New(),
+			},
+			UserID:     "I12345",
+			FirstName:  "John",
+			LastName:   "Doe",
+			Email:      "john@example.com",
+			TeamID:     &teamID,
+			TeamDomain: models.TeamDomainDeveloper,
+			TeamRole:   models.TeamRoleMember,
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID: uuid.New(),
+			},
+			UserID:     "I67890",
+			FirstName:  "Jane",
+			LastName:   "Smith",
+			Email:      "jane@example.com",
+			TeamID:     &teamID,
+			TeamDomain: models.TeamDomainDeveloper,
+			TeamRole:   models.TeamRoleManager,
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return(members, int64(2), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return([]models.Link{}, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Members, 2)
+	assert.Equal(suite.T(), "John", result.Members[0].FirstName)
+	assert.Equal(suite.T(), "Jane", result.Members[1].FirstName)
+	assert.Equal(suite.T(), "member", result.Members[0].TeamRole)
+	assert.Equal(suite.T(), "manager", result.Members[1].TeamRole)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleName_MultipleLinks() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "jira-board",
+			},
+			URL:        "https://jira.example.com/board/123",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleName(teamName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 2)
+	assert.Equal(suite.T(), "github-repo", result.Links[0].Name)
+	assert.Equal(suite.T(), "jira-board", result.Links[1].Name)
+}
+
+// GetBySimpleNameWithViewer Tests
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_Success_WithFavorites() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+	linkID1 := uuid.New()
+	linkID2 := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID1,
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID2,
+				Name: "jira-board",
+			},
+			URL:        "https://jira.example.com/board/123",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with favorites metadata
+	viewerMetadata := json.RawMessage(fmt.Sprintf(`{"favorites": ["%s"]}`, linkID1.String()))
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 2)
+	assert.True(suite.T(), result.Links[0].Favorite, "First link should be marked as favorite")
+	assert.False(suite.T(), result.Links[1].Favorite, "Second link should not be marked as favorite")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_EmptyViewerName() {
+	teamName := "backend-team"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Mock expectations - no viewer lookup should happen
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	// No GetByName call expected
+
+	// Execute with empty viewer name
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, "")
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite, "Link should not be marked as favorite")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_ViewerNotFound() {
+	teamName := "backend-team"
+	viewerName := "non-existent-user"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert - should succeed, just without favorites marked
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_ViewerWithNoMetadata() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with no metadata
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: nil,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_ViewerWithEmptyFavorites() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with empty favorites array
+	viewerMetadata := json.RawMessage(`{"favorites": []}`)
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_MultipleFavorites() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+	linkID1 := uuid.New()
+	linkID2 := uuid.New()
+	linkID3 := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID1,
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID2,
+				Name: "jira-board",
+			},
+			URL:        "https://jira.example.com/board/123",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID3,
+				Name: "confluence",
+			},
+			URL:        "https://confluence.example.com",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with multiple favorites
+	viewerMetadata := json.RawMessage(fmt.Sprintf(`{"favorites": ["%s", "%s"]}`, linkID1.String(), linkID3.String()))
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 3)
+	assert.True(suite.T(), result.Links[0].Favorite, "First link should be favorite")
+	assert.False(suite.T(), result.Links[1].Favorite, "Second link should not be favorite")
+	assert.True(suite.T(), result.Links[2].Favorite, "Third link should be favorite")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_InvalidFavoritesFormat() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with invalid favorites format (not an array)
+	viewerMetadata := json.RawMessage(`{"favorites": "not-an-array"}`)
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert - should handle gracefully
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_InvalidUUIDInFavorites() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+	linkID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   linkID,
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with invalid UUID in favorites (should be skipped)
+	viewerMetadata := json.RawMessage(fmt.Sprintf(`{"favorites": ["not-a-uuid", "%s", "also-invalid"]}`, linkID.String()))
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert - should only mark valid UUID as favorite
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.True(suite.T(), result.Links[0].Favorite, "Link with valid UUID should be marked as favorite")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_TeamNotFound() {
+	teamName := "non-existent-team"
+	viewerName := "john.doe"
+
+	// Mock expectations - team not found
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_GetBySimpleNameError() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+
+	// Mock expectations - database error
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(nil, errors.New("database connection error"))
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get team by name")
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_NoLinks() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// Viewer with favorites
+	viewerMetadata := json.RawMessage(fmt.Sprintf(`{"favorites": ["%s"]}`, uuid.New().String()))
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations - no links
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return([]models.Link{}, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 0)
+}
+
+func (suite *TeamServiceTestSuite) TestGetBySimpleNameWithViewer_InvalidJSON() {
+	teamName := "backend-team"
+	viewerName := "john.doe"
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:   teamID,
+			Name: teamName,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	links := []models.Link{
+		{
+			BaseModel: models.BaseModel{
+				ID:   uuid.New(),
+				Name: "github-repo",
+			},
+			URL:        "https://github.com/team/repo",
+			Owner:      teamID,
+			CategoryID: uuid.New(),
+		},
+	}
+
+	// Viewer with invalid JSON metadata
+	viewerMetadata := json.RawMessage(`{invalid json}`)
+	viewer := &models.User{
+		BaseModel: models.BaseModel{
+			ID: uuid.New(),
+		},
+		UserID:   viewerName,
+		Metadata: viewerMetadata,
+	}
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByNameGlobal(teamName).Return(team, nil)
+	suite.mockUserRepo.EXPECT().GetByTeamID(teamID, 1000, 0).Return([]models.User{}, int64(0), nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+	suite.mockLinkRepo.EXPECT().GetByOwner(teamID).Return(links, nil)
+	suite.mockUserRepo.EXPECT().GetByName(viewerName).Return(viewer, nil)
+
+	// Execute
+	result, err := suite.teamService.GetBySimpleNameWithViewer(teamName, viewerName)
+
+	// Assert - should handle gracefully
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Links, 1)
+	assert.False(suite.T(), result.Links[0].Favorite)
+}
+
+// UpdateTeamMetadata Tests
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_Success_MergeNewFields() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Existing team with metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"], "priority": "high"}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata to merge
+	newMetadata := json.RawMessage(`{"status": "active", "owner": "john.doe"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify merged metadata
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "backend", merged["tags"].([]interface{})[0])
+		assert.Equal(suite.T(), "high", merged["priority"])
+		assert.Equal(suite.T(), "active", merged["status"])
+		assert.Equal(suite.T(), "john.doe", merged["owner"])
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_Success_UpdateExistingFields() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Existing team with metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"], "priority": "high", "status": "inactive"}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata to update existing fields
+	newMetadata := json.RawMessage(`{"priority": "critical", "status": "active"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify updated metadata
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "backend", merged["tags"].([]interface{})[0])
+		assert.Equal(suite.T(), "critical", merged["priority"]) // Updated
+		assert.Equal(suite.T(), "active", merged["status"])     // Updated
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_Success_EmptyExistingMetadata() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Team with no existing metadata
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: nil,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"tags": ["backend"], "priority": "high"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify new metadata
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "backend", merged["tags"].([]interface{})[0])
+		assert.Equal(suite.T(), "high", merged["priority"])
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_Success_EmptyJSONExistingMetadata() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Team with empty JSON metadata
+	existingMetadata := json.RawMessage(`{}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify new metadata
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "active", merged["status"])
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_Success_ComplexNestedMetadata() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Existing team with complex nested metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"], "config": {"env": "prod", "region": "us-east"}}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata with nested structure
+	newMetadata := json.RawMessage(`{"config": {"env": "staging", "replicas": 3}, "owner": "john.doe"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify merged metadata
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "backend", merged["tags"].([]interface{})[0])
+		assert.Equal(suite.T(), "john.doe", merged["owner"])
+		// Config should be completely replaced (not deep merged)
+		config := merged["config"].(map[string]interface{})
+		assert.Equal(suite.T(), "staging", config["env"])
+		assert.Equal(suite.T(), float64(3), config["replicas"])
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_TeamNotFound() {
+	teamID := uuid.New()
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations - team not found
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, gorm.ErrRecordNotFound)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_GetByIDError() {
+	teamID := uuid.New()
+	expectedError := errors.New("database connection error")
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations - database error
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(nil, expectedError)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get team")
+	assert.NotErrorIs(suite.T(), err, apperrors.ErrTeamNotFound)
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_InvalidExistingMetadata() {
+	teamID := uuid.New()
+
+	// Team with invalid existing metadata
+	existingMetadata := json.RawMessage(`{invalid json}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: uuid.New(),
+	}
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to parse existing metadata")
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_InvalidNewMetadata() {
+	teamID := uuid.New()
+
+	// Existing team with valid metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"]}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: uuid.New(),
+	}
+
+	// Invalid new metadata
+	newMetadata := json.RawMessage(`{invalid json}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to parse new metadata")
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_UpdateRepositoryError() {
+	teamID := uuid.New()
+	expectedError := errors.New("database update failed")
+
+	// Existing team with metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"]}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: uuid.New(),
+	}
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).Return(expectedError)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to update team metadata")
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_ToResponseError() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+
+	// Existing team with metadata
+	existingMetadata := json.RawMessage(`{"tags": ["backend"]}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	// New metadata
+	newMetadata := json.RawMessage(`{"status": "active"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).Return(nil)
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(nil, errors.New("group not found"))
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to get group for team")
+}
+
+func (suite *TeamServiceTestSuite) TestUpdateTeamMetadata_PreservesUnmentionedFields() {
+	teamID := uuid.New()
+	groupID := uuid.New()
+	orgID := uuid.New()
+
+	// Existing team with multiple metadata fields
+	existingMetadata := json.RawMessage(`{"tags": ["backend"], "priority": "high", "status": "active", "owner": "jane.doe"}`)
+	team := &models.Team{
+		BaseModel: models.BaseModel{
+			ID:       teamID,
+			Name:     "backend-team",
+			Title:    "Backend Team",
+			Metadata: existingMetadata,
+		},
+		GroupID: groupID,
+	}
+
+	group := &models.Group{
+		BaseModel: models.BaseModel{
+			ID:   groupID,
+			Name: "engineering",
+		},
+		OrgID: orgID,
+	}
+
+	// New metadata updating only one field
+	newMetadata := json.RawMessage(`{"priority": "critical"}`)
+
+	// Mock expectations
+	suite.mockTeamRepo.EXPECT().GetByID(teamID).Return(team, nil)
+	suite.mockTeamRepo.EXPECT().Update(gomock.Any()).DoAndReturn(func(t *models.Team) error {
+		// Verify all fields are preserved except updated one
+		var merged map[string]interface{}
+		err := json.Unmarshal(t.Metadata, &merged)
+		assert.NoError(suite.T(), err)
+		assert.Equal(suite.T(), "backend", merged["tags"].([]interface{})[0])
+		assert.Equal(suite.T(), "critical", merged["priority"]) // Updated
+		assert.Equal(suite.T(), "active", merged["status"])     // Preserved
+		assert.Equal(suite.T(), "jane.doe", merged["owner"])    // Preserved
+		return nil
+	})
+	suite.mockGroupRepo.EXPECT().GetByID(groupID).Return(group, nil)
+
+	// Execute
+	result, err := suite.teamService.UpdateTeamMetadata(teamID, newMetadata)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), teamID, result.ID)
 }
 
 // TestTeamServiceTestSuite runs the test suite

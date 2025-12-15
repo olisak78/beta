@@ -6,7 +6,6 @@ import (
 	"developer-portal-backend/internal/service"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -20,19 +19,16 @@ type ComponentHandler struct {
 	componentService service.ComponentServiceInterface
 	landscapeService service.LandscapeServiceInterface
 	teamService      service.TeamServiceInterface
+	projectService   service.ProjectServiceInterface
 }
 
-// NewComponentHandler creates a new component handler (backwards-compatible signature)
-func NewComponentHandler(componentService service.ComponentServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
-	return NewComponentHandlerWithLandscape(componentService, nil, teamService)
-}
-
-// NewComponentHandlerWithLandscape creates a new component handler with landscape service
-func NewComponentHandlerWithLandscape(componentService service.ComponentServiceInterface, landscapeService service.LandscapeServiceInterface, teamService service.TeamServiceInterface) *ComponentHandler {
+// NewComponentHandler creates a component handler with all services
+func NewComponentHandler(componentService service.ComponentServiceInterface, landscapeService service.LandscapeServiceInterface, teamService service.TeamServiceInterface, projectService service.ProjectServiceInterface) *ComponentHandler {
 	return &ComponentHandler{
 		componentService: componentService,
 		landscapeService: landscapeService,
 		teamService:      teamService,
+		projectService:   projectService,
 	}
 }
 
@@ -55,47 +51,12 @@ func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidLandscapeID.Error()})
 			return
 		}
-
-		component, err := h.componentService.GetByID(compID)
+		// Compose health URL via helper (fully encapsulated: component/landscape/template fetch + composition)
+		url, err := BuildComponentHealthURL(h.componentService, h.landscapeService, h.projectService, compID, landID)
 		if err != nil {
-			if errors.Is(err, apperrors.ErrComponentNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-				return
-			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		// Ensure landscape service is configured
-		if h.landscapeService == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": apperrors.ErrLandscapeNotConfigured.Error()})
-			return
-		}
-		landscape, err := h.landscapeService.GetLandscapeByID(landID)
-		if err != nil {
-			if errors.Is(err, apperrors.ErrLandscapeNotFound) {
-				c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		// if exists, concatenate subdomain to component.Name
-		subdomain := component.Name
-		if len(component.Metadata) > 0 {
-			var meta map[string]interface{}
-			if err := json.Unmarshal(component.Metadata, &meta); err == nil {
-				if sdRaw, ok := meta["subdomain"]; ok {
-					if sdStr, ok := sdRaw.(string); ok && sdStr != "" {
-						subdomain = fmt.Sprintf("%s.%s", sdStr, subdomain)
-					}
-				}
-			}
-		}
-
-		// Build health URL
-		url := fmt.Sprintf("https://%s.cfapps.%s/health", subdomain, landscape.Domain)
 
 		// Log the URL to console
 		logger.FromGinContext(c).Infof("components health proxy URL=%s", url)

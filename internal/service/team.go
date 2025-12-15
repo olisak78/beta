@@ -7,6 +7,7 @@ import (
 
 	"developer-portal-backend/internal/database/models"
 	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/logger"
 	"developer-portal-backend/internal/repository"
 
 	"github.com/go-playground/validator/v10"
@@ -16,17 +17,17 @@ import (
 
 // TeamService handles business logic for teams
 type TeamService struct {
-	repo             *repository.TeamRepository
+	repo             repository.TeamRepositoryInterface
 	groupRepo        repository.GroupRepositoryInterface
-	organizationRepo *repository.OrganizationRepository
-	userRepo         *repository.UserRepository
+	organizationRepo repository.OrganizationRepositoryInterface
+	userRepo         repository.UserRepositoryInterface
 	linkRepo         repository.LinkRepositoryInterface
-	componentRepo    *repository.ComponentRepository
+	componentRepo    repository.ComponentRepositoryInterface
 	validator        *validator.Validate
 }
 
 // NewTeamService creates a new team service
-func NewTeamService(repo *repository.TeamRepository, groupRepo repository.GroupRepositoryInterface, orgRepo *repository.OrganizationRepository, userRepo *repository.UserRepository, linkRepo repository.LinkRepositoryInterface, compRepo *repository.ComponentRepository, validator *validator.Validate) *TeamService {
+func NewTeamService(repo repository.TeamRepositoryInterface, groupRepo repository.GroupRepositoryInterface, orgRepo repository.OrganizationRepositoryInterface, userRepo repository.UserRepositoryInterface, linkRepo repository.LinkRepositoryInterface, compRepo repository.ComponentRepositoryInterface, validator *validator.Validate) *TeamService {
 	return &TeamService{
 		repo:             repo,
 		groupRepo:        groupRepo,
@@ -101,7 +102,7 @@ func (s *TeamService) GetByID(id uuid.UUID) (*TeamResponse, error) {
 		return nil, fmt.Errorf("failed to get team: %w", err)
 	}
 
-	return s.toResponse(team), nil
+	return s.toResponse(team)
 }
 
 // GetAllTeams retrieves teams for a specific organization or all teams if organizationID is nil
@@ -138,8 +139,12 @@ func (s *TeamService) GetAllTeams(organizationID *uuid.UUID, page, pageSize int)
 		}
 
 		responses := make([]TeamResponse, len(filteredTeams))
-		for i, team := range filteredTeams {
-			responses[i] = *s.toResponse(&team)
+		for i := range filteredTeams {
+			resp, err := s.toResponse(&filteredTeams[i])
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert team to response: %w", err)
+			}
+			responses[i] = *resp
 		}
 
 		// Adjust total count to exclude filtered teams
@@ -171,8 +176,12 @@ func (s *TeamService) GetAllTeams(organizationID *uuid.UUID, page, pageSize int)
 	}
 
 	responses := make([]TeamResponse, len(filteredTeams))
-	for i, team := range filteredTeams {
-		responses[i] = *s.toResponse(&team)
+	for i := range filteredTeams {
+		resp, err := s.toResponse(&filteredTeams[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert team to response: %w", err)
+		}
+		responses[i] = *resp
 	}
 
 	return &TeamListResponse{
@@ -212,7 +221,7 @@ func (s *TeamService) GetTeamComponentsByID(id uuid.UUID, page, pageSize int) ([
 // GetBySimpleName retrieves a team by name across all organizations and includes its members
 func (s *TeamService) GetBySimpleName(teamName string) (*TeamWithMembersResponse, error) {
 	if teamName == "" {
-		return nil, fmt.Errorf("team name is required")
+		return nil, apperrors.NewMissingQueryParam("team_name")
 	}
 
 	team, err := s.repo.GetByNameGlobal(teamName)
@@ -230,7 +239,10 @@ func (s *TeamService) GetBySimpleName(teamName string) (*TeamWithMembersResponse
 	}
 
 	// Convert team to response
-	teamResp := s.toResponse(team)
+	teamResp, err := s.toResponse(team)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert team to response: %w", err)
+	}
 
 	// Convert members to UserResponse including metadata fallback
 	memberResponses := make([]UserResponse, len(members))
@@ -251,7 +263,15 @@ func (s *TeamService) GetBySimpleName(teamName string) (*TeamWithMembersResponse
 	// Fetch links owned by team
 	var linkResponses []LinkResponse
 	if s.linkRepo != nil {
-		if teamLinks, err := s.linkRepo.GetByOwner(team.ID); err == nil {
+		teamLinks, err := s.linkRepo.GetByOwner(team.ID)
+		if err != nil {
+			// Log the error but don't fail the request - links are non-critical
+			logger.New().WithFields(map[string]interface{}{
+				"team_id":   team.ID,
+				"team_name": team.Name,
+				"error":     err.Error(),
+			}).Warn("Failed to fetch links for team")
+		} else {
 			linkResponses = make([]LinkResponse, 0, len(teamLinks))
 			for i := range teamLinks {
 				linkResponses = append(linkResponses, toLinkResponse(&teamLinks[i]))
@@ -290,7 +310,14 @@ func (s *TeamService) GetBySimpleNameWithViewer(teamName string, viewerName stri
 	favSet := make(map[string]struct{})
 	if len(viewer.Metadata) > 0 {
 		var meta map[string]interface{}
-		if err := json.Unmarshal(viewer.Metadata, &meta); err == nil && meta != nil {
+		if unmarshalErr := json.Unmarshal(viewer.Metadata, &meta); unmarshalErr != nil {
+			// Log the error but don't fail the request - favorites are non-critical
+			logger.New().WithFields(map[string]interface{}{
+				"viewer_name": viewerName,
+				"user_id":     viewer.ID,
+				"error":       unmarshalErr.Error(),
+			}).Warn("Failed to parse viewer metadata for favorites")
+		} else if meta != nil {
 			if v, ok := meta["favorites"]; ok && v != nil {
 				switch arr := v.(type) {
 				case []interface{}:
@@ -325,17 +352,17 @@ func (s *TeamService) GetBySimpleNameWithViewer(teamName string, viewerName stri
 }
 
 // toResponse converts a team model to response
-func (s *TeamService) toResponse(team *models.Team) *TeamResponse {
+func (s *TeamService) toResponse(team *models.Team) (*TeamResponse, error) {
 	// Get organization ID through group (for backwards compatibility)
-	var organizationID uuid.UUID
-	if group, err := s.groupRepo.GetByID(team.GroupID); err == nil {
-		organizationID = group.OrgID
+	group, err := s.groupRepo.GetByID(team.GroupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get group for team: %w", err)
 	}
 
 	return &TeamResponse{
 		ID:             team.ID,
 		GroupID:        team.GroupID,
-		OrganizationID: organizationID,
+		OrganizationID: group.OrgID,
 		Name:           team.Name,
 		Title:          team.Title,
 		Description:    team.Description,
@@ -343,7 +370,7 @@ func (s *TeamService) toResponse(team *models.Team) *TeamResponse {
 		Email:          team.Email,
 		PictureURL:     team.PictureURL,
 		Metadata:       team.Metadata,
-	}
+	}, nil
 }
 
 // UpdateTeamMetadata updates only specific fields in the team's metadata (merge, not replace)
@@ -392,22 +419,5 @@ func (s *TeamService) UpdateTeamMetadata(id uuid.UUID, newMetadata json.RawMessa
 		return nil, fmt.Errorf("failed to update team metadata: %w", err)
 	}
 
-	// Get organization ID through group (for backwards compatibility)
-	var organizationID uuid.UUID
-	if group, err := s.groupRepo.GetByID(team.GroupID); err == nil {
-		organizationID = group.OrgID
-	}
-
-	return &TeamResponse{
-		ID:             team.ID,
-		GroupID:        team.GroupID,
-		OrganizationID: organizationID,
-		Name:           team.Name,
-		Title:          team.Title,
-		Description:    team.Description,
-		Owner:          team.Owner,
-		Email:          team.Email,
-		PictureURL:     team.PictureURL,
-		Metadata:       team.Metadata,
-	}, nil
+	return s.toResponse(team)
 }

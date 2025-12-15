@@ -2,6 +2,7 @@ package repository
 
 import (
 	"developer-portal-backend/internal/database/models"
+	"encoding/json"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -213,6 +214,30 @@ func (r *ProjectRepository) CheckProjectExists(id uuid.UUID) (bool, error) {
 	var count int64
 	err := r.db.Model(&models.Project{}).Where("id = ?", id).Count(&count).Error
 	return count > 0, err
+}
+
+// GetHealthURL returns the project's health URL template from metadata.health.
+// If the project is not found, returns an error.
+// If metadata or the 'health' field is missing or not a string, returns empty string with nil error.
+func (r *ProjectRepository) GetHealthURL(projectID uuid.UUID) (string, error) {
+	var project models.Project
+	if err := r.db.Select("id", "metadata").First(&project, "id = ?", projectID).Error; err != nil {
+		return "", err
+	}
+	// Handle null or empty metadata
+	if len(project.Metadata) == 0 || string(project.Metadata) == "null" {
+		return "", nil
+	}
+	var meta map[string]interface{}
+	if err := json.Unmarshal(project.Metadata, &meta); err != nil {
+		return "", err
+	}
+	if raw, ok := meta["health"]; ok {
+		if s, ok := raw.(string); ok {
+			return s, nil
+		}
+	}
+	return "", nil
 }
 
 // GetAllProjects retrieves all projects

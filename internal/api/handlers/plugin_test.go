@@ -70,6 +70,74 @@ func (m *MockPluginService) GetPluginUIContent(ctx context.Context, pluginID uui
 	return args.Get(0).(*service.PluginUIResponse), args.Error(1)
 }
 
+// MockGitHubService is a mock implementation of GitHubServiceInterface
+type MockGitHubService struct {
+	mock.Mock
+}
+
+func (m *MockGitHubService) GetUserOpenPullRequests(ctx context.Context, uuid, provider, state, sort, direction string, perPage, page int) (*service.PullRequestsResponse, error) {
+	args := m.Called(ctx, uuid, provider, state, sort, direction, perPage, page)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.PullRequestsResponse), args.Error(1)
+}
+
+func (m *MockGitHubService) GetUserTotalContributions(ctx context.Context, uuid, provider, period string) (*service.TotalContributionsResponse, error) {
+	args := m.Called(ctx, uuid, provider, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.TotalContributionsResponse), args.Error(1)
+}
+
+func (m *MockGitHubService) GetContributionsHeatmap(ctx context.Context, uuid, provider, period string) (*service.ContributionsHeatmapResponse, error) {
+	args := m.Called(ctx, uuid, provider, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.ContributionsHeatmapResponse), args.Error(1)
+}
+
+func (m *MockGitHubService) GetAveragePRMergeTime(ctx context.Context, uuid, provider, period string) (*service.AveragePRMergeTimeResponse, error) {
+	args := m.Called(ctx, uuid, provider, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.AveragePRMergeTimeResponse), args.Error(1)
+}
+
+func (m *MockGitHubService) GetUserPRReviewComments(ctx context.Context, uuid, provider, period string) (*service.PRReviewCommentsResponse, error) {
+	args := m.Called(ctx, uuid, provider, period)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.PRReviewCommentsResponse), args.Error(1)
+}
+
+func (m *MockGitHubService) GetRepositoryContent(ctx context.Context, userUUID, provider, owner, repo, path, ref string) (interface{}, error) {
+	args := m.Called(ctx, userUUID, provider, owner, repo, path, ref)
+	return args.Get(0), args.Error(1)
+}
+
+func (m *MockGitHubService) UpdateRepositoryFile(ctx context.Context, uuid, provider, owner, repo, path, message, content, sha, branch string) (interface{}, error) {
+	args := m.Called(ctx, uuid, provider, owner, repo, path, message, content, sha, branch)
+	return args.Get(0), args.Error(1)
+}
+
+func (m *MockGitHubService) ClosePullRequest(ctx context.Context, uuid, provider, owner, repo string, prNumber int, deleteBranch bool) (*service.PullRequest, error) {
+	args := m.Called(ctx, uuid, provider, owner, repo, prNumber, deleteBranch)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*service.PullRequest), args.Error(1)
+}
+
+func (m *MockGitHubService) GetGitHubAsset(ctx context.Context, uuid, provider, assetURL string) ([]byte, string, error) {
+	args := m.Called(ctx, uuid, provider, assetURL)
+	return args.Get(0).([]byte), args.Get(1).(string), args.Error(2)
+}
+
 func TestPluginHandler_GetAllPlugins(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -1036,4 +1104,155 @@ func TestPluginHandler_GetPluginByID(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
+}
+
+func TestNewPluginHandlerWithGitHub(t *testing.T) {
+	mockPluginService := new(MockPluginService)
+	mockGitHubService := new(MockGitHubService)
+
+	handler := NewPluginHandlerWithGitHub(mockPluginService, mockGitHubService)
+
+	assert.NotNil(t, handler)
+	assert.Equal(t, mockPluginService, handler.pluginService)
+	assert.Equal(t, mockGitHubService, handler.githubService)
+	assert.NotNil(t, handler.proxyCache)
+}
+
+func TestPluginHandler_GetPluginUI(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	validID := uuid.New()
+	invalidID := "invalid-uuid"
+
+	tests := []struct {
+		name           string
+		pluginID       string
+		setupAuth      bool
+		mockResponse   *service.PluginUIResponse
+		mockError      error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:      "successful UI content retrieval",
+			pluginID:  validID.String(),
+			setupAuth: true,
+			mockResponse: &service.PluginUIResponse{
+				Content:     "import React from 'react';",
+				ContentType: "text/typescript",
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid plugin ID format",
+			pluginID:       invalidID,
+			setupAuth:      true,
+			mockResponse:   nil,
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid plugin ID format"}`,
+		},
+		{
+			name:           "missing authentication",
+			pluginID:       validID.String(),
+			setupAuth:      false,
+			mockResponse:   nil,
+			mockError:      nil,
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   `{"error":"Authentication required"}`,
+		},
+		{
+			name:           "plugin not found",
+			pluginID:       validID.String(),
+			setupAuth:      true,
+			mockResponse:   nil,
+			mockError:      errors.New("record not found"),
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"error":"Plugin not found"}`,
+		},
+		{
+			name:           "service error",
+			pluginID:       validID.String(),
+			setupAuth:      true,
+			mockResponse:   nil,
+			mockError:      errors.New("service error"),
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockPluginService := new(MockPluginService)
+			mockGitHubService := new(MockGitHubService)
+			handler := NewPluginHandlerWithGitHub(mockPluginService, mockGitHubService)
+
+			if tt.mockResponse != nil || (tt.mockError != nil && tt.pluginID != invalidID && tt.setupAuth) {
+				parsedID, _ := uuid.Parse(tt.pluginID)
+				mockPluginService.On("GetPluginUIContent", mock.Anything, parsedID, mockGitHubService, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(tt.mockResponse, tt.mockError)
+			}
+
+			router := gin.New()
+
+			// Setup authentication middleware if needed
+			if tt.setupAuth {
+				router.Use(func(c *gin.Context) {
+					mockClaims := &auth.AuthClaims{
+						Username: "testuser",
+						Email:    "testuser@example.com",
+						UUID:     "test-uuid",
+					}
+					c.Set("auth_claims", mockClaims)
+					c.Next()
+				})
+			}
+
+			router.GET("/plugins/:id/ui", handler.GetPluginUI)
+
+			req, _ := http.NewRequest("GET", "/plugins/"+tt.pluginID+"/ui", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectedBody != "" {
+				assert.JSONEq(t, tt.expectedBody, w.Body.String())
+			} else if tt.mockResponse != nil {
+				var response service.PluginUIResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.mockResponse.Content, response.Content)
+				assert.Equal(t, tt.mockResponse.ContentType, response.ContentType)
+			}
+
+			mockPluginService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestPluginHandler_GetPluginUI_NoGitHubService(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockPluginService := new(MockPluginService)
+	handler := NewPluginHandler(mockPluginService) // No GitHub service
+
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		mockClaims := &auth.AuthClaims{
+			Username: "testuser",
+			Email:    "testuser@example.com",
+			UUID:     "test-uuid",
+		}
+		c.Set("auth_claims", mockClaims)
+		c.Next()
+	})
+	router.GET("/plugins/:id/ui", handler.GetPluginUI)
+
+	validID := uuid.New()
+	req, _ := http.NewRequest("GET", "/plugins/"+validID.String()+"/ui", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.JSONEq(t, `{"error":"GitHub service not available"}`, w.Body.String())
 }

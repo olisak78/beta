@@ -62,3 +62,12 @@ func (s *AlertHistoryService) UpdateAlertLabel(project, fingerprint, key, value 
 
 	return s.client.UpdateAlertLabel(project, fingerprint, request)
 }
+
+// GetAlertFilters retrieves available filter values for alerts in a specific project
+func (s *AlertHistoryService) GetAlertFilters(project string, filters map[string]string) (*client.AlertFiltersResponse, error) {
+	if project == "" {
+		return nil, apperrors.ErrMissingProject
+	}
+
+	return s.client.GetAlertFilters(project, filters)
+}

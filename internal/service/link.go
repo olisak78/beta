@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"developer-portal-backend/internal/database/models"
-	"developer-portal-backend/internal/repository"
 	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/logger"
+	"developer-portal-backend/internal/repository"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -155,7 +155,7 @@ func (s *LinkService) UpdateLink(id uuid.UUID, req *UpdateLinkRequest) (*LinkRes
 	if _, err := s.userRepo.GetByUserID(req.UpdatedBy); err != nil {
 		if _, errTeam := s.teamRepo.GetByNameGlobal(req.UpdatedBy); errTeam != nil {
 			log.WithField("updated_by", req.UpdatedBy).Warn("updated_by user or team not found")
-			return nil, apperrors.ErrUserNotFound
+			return nil, apperrors.ErrUserOrTeamNotFound
 		}
 	}
 

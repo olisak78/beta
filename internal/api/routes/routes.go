@@ -4,6 +4,7 @@ import (
 	"developer-portal-backend/internal/api/handlers"
 	"developer-portal-backend/internal/api/middleware"
 	"developer-portal-backend/internal/auth"
+	"developer-portal-backend/internal/cache"
 	"developer-portal-backend/internal/client"
 	"developer-portal-backend/internal/config"
 	"developer-portal-backend/internal/repository"
@@ -40,6 +41,13 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Initialize validator
 	validator := validator.New()
 
+	// Initialize cache service
+	cacheConfig := cache.DefaultCacheConfig()
+	cacheService := cache.NewInMemoryCache(cacheConfig)
+	ttlConfig := cache.DefaultTTLConfig()
+
+	log.Printf("Cache service initialized: enabled=%v, defaultTTL=%v", cacheConfig.Enabled, cacheConfig.DefaultTTL)
+
 	// Initialize repositories
 	organizationRepo := repository.NewOrganizationRepository(db)
 	groupRepo := repository.NewGroupRepository(db)
@@ -59,7 +67,17 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	teamService := service.NewTeamService(teamRepo, groupRepo, organizationRepo, userRepo, linkRepo, componentRepo, validator)
 	projectService := service.NewProjectService(projectRepo, validator)
 	componentService := service.NewComponentService(componentRepo, organizationRepo, projectRepo, validator)
-	landscapeService := service.NewLandscapeService(landscapeRepo, organizationRepo, projectRepo, validator)
+
+	// Initialize landscape service with caching
+	landscapeService := service.NewLandscapeServiceWithCache(
+		landscapeRepo,
+		organizationRepo,
+		projectRepo,
+		validator,
+		cacheService,
+		ttlConfig,
+	)
+
 	categoryService := service.NewCategoryService(categoryRepo, validator)
 	linkService := service.NewLinkService(linkRepo, userRepo, teamRepo, categoryRepo, validator)
 	docService := service.NewDocumentationService(docRepo, teamRepo, validator)
@@ -107,7 +125,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	userHandler := handlers.NewUserHandler(userService, teamService)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	projectHandler := handlers.NewProjectHandler(projectService)
-	componentHandler := handlers.NewComponentHandlerWithLandscape(componentService, landscapeService, teamService)
+	componentHandler := handlers.NewComponentHandler(componentService, landscapeService, teamService, projectService)
 	landscapeHandler := handlers.NewLandscapeHandler(landscapeService)
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	linkHandler := handlers.NewLinkHandler(linkService)
@@ -251,7 +269,7 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// Self-service routes (for Jenkins, and future services like Kubernetes, etc.)
 		selfService := v1.Group("/self-service")
 		{
-			// Jenkins self-service endpoints
+			// Jenkins routes
 			jenkins := selfService.Group("/jenkins")
 			{
 				jenkins.GET("/:jaasName/:jobName/parameters", jenkinsHandler.GetJobParameters)
@@ -264,47 +282,56 @@ func SetupRoutes(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// AI Core routes
 		aicore := v1.Group("/ai-core")
 		{
+			// Deployment management
 			aicore.GET("/deployments", aicoreHandler.GetDeployments)
 			aicore.GET("/deployments/:deploymentId", aicoreHandler.GetDeploymentDetails)
-			aicore.GET("/models", aicoreHandler.GetModels)
-			aicore.GET("/me", aicoreHandler.GetMe)
-			aicore.POST("/configurations", aicoreHandler.CreateConfiguration)
 			aicore.POST("/deployments", aicoreHandler.CreateDeployment)
 			aicore.PATCH("/deployments/:deploymentId", aicoreHandler.UpdateDeployment)
 			aicore.DELETE("/deployments/:deploymentId", aicoreHandler.DeleteDeployment)
+
+			// Model and configuration management
+			aicore.GET("/models", aicoreHandler.GetModels)
+			aicore.GET("/me", aicoreHandler.GetMe)
+			aicore.POST("/configurations", aicoreHandler.CreateConfiguration)
+
+			// Chat inference
 			aicore.POST("/chat/inference", aicoreHandler.ChatInference)
+
+			// Attachment management
 			aicore.POST("/upload", aicoreHandler.UploadAttachment)
 		}
 
-		// Alerts routes - Prometheus AlertManager alerts from GitHub
+		// Alerts routes
 		alerts := v1.Group("/projects/:projectId/alerts")
 		{
-			alerts.GET("", alertsHandler.GetAlerts)         // GET /api/v1/projects/:projectId/alerts
-			alerts.POST("/pr", alertsHandler.CreateAlertPR) // POST /api/v1/projects/:projectId/alerts/pr
+			alerts.GET("", alertsHandler.GetAlerts)
+			alerts.POST("/pr", alertsHandler.CreateAlertPR)
 		}
 
-		// Alert History routes - Monitoring service proxy for triggered alerts history
+		// Alert history routes
 		alertHistory := v1.Group("/alert-history")
 		{
 			alertHistory.GET("/projects", alertHistoryHandler.GetAvailableProjects)                       // GET /api/v1/alert-history/projects
 			alertHistory.GET("/alerts/:project", alertHistoryHandler.GetAlertsByProject)                  // GET /api/v1/alert-history/alerts/:project?page=1&pageSize=50&severity=critical&status=firing
+			alertHistory.GET("/alerts/:project/filters", alertHistoryHandler.GetAlertFilters)             // GET /api/v1/alert-history/alerts/:project/filters?severity=critical&landscape=production
 			alertHistory.GET("/alerts/:project/:fingerprint", alertHistoryHandler.GetAlertByFingerprint)  // GET /api/v1/alert-history/alerts/:project/:fingerprint
 			alertHistory.PUT("/alerts/:project/:fingerprint/label", alertHistoryHandler.UpdateAlertLabel) // PUT /api/v1/alert-history/alerts/:project/:fingerprint/label
+		}
+
+		// Link routes
+		links := v1.Group("/links")
+		{
+			links.GET("", linkHandler.ListLinks)
+			links.POST("", linkHandler.CreateLink)
+			links.PUT("/:id", linkHandler.UpdateLink)
+			links.DELETE("/:id", linkHandler.DeleteLink)
+
 		}
 
 		// Category routes
 		categories := v1.Group("/categories")
 		{
 			categories.GET("", categoryHandler.ListCategories)
-		}
-
-		// Link routes
-		links := v1.Group("/links")
-		{
-			links.GET("", linkHandler.ListLinks) // GET /api/v1/links?owner=<user_id>
-			links.POST("", linkHandler.CreateLink)
-			links.DELETE("/:id", linkHandler.DeleteLink)
-			links.PUT("/:id", linkHandler.UpdateLink)
 		}
 
 		// Plugin routes

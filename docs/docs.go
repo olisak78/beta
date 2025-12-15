@@ -859,6 +859,128 @@ const docTemplate = `{
                 }
             }
         },
+        "/alert-history/alerts/{project}/filters": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve available filter values for alerts in a specific project. Returns a dynamic map where keys are filter names (e.g., alertname, severity, status, landscape, region) and values are arrays of available options. Use query parameters to narrow down results.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alert-history"
+                ],
+                "summary": "Get available filter values for alerts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name (must be one of cis2, usrv, cloud_automation)",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by severity level (e.g., critical, warning, info)",
+                        "name": "severity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by landscape (e.g., production, staging, development)",
+                        "name": "landscape",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "firing",
+                            "resolved"
+                        ],
+                        "type": "string",
+                        "description": "Filter by alert status (firing or resolved)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by alert name",
+                        "name": "alertname",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by region (e.g., us-east-1, eu-west-1)",
+                        "name": "region",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by component label",
+                        "name": "component",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter alerts starting from this time (RFC3339 format)",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter alerts up to this time (RFC3339 format)",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved filter values as a dynamic map",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/alert-history/alerts/{project}/{fingerprint}": {
             "get": {
                 "security": [
@@ -1063,14 +1185,6 @@ const docTemplate = `{
                     "authentication"
                 ],
                 "summary": "Logout user",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Successfully logged out",
@@ -1109,12 +1223,6 @@ const docTemplate = `{
                 ],
                 "summary": "Refresh authentication token",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
-                    },
                     {
                         "type": "string",
                         "example": "\"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"",
@@ -1191,12 +1299,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "OAuth error parameter from provider",
                         "name": "error",
                         "in": "query"
@@ -1245,12 +1347,6 @@ const docTemplate = `{
                         "name": "provider",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Environment (development, staging, production)",
-                        "name": "env",
-                        "in": "query"
                     }
                 ],
                 "responses": {

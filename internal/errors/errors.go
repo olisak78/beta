@@ -91,6 +91,7 @@ var (
 	ErrTeamNotFound                   = &NotFoundError{Entity: "team"}
 	ErrComponentNotFound              = &NotFoundError{Entity: "component"}
 	ErrUserNotFound                   = &NotFoundError{Entity: "user"}
+	ErrUserOrTeamNotFound             = &NotFoundError{Entity: "user or team"}
 	ErrProjectNotFound                = &NotFoundError{Entity: "project"}
 	ErrLandscapeNotFound              = &NotFoundError{Entity: "landscape"}
 	ErrGroupNotFound                  = &NotFoundError{Entity: "group"}

@@ -75,6 +75,10 @@ type UpdateLabelResponse struct {
 	} `json:"label"`
 }
 
+// AlertFiltersResponse represents available filter values for alerts
+// Uses a dynamic map to support any filter fields without hardcoding
+type AlertFiltersResponse map[string][]string
+
 // GetAvailableProjects retrieves all available projects from the alert history service
 func (c *AlertHistoryClient) GetAvailableProjects() (*ProjectsResponse, error) {
 	url := fmt.Sprintf("%s/api/projects", c.BaseURL)
@@ -193,6 +197,46 @@ func (c *AlertHistoryClient) UpdateAlertLabel(project, fingerprint string, reque
 	}
 
 	var result UpdateLabelResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// GetAlertFilters retrieves available filter values for alerts in a specific project
+func (c *AlertHistoryClient) GetAlertFilters(project string, params map[string]string) (*AlertFiltersResponse, error) {
+	// Build URL with query parameters
+	baseURL := fmt.Sprintf("%s/api/alerts/%s/filters", c.BaseURL, project)
+
+	queryParams := url.Values{}
+	for key, value := range params {
+		if value != "" {
+			queryParams.Add(key, value)
+		}
+	}
+
+	fullURL := baseURL
+	if len(queryParams) > 0 {
+		fullURL = fmt.Sprintf("%s?%s", baseURL, queryParams.Encode())
+	}
+
+	resp, err := c.HTTPClient.Get(fullURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call alert history service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("alert history service returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result AlertFiltersResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

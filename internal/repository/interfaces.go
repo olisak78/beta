@@ -34,6 +34,7 @@ type UserRepositoryInterface interface {
 	GetByUserID(userID string) (*models.User, error)
 	GetAll(limit, offset int) ([]models.User, int64, error)
 	GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.User, int64, error)
+	GetByTeamID(teamID uuid.UUID, limit, offset int) ([]models.User, int64, error)
 	GetWithOrganization(id uuid.UUID) (*models.User, error)
 	SearchByOrganization(orgID uuid.UUID, query string, limit, offset int) ([]models.User, int64, error)
 	SearchByNameOrTitleGlobal(query string, limit, offset int) ([]models.User, int64, error)
@@ -75,6 +76,7 @@ type TeamRepositoryInterface interface {
 type ProjectRepositoryInterface interface {
 	Create(project *models.Project) error
 	GetByID(id uuid.UUID) (*models.Project, error)
+	GetHealthURL(projectID uuid.UUID) (string, error)
 	GetByName(name string) (*models.Project, error)
 	GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.Project, int64, error)
 	Update(project *models.Project) error
@@ -88,6 +90,7 @@ type ComponentRepositoryInterface interface {
 	GetByName(projectID uuid.UUID, name string) (*models.Component, error)
 	GetByProjectID(projectID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
 	GetByOwnerID(ownerID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
+	GetComponentsByTeamID(teamID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
 	Update(component *models.Component) error
 	Delete(id uuid.UUID) error
 }
@@ -98,10 +101,18 @@ type LandscapeRepositoryInterface interface {
 	GetByID(id uuid.UUID) (*models.Landscape, error)
 	GetByName(name string) (*models.Landscape, error)
 	GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.Landscape, int64, error)
+	GetByType(orgID uuid.UUID, landscapeType string, limit, offset int) ([]models.Landscape, int64, error)
 	GetByStatus(status string, limit, offset int) ([]models.Landscape, int64, error)
 	GetActiveLandscapes(limit, offset int) ([]models.Landscape, int64, error)
+	GetLandscapesByTypeAndStatus(orgID uuid.UUID, landscapeType string, status string, limit, offset int) ([]models.Landscape, int64, error)
+	GetLandscapesByProjectID(projectID uuid.UUID, limit, offset int) ([]models.Landscape, int64, error)
+	Search(orgID uuid.UUID, query string, limit, offset int) ([]models.Landscape, int64, error)
 	Update(landscape *models.Landscape) error
 	Delete(id uuid.UUID) error
+	SetStatus(landscapeID uuid.UUID, status string) error
+	GetWithOrganization(id uuid.UUID) (*models.Landscape, error)
+	GetWithProjects(id uuid.UUID) (*models.Landscape, error)
+	GetWithFullDetails(id uuid.UUID) (*models.Landscape, error)
 }
 
 // CategoryRepositoryInterface defines the interface for category repository operations

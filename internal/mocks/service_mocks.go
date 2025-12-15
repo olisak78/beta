@@ -1320,6 +1320,14 @@ func (m *MockProjectServiceInterface) GetAllProjects() ([]models.Project, error)
 	return ret0, ret1
 }
 
+func (m *MockProjectServiceInterface) GetHealthURL(projectID uuid.UUID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHealthURL", projectID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
 // GetAllProjects indicates an expected call of GetAllProjects.
 func (mr *MockProjectServiceInterfaceMockRecorder) GetAllProjects() *gomock.Call {
 	mr.mock.ctrl.T.Helper()

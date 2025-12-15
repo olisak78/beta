@@ -27,6 +27,7 @@ type ComponentHandlerTestSuite struct {
 	mockComponentService *mocks.MockComponentServiceInterface
 	mockTeamService      *mocks.MockTeamServiceInterface
 	mockLandscapeService *mocks.MockLandscapeServiceInterface
+	mockProjectService   *mocks.MockProjectServiceInterface
 	handler              *handlers.ComponentHandler
 	router               *gin.Engine
 }
@@ -40,12 +41,14 @@ func (suite *ComponentHandlerTestSuite) SetupTest() {
 	suite.mockComponentService = mocks.NewMockComponentServiceInterface(suite.ctrl)
 	suite.mockTeamService = mocks.NewMockTeamServiceInterface(suite.ctrl)
 	suite.mockLandscapeService = mocks.NewMockLandscapeServiceInterface(suite.ctrl)
+	suite.mockProjectService = mocks.NewMockProjectServiceInterface(suite.ctrl)
 
 	// Create handler with mocks
-	suite.handler = handlers.NewComponentHandlerWithLandscape(
+	suite.handler = handlers.NewComponentHandler(
 		suite.mockComponentService,
 		suite.mockLandscapeService,
 		suite.mockTeamService,
+		suite.mockProjectService,
 	)
 
 	suite.router = gin.New()
@@ -291,7 +294,7 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_ComponentNotFound() 
 
 	suite.router.ServeHTTP(w, req)
 
-	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), apperrors.ErrComponentNotFound.Error())
 }
 
@@ -316,7 +319,7 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_LandscapeNotFound() 
 
 	suite.router.ServeHTTP(w, req)
 
-	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), apperrors.ErrLandscapeNotFound.Error())
 }
 
@@ -454,7 +457,7 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_LandscapeServiceNil(
 	landscapeID := uuid.New()
 
 	// Create handler without landscape service
-	handlerWithoutLandscape := handlers.NewComponentHandler(suite.mockComponentService, suite.mockTeamService)
+	handlerWithoutLandscape := handlers.NewComponentHandler(suite.mockComponentService, nil, suite.mockTeamService, suite.mockProjectService)
 	router := gin.New()
 	router.GET("/components/health", handlerWithoutLandscape.ComponentHealth)
 

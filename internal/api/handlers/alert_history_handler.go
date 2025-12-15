@@ -198,3 +198,70 @@ func (h *AlertHistoryHandler) UpdateAlertLabel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// GetAlertFilters godoc
+// @Summary Get available filter values for alerts
+// @Description Retrieve available filter values for alerts in a specific project. Returns a dynamic map where keys are filter names (e.g., alertname, severity, status, landscape, region) and values are arrays of available options. Use query parameters to narrow down results.
+// @Tags alert-history
+// @Accept json
+// @Produce json
+// @Param project path string true "Project name (must be one of cis2, usrv, cloud_automation)"
+// @Param severity query string false "Filter by severity level (e.g., critical, warning, info)"
+// @Param landscape query string false "Filter by landscape (e.g., production, staging, development)"
+// @Param status query string false "Filter by alert status (firing or resolved)" Enums(firing, resolved)
+// @Param alertname query string false "Filter by alert name"
+// @Param region query string false "Filter by region (e.g., us-east-1, eu-west-1)"
+// @Param component query string false "Filter by component label"
+// @Param start_time query string false "Filter alerts starting from this time (RFC3339 format)"
+// @Param end_time query string false "Filter alerts up to this time (RFC3339 format)"
+// @Success 200 {object} map[string][]string "Successfully retrieved filter values as a dynamic map"
+// @Failure 400 {object} map[string]string "Invalid query parameters"
+// @Failure 404 {object} map[string]string "Project not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /alert-history/alerts/{project}/filters [get]
+// @Security BearerAuth
+func (h *AlertHistoryHandler) GetAlertFilters(c *gin.Context) {
+	project := c.Param("project")
+
+	// Collect all query parameters to pass to the external service
+	filters := make(map[string]string)
+
+	// Add all possible filter parameters
+	if severity := c.Query("severity"); severity != "" {
+		filters["severity"] = severity
+	}
+	if landscape := c.Query("landscape"); landscape != "" {
+		filters["landscape"] = landscape
+	}
+	if status := c.Query("status"); status != "" {
+		filters["status"] = status
+	}
+	if alertname := c.Query("alertname"); alertname != "" {
+		filters["alertname"] = alertname
+	}
+	if region := c.Query("region"); region != "" {
+		filters["region"] = region
+	}
+	if component := c.Query("component"); component != "" {
+		filters["component"] = component
+	}
+	if startTime := c.Query("start_time"); startTime != "" {
+		filters["start_time"] = startTime
+	}
+	if endTime := c.Query("end_time"); endTime != "" {
+		filters["end_time"] = endTime
+	}
+
+	// Call the external service
+	response, err := h.service.GetAlertFilters(project, filters)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrMissingProject) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve filters from alert history service"})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

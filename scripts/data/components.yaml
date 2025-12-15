@@ -619,6 +619,8 @@ components:
     owner: team-coe
     project: usrv
     metadata:
+      health: true
+      health_suffix: /health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/healthcheck
@@ -647,6 +649,8 @@ components:
     owner: team-avihai
     project: usrv
     metadata:
+      health: true
+      health_suffix: /btp-solution-operator-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/btp-solution-operator
@@ -661,6 +665,8 @@ components:
     owner: team-zohar
     project: usrv
     metadata:
+      health: true
+      health_suffix: /commercial-integration-manager-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/commercial-integration-manager
@@ -825,6 +831,8 @@ components:
     owner: team-lior
     project: usrv
     metadata:
+      health: true
+      health_suffix: /unified-account-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/unified-account
@@ -865,6 +873,8 @@ components:
     owner: team-avihai
     project: usrv
     metadata:
+      health: true
+      health_suffix: /btp-subaccount-operator-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/btp-subaccount-operator
@@ -993,6 +1003,8 @@ components:
     owner: team-lior
     project: usrv
     metadata:
+      health: true
+      health_suffix: /unified-cloud-automation-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/unified-cloud-automation
@@ -1058,6 +1070,8 @@ components:
     owner: team-avihai
     project: usrv
     metadata:
+      health: true
+      health_suffix: /unified-service-orchestration-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/unified-service-orchestration
