@@ -1334,6 +1334,22 @@ func (mr *MockProjectServiceInterfaceMockRecorder) GetAllProjects() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProjects", reflect.TypeOf((*MockProjectServiceInterface)(nil).GetAllProjects))
 }
 
+// GetHealthMetadata mocks base method.
+func (m *MockProjectServiceInterface) GetHealthMetadata(projectID uuid.UUID) (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHealthMetadata", projectID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetHealthMetadata indicates an expected call of GetHealthMetadata.
+func (mr *MockProjectServiceInterfaceMockRecorder) GetHealthMetadata(projectID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHealthMetadata", reflect.TypeOf((*MockProjectServiceInterface)(nil).GetHealthMetadata), projectID)
+}
+
 // MockLinkServiceInterface is a mock of LinkServiceInterface interface.
 type MockLinkServiceInterface struct {
 	ctrl     *gomock.Controller

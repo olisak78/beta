@@ -6,8 +6,10 @@ import (
 	"developer-portal-backend/internal/service"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,49 +45,55 @@ func (h *ComponentHandler) ComponentHealth(c *gin.Context) {
 	if componentIDStr != "" && landscapeIDStr != "" {
 		compID, err := uuid.Parse(componentIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidComponentID.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"healthy": false, "error": apperrors.ErrInvalidComponentID.Error(), "details": fmt.Sprintf("failed to parse component-id: %s", componentIDStr)})
 			return
 		}
 		landID, err := uuid.Parse(landscapeIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrInvalidLandscapeID.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"healthy": false, "error": apperrors.ErrInvalidLandscapeID.Error(), "details": fmt.Sprintf("failed to parse landscape-id: %s", landscapeIDStr)})
 			return
 		}
 		// Compose health URL via helper (fully encapsulated: component/landscape/template fetch + composition)
-		url, err := BuildComponentHealthURL(h.componentService, h.landscapeService, h.projectService, compID, landID)
+		healthURL, healthSuccessRegEx, err := BuildComponentHealthURL(h.componentService, h.landscapeService, h.projectService, compID, landID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"healthy": false, "error": err.Error(), "details": fmt.Sprintf("failed to build component health URL. healthURL=%s successRegEx=%s", healthURL, healthSuccessRegEx)})
 			return
 		}
 
-		// Log the URL to console
-		logger.FromGinContext(c).Infof("components health proxy URL=%s", url)
+		logger.FromGinContext(c).Debugf("components health proxy URL=%s", healthURL)
 
 		// Fetch URL with timeout
 		client := &http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Get(url)
+		resp, err := client.Get(healthURL)
 		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch component health", "details": err.Error(), "url": url})
+			c.JSON(http.StatusInternalServerError, gin.H{"healthy": false, "error": "failed to fetch component health", "details": err.Error(), "healthURL": healthURL})
 			return
 		}
-		defer resp.Body.Close()
-
-		// Copy relevant headers (at least content-type)
-		if ct := resp.Header.Get("Content-Type"); ct != "" {
-			c.Writer.Header().Set("Content-Type", ct)
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"healthy": false, "error": "failed to close component health response body", "details": err.Error(), "healthURL": healthURL})
+				return
+			}
+		}(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"healthy": false, "error": "failed to read component health response", "details": err.Error(), "healthURL": healthURL, "statusCode": resp.StatusCode})
+			return
 		}
-
-		// Pass through status and body
-		c.Status(resp.StatusCode)
-		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
-			// Can't send JSON after headers/body may have been sent; just log the error
-			logger.FromGinContext(c).Warnf("failed to stream response body: %v", err)
+		responseBody := string(bodyBytes)
+		// check if responseBody matches healthSuccessRegEx
+		healthy, err := regexp.MatchString(healthSuccessRegEx, responseBody)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"healthy": false, "error": err.Error(), "details": "failed to apply health success regex", "healthURL": healthURL, "statusCode": resp.StatusCode})
+			return
 		}
+		c.JSON(http.StatusOK, gin.H{"healthy": healthy, "details": responseBody, "healthURL": healthURL, "statusCode": resp.StatusCode})
 		return
 	}
-
 	// Missing parameters: both component-id and landscape-id are required
-	c.JSON(http.StatusBadRequest, gin.H{"error": apperrors.ErrMissingLandscapeParams.Error()})
+	c.JSON(http.StatusBadRequest, gin.H{"healthy": false, "error": apperrors.ErrMissingHealthParams.Error()})
+
 }
 
 // ListComponents handles GET /components

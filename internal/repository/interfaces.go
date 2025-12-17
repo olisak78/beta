@@ -76,7 +76,7 @@ type TeamRepositoryInterface interface {
 type ProjectRepositoryInterface interface {
 	Create(project *models.Project) error
 	GetByID(id uuid.UUID) (*models.Project, error)
-	GetHealthURL(projectID uuid.UUID) (string, error)
+	GetHealthMetadata(projectID uuid.UUID) (string, string, error)
 	GetByName(name string) (*models.Project, error)
 	GetByOrganizationID(orgID uuid.UUID, limit, offset int) ([]models.Project, int64, error)
 	Update(project *models.Project) error

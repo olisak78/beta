@@ -635,6 +635,8 @@ components:
     owner: team-coe
     project: usrv
     metadata:
+      health: true
+      health_suffix: /feature-toggle-operator-health
       ci:
         qos:
           jenkins_url: https://atom.jaas-gcp.cloud.sap.corp/job/feature-toggle-manager

@@ -11,6 +11,7 @@ projects:
     metadata:
       alerts: "https://github.tools.sap/btp-monitoring/monitoring-configs/tree/main/charts/monitoring-configs/templates/alerts"
       health: "https://{subdomain}.{component_name}.cfapps.{landscape_domain}/health"
+      health_success_regex: '"status":"UP"'
       components-metrics: true
       views:
         - grid
@@ -26,6 +27,7 @@ projects:
     description: Unified Services
     metadata:
       health: "https://health.ingress.{landscape_domain}{health_suffix}"
+      health_success_regex: '(?s)^(UP|Overall status: UP.*)$'
       views:
         - grid
   - name: developer-portal

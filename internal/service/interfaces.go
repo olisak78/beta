@@ -124,7 +124,7 @@ type CategoryServiceInterface interface {
 // ProjectServiceInterface defines the interface for project service
 type ProjectServiceInterface interface {
 	GetAllProjects() ([]models.Project, error)
-	GetHealthURL(projectID uuid.UUID) (string, error)
+	GetHealthMetadata(projectID uuid.UUID) (string, string, error)
 }
 
 // LinkServiceInterface defines the interface for link service

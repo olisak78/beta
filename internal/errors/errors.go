@@ -217,7 +217,7 @@ var (
 	ErrCombinedFileSizeExceeds       = &ValidationError{Field: "files", Message: "Combined file size exceeds 5MB limit"}
 
 	// Component specific validation errors
-	ErrMissingLandscapeParams   = &ValidationError{Message: "component-id and landscape-id parameters are required"}
+	ErrMissingHealthParams      = &ValidationError{Message: "component-id and landscape-id parameters are required"}
 	ErrMissingTeamOrProjectName = &ValidationError{Message: "team-id or project-name parameter is required"}
 
 	// Alert History specific validation errors

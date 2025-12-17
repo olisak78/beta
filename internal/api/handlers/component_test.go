@@ -255,7 +255,7 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_MissingParameters() 
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
-	assert.Contains(suite.T(), w.Body.String(), apperrors.ErrMissingLandscapeParams.Message)
+	assert.Contains(suite.T(), w.Body.String(), apperrors.ErrMissingHealthParams.Message)
 }
 
 // TestComponentHealth_InvalidComponentID tests invalid component-id
@@ -404,6 +404,11 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_SuccessWithMetadata(
 		GetLandscapeByID(landscapeID).
 		Return(landscape, nil)
 
+	// Ensure project-level health URL template is provided so URL is built
+	projectID := uuid.New()
+	component.ProjectID = projectID
+	suite.mockProjectService.EXPECT().GetHealthMetadata(projectID).Return("https://{subdomain}.{component_name}.cfapps.{landscape_domain}/health", ".*", nil)
+
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/components/health?component-id=%s&landscape-id=%s", componentID.String(), landscapeID.String()), nil)
 	w := httptest.NewRecorder()
 
@@ -412,7 +417,7 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_SuccessWithMetadata(
 
 	// The request will fail with 502 Bad Gateway because the URL doesn't exist
 	// But this tests that the handler processes the request correctly up to the HTTP call
-	assert.Equal(suite.T(), http.StatusBadGateway, w.Code)
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), "failed to fetch component health")
 }
 
@@ -441,13 +446,18 @@ func (suite *ComponentHandlerTestSuite) TestComponentHealth_SuccessWithoutMetada
 		GetLandscapeByID(landscapeID).
 		Return(landscape, nil)
 
+	// Ensure project-level health URL template is provided so URL is built
+	projectID := uuid.New()
+	component.ProjectID = projectID
+	suite.mockProjectService.EXPECT().GetHealthMetadata(projectID).Return("https://{subdomain}.{component_name}.cfapps.{landscape_domain}/health", ".*", nil)
+
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/components/health?component-id=%s&landscape-id=%s", componentID.String(), landscapeID.String()), nil)
 	w := httptest.NewRecorder()
 
 	suite.router.ServeHTTP(w, req)
 
 	// Will fail with 502 because URL doesn't exist, but tests the logic
-	assert.Equal(suite.T(), http.StatusBadGateway, w.Code)
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Contains(suite.T(), w.Body.String(), "failed to fetch component health")
 }
 

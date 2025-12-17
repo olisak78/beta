@@ -182,8 +182,8 @@ func ErrorsFix(db *gorm.DB) error {
 	if err := db.Exec(`DELETE FROM projects WHERE name IN (?,?)`, "noe", "internal").Error; err != nil {
 		return err
 	}
-	// remove 'health' metadata entries from all projects - these had invalid data structures in early versions:
-	if err := db.Exec(`UPDATE projects SET metadata = jsonb_strip_nulls(metadata - 'health') WHERE metadata ? 'health'`).Error; err != nil {
+	// remove 'health-success-regex' metadata entries from all projects - these had invalid data structures in early versions:
+	if err := db.Exec(`UPDATE projects SET metadata = jsonb_strip_nulls(metadata - 'health-success-regex') WHERE metadata ? 'health-success-regex'`).Error; err != nil {
 		return err
 	}
 	return nil

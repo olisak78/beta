@@ -216,28 +216,37 @@ func (r *ProjectRepository) CheckProjectExists(id uuid.UUID) (bool, error) {
 	return count > 0, err
 }
 
-// GetHealthURL returns the project's health URL template from metadata.health.
+// GetHealthMetadata returns the project's health URL template and success regex from metadata.
 // If the project is not found, returns an error.
-// If metadata or the 'health' field is missing or not a string, returns empty string with nil error.
-func (r *ProjectRepository) GetHealthURL(projectID uuid.UUID) (string, error) {
+// If metadata or the fields are missing or not strings, returns empty strings with nil error.
+func (r *ProjectRepository) GetHealthMetadata(projectID uuid.UUID) (string, string, error) {
 	var project models.Project
 	if err := r.db.Select("id", "metadata").First(&project, "id = ?", projectID).Error; err != nil {
-		return "", err
+		return "", "", err
 	}
 	// Handle null or empty metadata
 	if len(project.Metadata) == 0 || string(project.Metadata) == "null" {
-		return "", nil
+		return "", "", nil
 	}
 	var meta map[string]interface{}
 	if err := json.Unmarshal(project.Metadata, &meta); err != nil {
-		return "", err
+		return "", "", err
 	}
+	// URL template from metadata["health"]
+	urlTemplate := ""
 	if raw, ok := meta["health"]; ok {
 		if s, ok := raw.(string); ok {
-			return s, nil
+			urlTemplate = s
 		}
 	}
-	return "", nil
+	// Success regex from metadata["health_success_regex"]
+	successRegex := ""
+	if raw, ok := meta["health_success_regex"]; ok {
+		if s, ok := raw.(string); ok {
+			successRegex = s
+		}
+	}
+	return urlTemplate, successRegex, nil
 }
 
 // GetAllProjects retrieves all projects

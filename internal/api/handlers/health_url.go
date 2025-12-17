@@ -5,7 +5,6 @@ import (
 	"developer-portal-backend/internal/service"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 
 // ErrComponentHealthDisabled indicates the component's health flag is explicitly disabled in metadata.
 var ErrComponentHealthDisabled = errors.New("component 'health' flag is not set to 'true'")
+var ErrComponentHealthBadConfig = errors.New("project's health URL pattern or success regex is not set")
 
 // BuildComponentHealthURL computes the final health URL for a component given the optional project-level
 // URL template and the component/landscape context. It supports the following placeholders:
@@ -32,32 +32,21 @@ func BuildComponentHealthURL(
 	projectService service.ProjectServiceInterface,
 	componentID uuid.UUID,
 	landscapeID uuid.UUID,
-) (string, error) {
+) (string, string, error) {
 	// Resolve component and landscape
 	// First fetch component (matches previous handler behavior)
 	component, err := componentService.GetByID(componentID)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if landscapeService == nil {
-		return "", apperrors.ErrLandscapeNotConfigured
+		return "", "", apperrors.ErrLandscapeNotConfigured
 	}
 	landscape, err := landscapeService.GetLandscapeByID(landscapeID)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	// Get project health URL template
-	healthURLTemplate := ""
-	if projectService != nil && component.ProjectID != uuid.Nil {
-		var err error
-		healthURLTemplate, err = projectService.GetHealthURL(component.ProjectID)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// Extract metadata values: health flag, subdomain, health_suffix
 	subdomain := ""    // default for {subdomain} is empty (omit segment when absent)
 	healthSuffix := "" // used for {health_suffix}
 	if len(component.Metadata) > 0 {
@@ -66,48 +55,54 @@ func BuildComponentHealthURL(
 			// get 'health' flag from metadata to check if health is enabled:
 			if healthRaw, ok := meta["health"]; ok {
 				if healthBool, ok := healthRaw.(bool); ok && !healthBool {
-					return "", ErrComponentHealthDisabled
-				}
-			}
-			// subdomain from metadata (if exists)
-			if sdRaw, ok := meta["subdomain"]; ok {
-				if sdStr, ok := sdRaw.(string); ok && sdStr != "" {
-					subdomain = sdStr
-				}
-			}
-			// health suffix from metadata (if exists)
-			if hsRaw, ok := meta["health_suffix"]; ok {
-				if hsStr, ok := hsRaw.(string); ok {
-					healthSuffix = hsStr
+					return "", "", ErrComponentHealthDisabled
 				}
 			}
 		}
-	}
 
-	// Determine URL template and perform placeholder substitution
-	if strings.TrimSpace(healthURLTemplate) != "" {
-		// Replace placeholders in provided template with optional {subdomain} handling
-		t := healthURLTemplate
-		t = strings.ReplaceAll(t, "{landscape_domain}", landscape.Domain)
-		t = strings.ReplaceAll(t, "{health_suffix}", healthSuffix)
-
-		if strings.TrimSpace(subdomain) == "" {
-			// Remove optional subdomain segment including adjacent dots if subdomain is not provided
-			t = strings.ReplaceAll(t, "{subdomain}.", "")
-			t = strings.ReplaceAll(t, ".{subdomain}", "")
-			t = strings.ReplaceAll(t, "{subdomain}", "")
-		} else {
-			t = strings.ReplaceAll(t, "{subdomain}", subdomain)
+		// subdomain from metadata (if exists)
+		if sdRaw, ok := meta["subdomain"]; ok {
+			if sdStr, ok := sdRaw.(string); ok && sdStr != "" {
+				subdomain = sdStr
+			}
+		}
+		// health suffix from metadata (if exists)
+		if hsRaw, ok := meta["health_suffix"]; ok {
+			if hsStr, ok := hsRaw.(string); ok {
+				healthSuffix = hsStr
+			}
 		}
 
-		t = strings.ReplaceAll(t, "{component_name}", component.Name)
-		return t, nil
+	}
+	// Get project health URL template (and success regex, ignored for now)
+	healthURLTemplate, healthSuccessRegEx := "", ""
+	if projectService != nil && component.ProjectID != uuid.Nil {
+		var err error
+		healthURLTemplate, healthSuccessRegEx, err = projectService.GetHealthMetadata(component.ProjectID)
+		if err != nil {
+			return "", "", err
+		}
 	}
 
-	// Legacy fallback: compose host and build URL
-	host := component.Name
-	if subdomain != "" {
-		host = fmt.Sprintf("%s.%s", subdomain, component.Name)
+	if strings.TrimSpace(healthURLTemplate) == "" || strings.TrimSpace(healthSuccessRegEx) == "" {
+		return "", "", ErrComponentHealthBadConfig
 	}
-	return fmt.Sprintf("https://%s.cfapps.%s/health", host, landscape.Domain), nil
+
+	// Replace placeholders in provided template with optional {subdomain} handling
+	t := healthURLTemplate
+	t = strings.ReplaceAll(t, "{landscape_domain}", landscape.Domain)
+	t = strings.ReplaceAll(t, "{health_suffix}", healthSuffix)
+
+	if strings.TrimSpace(subdomain) == "" {
+		// Remove optional subdomain segment including adjacent dots if subdomain is not provided
+		t = strings.ReplaceAll(t, "{subdomain}.", "")
+		t = strings.ReplaceAll(t, ".{subdomain}", "")
+		t = strings.ReplaceAll(t, "{subdomain}", "")
+	} else {
+		t = strings.ReplaceAll(t, "{subdomain}", subdomain)
+	}
+
+	t = strings.ReplaceAll(t, "{component_name}", component.Name)
+	return t, healthSuccessRegEx, nil
+
 }

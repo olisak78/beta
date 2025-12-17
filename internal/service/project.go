@@ -27,7 +27,7 @@ func (s *ProjectService) GetAllProjects() ([]models.Project, error) {
 	return s.projectRepo.GetAllProjects()
 }
 
-// GetHealthURL retrieves the health URL for a given project ID
-func (s *ProjectService) GetHealthURL(projectID uuid.UUID) (string, error) {
-	return s.projectRepo.GetHealthURL(projectID)
+// GetHealthMetadata retrieves the health URL template and success regex for a given project ID
+func (s *ProjectService) GetHealthMetadata(projectID uuid.UUID) (string, string, error) {
+	return s.projectRepo.GetHealthMetadata(projectID)
 }
