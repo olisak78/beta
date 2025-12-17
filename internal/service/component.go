@@ -16,14 +16,14 @@ import (
 
 // ComponentService handles business logic for components
 type ComponentService struct {
-	repo             *repository.ComponentRepository
-	organizationRepo *repository.OrganizationRepository
-	projectRepo      *repository.ProjectRepository
+	repo             repository.ComponentRepositoryInterface
+	organizationRepo repository.OrganizationRepositoryInterface
+	projectRepo      repository.ProjectRepositoryInterface
 	validator        *validator.Validate
 }
 
 // NewComponentService creates a new component service
-func NewComponentService(repo *repository.ComponentRepository, orgRepo *repository.OrganizationRepository, projRepo *repository.ProjectRepository, validator *validator.Validate) *ComponentService {
+func NewComponentService(repo repository.ComponentRepositoryInterface, orgRepo repository.OrganizationRepositoryInterface, projRepo repository.ProjectRepositoryInterface, validator *validator.Validate) *ComponentService {
 	return &ComponentService{
 		repo:             repo,
 		organizationRepo: orgRepo,

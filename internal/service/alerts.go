@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"developer-portal-backend/internal/auth"
 	apperrors "developer-portal-backend/internal/errors"
 	"developer-portal-backend/internal/repository"
 	"encoding/base64"
@@ -19,14 +18,14 @@ import (
 )
 
 type AlertsService struct {
-	projectRepo *repository.ProjectRepository
+	projectRepo repository.ProjectRepositoryInterface
 	authService GitHubAuthService
 }
 
-func NewAlertsService(projectRepo *repository.ProjectRepository, authService *auth.AuthService) *AlertsService {
+func NewAlertsService(projectRepo repository.ProjectRepositoryInterface, authService GitHubAuthService) *AlertsService {
 	return &AlertsService{
 		projectRepo: projectRepo,
-		authService: NewAuthServiceAdapter(authService),
+		authService: authService,
 	}
 }
 

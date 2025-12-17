@@ -2,6 +2,7 @@ package service_test
 
 import (
 	apperrors "developer-portal-backend/internal/errors"
+	"developer-portal-backend/internal/testutils"
 	"encoding/json"
 	"testing"
 
@@ -31,6 +32,7 @@ type UserServiceTestSuite struct {
 	mockPluginRepo *mocks.MockPluginRepositoryInterface
 	userService    *service.UserService
 	validator      *validator.Validate
+	factories      *testutils.FactorySet
 }
 
 // SetupTest sets up the test suite
@@ -40,6 +42,7 @@ func (suite *UserServiceTestSuite) SetupTest() {
 	suite.mockLinkRepo = mocks.NewMockLinkRepositoryInterface(suite.ctrl)
 	suite.mockPluginRepo = mocks.NewMockPluginRepositoryInterface(suite.ctrl)
 	suite.validator = validator.New()
+	suite.factories = testutils.NewFactorySet()
 
 	// Create service with mock repository
 	suite.userService = service.NewUserService(suite.mockUserRepo, suite.mockLinkRepo, suite.mockPluginRepo, suite.validator)
@@ -160,14 +163,7 @@ func (suite *UserServiceTestSuite) TestCreateUserDuplicateEmail() {
 		CreatedBy: "I123456",
 	}
 
-	existingUser := &models.User{
-		UserID:     "I789012",
-		FirstName:  "Jane",
-		LastName:   "Doe",
-		Email:      req.Email,
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.WithEmail(req.Email)
 
 	// Mock GetByEmail to return existing member
 	suite.mockUserRepo.EXPECT().
@@ -185,16 +181,8 @@ func (suite *UserServiceTestSuite) TestCreateUserDuplicateEmail() {
 // TestGetUserByID tests getting a user by ID
 func (suite *UserServiceTestSuite) TestGetUserByID() {
 	userID := uuid.New()
-	existingUser := &models.User{
-		TeamID:     &userID,
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		Mobile:     "+1-555-0123",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &userID
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -272,16 +260,8 @@ func (suite *UserServiceTestSuite) TestGetMembersByOrganization() {
 // TestUpdateMember tests updating a member
 func (suite *UserServiceTestSuite) TestUpdateMember() {
 	userID := uuid.New()
-	existingUser := &models.User{
-		TeamID:     &userID,
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		Mobile:     "+1-555-0123",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &userID
 
 	newFirstName := "John"
 	newLastName := "Updated"
@@ -319,15 +299,8 @@ func (suite *UserServiceTestSuite) TestUpdateMember() {
 // TestDeleteMember tests deleting a member
 func (suite *UserServiceTestSuite) TestDeleteMember() {
 	userID := uuid.New()
-	existingUser := &models.User{
-		TeamID:     &userID,
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &userID
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -484,22 +457,12 @@ func (suite *UserServiceTestSuite) TestUpdateMemberNotFound() {
 
 func (suite *UserServiceTestSuite) TestUpdateMemberEmailConflict() {
 	userID := uuid.New()
-	existingUser := &models.User{
-		TeamID:     &userID,
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &userID
 
 	conflictingEmail := "taken@example.com"
-	conflictingUser := &models.User{
-		TeamID: uuidPtr(),
-		UserID: "I999999",
-		Email:  conflictingEmail,
-	}
+	conflictingUser := suite.factories.User.WithEmail(conflictingEmail)
+	conflictingUser.TeamID = uuidPtr()
 
 	req := &service.UpdateUserRequest{
 		Email: &conflictingEmail,
@@ -530,15 +493,8 @@ func (suite *UserServiceTestSuite) TestUpdateUserTeam_Success() {
 	teamID := uuid.New()
 	updatedBy := "I999999"
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		TeamID:     nil, // No team initially
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = nil // No team initially
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -600,15 +556,8 @@ func (suite *UserServiceTestSuite) TestUpdateUserTeam_UpdateFails() {
 	teamID := uuid.New()
 	updatedBy := "I999999"
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		TeamID:     nil,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = nil
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -634,15 +583,8 @@ func (suite *UserServiceTestSuite) TestUpdateUserTeam_ChangeExistingTeam() {
 	newTeamID := uuid.New()
 	updatedBy := "I999999"
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		TeamID:     &oldTeamID, // Already has a team
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &oldTeamID // Already has a team
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -688,15 +630,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_Success() {
 	userID := "I123456"
 	linkID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil, // No existing metadata
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil // No existing metadata
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -742,15 +678,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_WithExistingMetad
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -798,15 +728,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_WithExistingFavor
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -855,15 +779,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_Deduplication() {
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -940,15 +858,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_InvalidMetadata()
 	userID := "I123456"
 	linkID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`invalid json`), // Invalid JSON
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(`invalid json`) // Invalid JSON
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -986,15 +898,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_UpdateFails() {
 	userID := "I123456"
 	linkID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1025,15 +931,9 @@ func (suite *UserServiceTestSuite) TestAddFavoriteLinkByUserID_FavoritesAsInterf
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1075,15 +975,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_Success() {
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1130,15 +1024,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_RemoveLastLink
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1180,15 +1068,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_NoExistingFavo
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1228,15 +1110,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_NoMetadata() {
 	userID := "I123456"
 	linkID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil, // No metadata
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil // No metadata
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1279,15 +1155,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_Idempotent() {
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1364,15 +1234,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_InvalidMetadat
 	userID := "I123456"
 	linkID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`invalid json`), // Invalid JSON
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(`invalid json`) // Invalid JSON
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1414,15 +1278,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_UpdateFails() 
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1453,15 +1311,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_FavoritesAsInt
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1506,15 +1358,9 @@ func (suite *UserServiceTestSuite) TestRemoveFavoriteLinkByUserID_PreservesOther
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1555,15 +1401,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_Success() {
 	userID := "I123456"
 	pluginID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil, // No existing metadata
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil // No existing metadata
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1609,15 +1449,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_WithExistingM
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1665,15 +1499,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_WithExistingS
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1722,15 +1550,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_Deduplication
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1807,15 +1629,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_InvalidMetada
 	userID := "I123456"
 	pluginID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`invalid json`), // Invalid JSON
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(`invalid json`) // Invalid JSON
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1853,15 +1669,9 @@ func (suite *UserServiceTestSuite) TestAddSubscribedPluginByUserID_UpdateFails()
 	userID := "I123456"
 	pluginID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1891,15 +1701,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_Success() 
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1946,15 +1750,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_RemoveLast
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -1997,15 +1795,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_NoExisting
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2046,15 +1838,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_NoMetadata
 	userID := "I123456"
 	pluginID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil, // No metadata
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = nil // No metadata
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2097,15 +1883,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_Idempotent
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2182,15 +1962,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_InvalidMet
 	userID := "I123456"
 	pluginID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`invalid json`), // Invalid JSON
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(`invalid json`) // Invalid JSON
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2232,15 +2006,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_UpdateFail
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2271,15 +2039,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_Subscribed
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2324,15 +2086,9 @@ func (suite *UserServiceTestSuite) TestRemoveSubscribedPluginByUserID_PreservesO
 	}
 	metadataBytes, _ := json.Marshal(existingMetadata)
 
-	existingUser := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2373,16 +2129,10 @@ func (suite *UserServiceTestSuite) TestGetUserByUserID_Success() {
 	userID := "I123456"
 	teamID := uuid.New()
 
-	existingUser := &models.User{
-		TeamID:     &teamID,
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		Mobile:     "+1-555-0123",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.TeamID = &teamID
+	existingUser.UserID = userID
+	existingUser.Mobile = "+1-555-0123"
 
 	suite.mockUserRepo.EXPECT().
 		GetByUserID(userID).
@@ -2433,18 +2183,10 @@ func (suite *UserServiceTestSuite) TestGetUserByName_Success() {
 	name := "John Doe"
 	userID := "I123456"
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		Mobile:     "+1-555-0123",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Mobile = "+1-555-0123"
 
 	suite.mockUserRepo.EXPECT().
 		GetByName(name).
@@ -2458,7 +2200,7 @@ func (suite *UserServiceTestSuite) TestGetUserByName_Success() {
 	assert.Equal(suite.T(), userID, response.ID)
 	assert.Equal(suite.T(), "John", response.FirstName)
 	assert.Equal(suite.T(), "Doe", response.LastName)
-	assert.Equal(suite.T(), "john@example.com", response.Email)
+	assert.Equal(suite.T(), existingUser.Email, response.Email)
 }
 
 // TestGetUserByName_EmptyName tests error when name is empty
@@ -2492,17 +2234,9 @@ func (suite *UserServiceTestSuite) TestGetUserByName_TrimsWhitespace() {
 	trimmedName := "John Doe"
 	userID := "I123456"
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			Name: trimmedName,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.Name = trimmedName
+	existingUser.UserID = userID
 
 	suite.mockUserRepo.EXPECT().
 		GetByName(trimmedName).
@@ -2522,19 +2256,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_SuccessNilMetaData
 	userID := "I123456"
 	userUUID := uuid.New()
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = nil
 
 	// First call to GetByName
 	suite.mockUserRepo.EXPECT().
@@ -2609,19 +2335,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_WithFavorites() {
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	link1 := models.Link{
 		BaseModel: models.BaseModel{
@@ -2699,19 +2417,14 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_WithPortalAdmin() 
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "Admin",
-		LastName:   "User",
-		Email:      "admin@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.FirstName = "Admin"
+	existingUser.LastName = "User"
+	existingUser.Email = "admin@example.com"
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	// First call to GetByName
 	suite.mockUserRepo.EXPECT().
@@ -2748,15 +2461,9 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_WithPortalAdmin() 
 
 // TestGetSubscribedPluginsFromUser_NoMetadata tests getting subscribed plugins when user has no metadata
 func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_NoMetadata() {
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   nil,
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = nil
 
 	plugins := suite.userService.GetSubscribedPluginsFromUser(user)
 
@@ -2766,15 +2473,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_NoMetadata()
 
 // TestGetSubscribedPluginsFromUser_EmptyMetadata tests getting subscribed plugins when user has empty metadata
 func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_EmptyMetadata() {
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`{}`),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(`{}`)
 
 	plugins := suite.userService.GetSubscribedPluginsFromUser(user)
 
@@ -2784,15 +2485,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_EmptyMetadat
 
 // TestGetSubscribedPluginsFromUser_InvalidJSON tests getting subscribed plugins when metadata is invalid JSON
 func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_InvalidJSON() {
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(`invalid json`),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(`invalid json`)
 
 	plugins := suite.userService.GetSubscribedPluginsFromUser(user)
 
@@ -2807,15 +2502,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_EmptySubscri
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(metadataBytes)
 
 	plugins := suite.userService.GetSubscribedPluginsFromUser(user)
 
@@ -2831,15 +2520,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_SinglePlugin
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(metadataBytes)
 
 	plugin := &models.Plugin{
 		BaseModel: models.BaseModel{
@@ -2884,15 +2567,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_MultiplePlug
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(metadataBytes)
 
 	plugin1 := &models.Plugin{
 		BaseModel: models.BaseModel{
@@ -2983,15 +2660,9 @@ func (suite *UserServiceTestSuite) TestGetSubscribedPluginsFromUser_PluginNotFou
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	user := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = "I123456"
+	user.Metadata = json.RawMessage(metadataBytes)
 
 	plugin1 := &models.Plugin{
 		BaseModel: models.BaseModel{
@@ -3036,15 +2707,9 @@ func (suite *UserServiceTestSuite) TestGetUserByUserIDWithPlugins_Success() {
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	user := &models.User{
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	user := suite.factories.User.Create()
+	user.UserID = userID
+	user.Metadata = json.RawMessage(metadataBytes)
 
 	plugin1 := &models.Plugin{
 		BaseModel: models.BaseModel{
@@ -3151,19 +2816,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_WithSubscribed() {
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	// Favorite links
 	favoriteLink1 := models.Link{
@@ -3285,19 +2942,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinks_WithAllMetadata() 
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	link := models.Link{
 		BaseModel: models.BaseModel{
@@ -3359,19 +3008,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinksAndPlugins_Success(
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	link := models.Link{
 		BaseModel: models.BaseModel{
@@ -3489,19 +3130,11 @@ func (suite *UserServiceTestSuite) TestGetUserByNameWithLinksAndPlugins_NoPlugin
 	}
 	metadataBytes, _ := json.Marshal(metadata)
 
-	existingUser := &models.User{
-		BaseModel: models.BaseModel{
-			ID:   userUUID,
-			Name: name,
-		},
-		UserID:     userID,
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-		Metadata:   json.RawMessage(metadataBytes),
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.ID = userUUID
+	existingUser.Name = name
+	existingUser.UserID = userID
+	existingUser.Metadata = json.RawMessage(metadataBytes)
 
 	link := models.Link{
 		BaseModel: models.BaseModel{
@@ -3710,14 +3343,8 @@ func (suite *UserServiceTestSuite) TestSearchUsersGlobal_RepositoryError() {
 func (suite *UserServiceTestSuite) TestGetQuickLinks_Success() {
 	userID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = "I123456"
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).
@@ -3754,14 +3381,8 @@ func (suite *UserServiceTestSuite) TestGetQuickLinks_UserNotFound() {
 func (suite *UserServiceTestSuite) TestAddQuickLink_Success() {
 	userID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = "I123456"
 
 	req := &service.AddQuickLinkRequest{
 		URL:      "https://github.com/user/repo",
@@ -3787,14 +3408,8 @@ func (suite *UserServiceTestSuite) TestAddQuickLink_Success() {
 func (suite *UserServiceTestSuite) TestAddQuickLink_WithoutOptionalFields() {
 	userID := uuid.New()
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = "I123456"
 
 	req := &service.AddQuickLinkRequest{
 		URL:   "https://example.com",
@@ -3891,14 +3506,8 @@ func (suite *UserServiceTestSuite) TestRemoveQuickLink_Success() {
 	userID := uuid.New()
 	linkURL := "https://github.com/user/repo"
 
-	existingUser := &models.User{
-		UserID:     "I123456",
-		FirstName:  "John",
-		LastName:   "Doe",
-		Email:      "john@example.com",
-		TeamDomain: models.TeamDomainDeveloper,
-		TeamRole:   models.TeamRoleMember,
-	}
+	existingUser := suite.factories.User.Create()
+	existingUser.UserID = "I123456"
 
 	suite.mockUserRepo.EXPECT().
 		GetByID(userID).

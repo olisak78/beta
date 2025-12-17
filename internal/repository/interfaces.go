@@ -89,6 +89,7 @@ type ComponentRepositoryInterface interface {
 	GetByID(id uuid.UUID) (*models.Component, error)
 	GetByName(projectID uuid.UUID, name string) (*models.Component, error)
 	GetByProjectID(projectID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
+	GetComponentsByProjectID(projectID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
 	GetByOwnerID(ownerID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
 	GetComponentsByTeamID(teamID uuid.UUID, limit, offset int) ([]models.Component, int64, error)
 	Update(component *models.Component) error
